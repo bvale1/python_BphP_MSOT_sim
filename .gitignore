@@ -1,0 +1,13 @@
+*.log
+
+temp/
+
+__pycache__
+
+*.bin
+
+*.json
+
+*.mc2
+
+*.h5

@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+# plots 4D data as a 3D scatter plot
 def plot4D(data,
            cmap="Reds",
            dpi=500,
@@ -34,6 +35,7 @@ def plot4D(data,
     if save_name:
         plt.savefig(save_name, dpi=dpi)
     plt.close(fig)
+
 
 if __name__ == '__main__':
     import h5py

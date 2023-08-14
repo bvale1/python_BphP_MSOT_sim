@@ -189,6 +189,7 @@ if __name__ == '__main__':
                  ReBphP_PCM_Pfr_c[:,cfg['grid_size'][1]//2,:]
         )
 
+    '''
     # use this to get the fluence resulting from the MCX source with no sample
     volume = volume = np.zeros(
         (
@@ -202,6 +203,7 @@ if __name__ == '__main__':
     for i in range(len(cfg['wavelengths'])):
         volume[i,0,:,:,:] = water['mu_a'][i]
         volume[i,1,:,:,:] = water['mu_s'][i]
+    '''
 
     mcx_simulation = optical_simulation.MCX_adapter(cfg)
 
@@ -221,6 +223,8 @@ if __name__ == '__main__':
                     wavelength_index
                 )
                 
+                # kwave simulation needs to be initialised for each pulse
+                # then removed otherwise it will run out of memory
                 #p_0 = cfg['gruneisen'] * Phi * 
 
     mcx_simulation.delete_temporary_files()
