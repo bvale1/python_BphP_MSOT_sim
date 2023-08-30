@@ -200,7 +200,9 @@ class MCX_adapter():
         
         self.save_mcx_volume_binary(volume)
         
-        cmd = [mcx_bin_path, '-f', self.mcx_config_file, '-O', 'F']
+        # Output flag 'E' returns the energy absorbed in each voxel
+        # Output flag 'F' returns the fluence in each voxel
+        cmd = [mcx_bin_path, '-f', self.mcx_config_file, '-O', 'E']
         energy_absorbed = np.zeros(self.mcx_cfg['Domain']['Dim'], dtype=np.float32)
         
         for i in range(10):
@@ -238,8 +240,6 @@ class MCX_adapter():
             energy_absorbed = np.asarray(energy_absorbed).reshape(
                 (self.mcx_cfg['Domain']['Dim']), order='F'
             )
-            # Convert from [J voxel^-1] to [J m^-3]
-            #energy_absorbed *= (self.mcx_cfg['Domain']['length_unit'] * 1e-3)**3  
             
             return energy_absorbed
         

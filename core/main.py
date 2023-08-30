@@ -1,4 +1,5 @@
 import numpy as np
+from core.phantoms.Clara_experiment_phantom import Clara_experiment_phantom
 import json
 import h5py
 import geometry_func as gf
@@ -37,9 +38,9 @@ if __name__ == '__main__':
         - abjust absorbtion coeff (mu_a) of volume array
         - overwrite volume array binary file
 
-    6. Calculate inital acoustic pressure (P_0) of sample
+    6. Calculate inital acoustic pressure (p0) of sample
 
-    7. Propogate P_0 using K-wave
+    7. Propogate p0 using K-wave
 
     8. Reconstruct images from transducer array data
 
@@ -85,18 +86,10 @@ if __name__ == '__main__':
     
     print('main config ', cfg)
     
-    # properties of the phytochrome
-    ReBphP_PCM = {
-        'Pr' : {
-            'epsilon_a': [0.8e4, 0.05e4],
-            'eta' : [0.01, 0.0]
-            },
-        'Pfr' : {
-            'epsilon_a': [0.6e4, 0.8e4],
-            'eta' : [0.015, 0.0]
-        }   
-    }
-    cfg['ReBphP_PCM'] = ReBphP_PCM
+    phantom = Clara_experiment_phantom()
+    H2O = phantom.define_water()
+    ReBphP_PCM = phantom.define_ReBphP_PCM()
+    (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg)
     
     # Energy total delivered is wavelength dependant and normally disributed
     Emean = np.array([58.0050, 70.0727]) * 1e-3; # [J]
@@ -120,62 +113,6 @@ if __name__ == '__main__':
     uf.create_dir(cfg['name'])
     with open(cfg['name']+'/config.json', 'w') as outfile:
         json.dump(cfg, outfile)
-    
-    # temperature coefficients https://pubs.acs.org/doi/10.1021/jp010093m
-    temp = 34; # [celcius]
-    # absorption 380nm-700nm https://opg.optica.org/ao/viewmedia.cfm?uri=ao-38-7-1216&seq=0
-    # absorption and scattering 300nm-800nm Optical properties of pure water Hendrik Buiteveld
-    # https://www.spiedigitallibrary.org/conference-proceedings-of-spie/2258/0000/Optical-properties-of-pure-water/10.1117/12.190060.full
-    water = {
-        'mu_a' : [ 
-            0.4318 + (temp - 20) * (-5e-5), # [m^-1]
-            2.7542 + (temp - 20) * (-152e-5) # [m^-1]
-        ],
-        'mu_s' : [0.0006, 0.0003], # [m^-1],
-        'n' : [1.33, 1.33],
-        'g' : [0.9, 0.9]
-    }
-    
-    
-    # initialise proteins, Pr to Pfr ratio is the steady state
-    Pr_frac, Pfr_frac = bf.steady_state_BphP(
-        ReBphP_PCM['Pr'],
-        ReBphP_PCM['Pfr'],
-        wavelength_idx=0
-    )
-    ReBphP_PCM_Pr_c = 0.001 * gf.cylinder_mask(
-        cfg['dx'],
-        cfg['grid_size'],
-        1.5e-3,
-        [(cfg['domain_size'][0]/2)-4e-3, 0.0, (cfg['domain_size'][2]/2)-2e-3]
-    )
-    ReBphP_PCM_Pfr_c = Pfr_frac * ReBphP_PCM_Pr_c
-    ReBphP_PCM_Pr_c = Pr_frac * ReBphP_PCM_Pr_c
-    
-    # define volume scattering and absorption coefficients
-    # index as [1, ..., lambda]->[mu_a, mu_s]->[x]->[y]->[z]
-    volume = np.zeros(
-        (
-            len(cfg['wavelengths']),
-            2, 
-            cfg['grid_size'][0], 
-            cfg['grid_size'][1], 
-            cfg['grid_size'][2]            
-        ), dtype=np.float32
-    )
-    for i in range(len(cfg['wavelengths'])):
-        volume[i,0,:,:,:] = water['mu_a'][i] * gf.cylinder_mask(
-            cfg['dx'],
-            cfg['grid_size'],
-            0.01,
-            [(cfg['domain_size'][0]/2), 0.0, (cfg['domain_size'][2]/2)]
-        )
-        volume[i,1,:,:,:] = water['mu_s'][i] * gf.cylinder_mask(
-            cfg['dx'],
-            cfg['grid_size'],
-            0.01,
-            [(cfg['domain_size'][0]/2), 0.0, (cfg['domain_size'][2]/2)] 
-        )
         
     # save 2D slice of the volume to HDF5 file
     with h5py.File(cfg['name']+'/data.h5', 'w') as f:
@@ -187,34 +124,35 @@ if __name__ == '__main__':
             'ReBphP_PCM_c_tot', 
             data=ReBphP_PCM_Pr_c[:,cfg['grid_size'][1]//2,:] +
                  ReBphP_PCM_Pfr_c[:,cfg['grid_size'][1]//2,:]
-        )
+        )     
+        # allocate storage for the fluence, initial and reconstructed pressure
+        # index as data['arg'][cycle, wavelength, pulse, x, z]
+        for arg in ['fluence', 'p0', 'p0_recon', 'ReBphP_PCM_Pr_c', 'ReBphP_PCM_Pfr_c']:
+            f.create_dataset(
+                arg,
+                np.zeros(
+                    (
+                        cfg['ncycles'],
+                        len(cfg['wavelengths']),
+                        cfg['npulses'],
+                        cfg['grid_size'][0],
+                        cfg['grid_size'][2]
+                    ),
+                    dtype=np.float32
+                )
+                
+            )
 
-    '''
-    # use this to get the fluence resulting from the MCX source with no sample
-    volume = volume = np.zeros(
-        (
-            len(cfg['wavelengths']),
-            2, 
-            cfg['grid_size'][0], 
-            cfg['grid_size'][1], 
-            cfg['grid_size'][2]            
-        ), dtype=np.float32
-    )
-    for i in range(len(cfg['wavelengths'])):
-        volume[i,0,:,:,:] = water['mu_a'][i]
-        volume[i,1,:,:,:] = water['mu_s'][i]
-    '''
-
+    # optical simulation
     mcx_simulation = optical_simulation.MCX_adapter(cfg)
-
+    
     for cycle in range(cfg['ncycles']):
-        
         for wavelength_index in range(len(cfg['wavelengths'])):
-            
             for pulse in range(cfg['npulses']):
                 
                 print('cycle: ', cycle+1, ', pulse: ', pulse+1)
-                energy_absorbed = mcx_simulation.run_mcx(
+                
+                mcx_out = mcx_simulation.run_mcx(
                     mcx_bin_path,
                     volume[wavelength_index], 
                     ReBphP_PCM_Pr_c,
@@ -223,12 +161,41 @@ if __name__ == '__main__':
                     wavelength_index
                 )
                 
-                # kwave simulation needs to be initialised for each pulse
-                # then removed otherwise it will run out of memory
-                #p_0 = cfg['gruneisen'] * Phi * 
-
+                # convert from [voxel^-1] to [J voxel^-1]
+                mcx_out *= cfg['LaserEnergy'][cycle, wavelength_index, pulse]
+                
+                # Convert from [J voxel^-1] to [J m^-3]
+                mcx_out /= cfg['dx']**3 
+                
+                # divide by absorption coefficient to get fluence
+                mcx_out /= volume[wavelength_index, 0] # [J m^-3] -> [J m^-2]
+                
+                # zero nan values (since all background voxels have zero absorption)
+                mcx_out = np.nan_to_num(mcx_out, nan=0.0, posinf=0.0, neginf=0.0)
+                
+                # save fluence, Pr and Pfr concentrations to HDF5 file
+                with h5py.File(cfg['name']+'/data.h5', 'r+') as f:
+                    f['fluence'][cycle,wavelength_index,pulse,:,:] = mcx_out[:,cfg['grid_size'][1]//2,:]
+                    f['ReBphP_PCM_Pr_c'][cycle,wavelength_index,pulse,:,:] = ReBphP_PCM_Pr_c[:,cfg['grid_size'][1]//2,:]
+                    f['ReBphP_PCM_Pfr_c'][cycle,wavelength_index,pulse,:,:] = ReBphP_PCM_Pfr_c[:cfg['grid_size'][1]//2,:]
+                
+                # compute photoisomerisation
+                bf.switch_BphP(
+                    ReBphP_PCM['Pr'], 
+                    ReBphP_PCM['Pfr'],
+                    ReBphP_PCM_Pr_c,
+                    ReBphP_PCM_Pfr_c,
+                    mcx_out,
+                    cfg['wavelengths'],
+                    wavelength_index
+                )
+                
     mcx_simulation.delete_temporary_files()
-
-    with h5py.File(cfg['name']+'/data.h5', 'a') as f:
-        f.create_dataset('norm_fluence', data=energy_absorbed)
     
+    '''
+    # acoustic forward simulation
+    for cycle in range(cfg['ncycles']):
+        for wavelength_index in range(len(cfg['wavelengths'])):
+            for pulse in range(cfg['npulses']):
+    '''
+    # acoustic reconstruction
