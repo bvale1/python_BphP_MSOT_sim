@@ -1,5 +1,5 @@
 import numpy as np
-import core.phantoms.phantom as phantom
+from phantoms.phantom import phantom
 import geometry_func as gf
 import BphP_func as bf
 

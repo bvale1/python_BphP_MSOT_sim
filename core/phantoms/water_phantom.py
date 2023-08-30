@@ -1,5 +1,5 @@
 import numpy as np
-import core.phantoms.phantom as phantom
+from phantoms.phantom import phantom
 
 
 # use this class to define the whole volume as water

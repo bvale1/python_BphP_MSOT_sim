@@ -17,11 +17,15 @@ def steady_state_BphP(Pr, Pfr, wavelength_idx):
 def switch_BphP(Pr, Pfr, Pr_c, Pfr_c, Phi, wavelengths, wavelength_idx):
     
     c_tot = Pr_c + Pfr_c
-    a = (Pr['epsilon_a'](wavelength_idx) * Pr['eta'](wavelength_idx) +
-        Pfr['epsilon_a'](wavelength_idx) * Pfr['eta'](wavelength_idx))
+    
+    # mask BphPs to prevent division by zero
+    mask = c_tot != 0.0
+    
+    a = (Pr['epsilon_a'][wavelength_idx] * Pr['eta'][wavelength_idx] +
+        Pfr['epsilon_a'][wavelength_idx] * Pfr['eta'][wavelength_idx])
     
     # molar fluence [mols m^-2] = lambda * Phi / (h * c * N_A)
-    Phi_mols = 8.3593472259 * wavelengths(wavelength_idx) * Phi
+    Phi_mols = 8.3593472259 * wavelengths[wavelength_idx] * Phi
     
     # dimensionless exponential term
     exponential = np.exp(-a * Phi_mols)

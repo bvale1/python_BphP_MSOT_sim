@@ -7,8 +7,7 @@ from kwave.kspaceFirstOrder2D import kspaceFirstOrder2DG
 from kwave.options.simulation_execution_options import SimulationExecutionOptions
 from kwave.options.simulation_options import SimulationOptions
 from kwave.ksource import kSource
-from kwave.utils.mapgen import make_cart_circle, make_circle
-from kwave.utils.interp import interp_cart_data
+from kwave.utils.mapgen import make_cart_circle
 from kwave.utils.conversion import cart2grid
 import utility_func as uf
 import numpy as np

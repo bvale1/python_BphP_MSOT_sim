@@ -27,17 +27,11 @@ class kwave_forward_adapter():
     
     2. define transducer object (KWaveArray)
     
-    3. run simulation simulation on GPU with CUDA binaries (KWaveFirstOrder3DG)
+    3. run simulation on GPU with CUDA binaries (KWaveFirstOrder3DG)
     
     4. save senor data to HDF5 file
     
     5. TODO: add bandlimited impulse response (BLI) and noise
-    
-    6. run time reversal reconstruction (KWaveFirstOrder3DG)
-    
-    7. TODO: implement iterative time reversal reconstruction (ITR)
-    
-    8. Save reconstruction to HDF5 file
 
     ============================================================================
     '''
@@ -61,6 +55,35 @@ class kwave_forward_adapter():
             sound_speed=cfg['c_0'],
             absorbing=False
         )
+        
+        
+    def create_point_sensor_array(self):
+        number_detector_elements = 256
+        radius_mm = 40.5
+        sensor_xz = np.matmul(
+            uf.Ry2D(225 * np.pi / 180),
+            make_cart_circle(
+                radius_mm * 1e-3, 
+                number_detector_elements,
+                np.array([0.0, 0.0]),
+                3 * np.pi / 2,
+                plot_circle=False
+            )
+        )
+        
+        sensor_xyz = np.concatenate(
+            (
+                np.expand_dims(sensor_xz[0], axis=0),
+                np.zeros((1, self.cfg['nsensors']), dtype=np.float32),
+                np.expand_dims(sensor_xz[1], axis=0)
+            ), axis=0
+        )
+        
+        sensor_mask = cart2grid(self.kgrid, sensor_xyz)[0]
+        sensor = kSensor(sensor_mask)
+        sensor.record = ['p']
+        self.sensor = sensor
+        self.combine_data = False
         
         
     def create_transducer_array(self):
@@ -126,6 +149,20 @@ class kwave_forward_adapter():
         self.karray = karray
         # records pressure by default
         self.sensor = kSensor(self.sensor_mask)#, record=['p'])
+        self.combine_data = True
+        
+    
+    def configure_simulation(self):
+        self.simulation_options = SimulationOptions(
+            pml_inside=False,
+            pml_size=self.cfg['pml_size'],
+            data_cast='single',
+            save_to_disk=True,
+        )
+        
+        self.execution_options = SimulationExecutionOptions(
+            is_gpu_simulation=True
+        )
         
         
     def run_kwave_forward(self, p0):
@@ -133,49 +170,33 @@ class kwave_forward_adapter():
         source = kSource()
         source.p0 = p0
         
-        # configure simulation
-        simulation_options = SimulationOptions(
-            pml_inside=False,
-            pml_size=self.cfg['pml_size'],
-            data_cast='single',
-            save_to_disk=True,
-        )
-        
-        execution_options = SimulationExecutionOptions(
-            is_gpu_simulation=True
-        )
-        
         # run forward simulation
         sensor_data = kspaceFirstOrder3DG(
             self.kgrid,
             source,
             self.sensor,
             self.medium,
-            simulation_options,
-            execution_options
+            self.simulation_options,
+            self.execution_options
         )['p'].T
         print('sensor data')
         print(type(sensor_data), sensor_data.shape, sensor_data.dtype)
         
-        start = timeit.default_timer()
-        print("combining sensor data...")
-        sensor_data = self.karray.combine_sensor_data(
-            self.kgrid, 
-            sensor_data, 
-            self.sensor_mask
-        )
-        print(f'sensor data combined in {timeit.default_timer() - start} seconds')
+        if self.combine_data:
+            start = timeit.default_timer()
+            print("combining sensor data...")
+            sensor_data = self.karray.combine_sensor_data(
+                self.kgrid, 
+                sensor_data, 
+                self.sensor_mask
+            )
+            print(f'sensor data combined in {timeit.default_timer() - start} seconds')
         
         import matplotlib.pyplot as plt
         plt.imshow(sensor_data)
         plt.savefig('sensor_data.png')
         
-        with h5py.File(cfg['name']+'/data.h5', 'w') as f:
-            # MSOT uses a 12 Bit DAS
-            f.create_dataset(
-                'sensor_data', 
-                data=sensor_data.astype(dtype=np.float16)
-            )
+        return sensor_data.astype(np.float16)
     
     
 # test script

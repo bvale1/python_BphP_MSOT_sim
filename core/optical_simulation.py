@@ -203,9 +203,10 @@ class MCX_adapter():
         # Output flag 'E' returns the energy absorbed in each voxel
         # Output flag 'F' returns the fluence in each voxel
         cmd = [mcx_bin_path, '-f', self.mcx_config_file, '-O', 'E']
-        energy_absorbed = np.zeros(self.mcx_cfg['Domain']['Dim'], dtype=np.float32)
+        mcx_out = np.zeros(self.mcx_cfg['Domain']['Dim'], dtype=np.float32)
         
         for i in range(10):
+            print('source no: ', i)
             self.set_source(i)
             self.save_mcx_config()
             print('mcx config ', self.mcx_cfg)
@@ -218,30 +219,26 @@ class MCX_adapter():
                     f"MCX failed to run: {cmd}, source no: {i}, results: {results}"
                 )
                 
-            energy_absorbed += self.read_mcx_output(self.mcx_out_file)
-            print('energy absorbed:')
-            print(np.shape(energy_absorbed))
-            print(energy_absorbed[182, 46, 182])
+            mcx_out += self.read_mcx_output(self.mcx_out_file)
+            
+        # renormalise
+        mcx_out /= 10           
         
-        return energy_absorbed
-        # intial acoustic pressure (mu_a [mm^-1] -> [m^-1])
-        #p0 = self.grunesien * fluence * (volume[0] * 1e3)
-        
-        #return p_0
+        return mcx_out
         
 
     def read_mcx_output(self, mcx_out_file) -> np.array:
-            #reads the temporary output generated with MCX
-            with open(mcx_out_file+'.mc2', 'rb') as f:
-                energy_absorbed = f.read()
-            energy_absorbed = struct.unpack(
-                '%df' % (len(energy_absorbed) / 4), energy_absorbed
-            )
-            energy_absorbed = np.asarray(energy_absorbed).reshape(
-                (self.mcx_cfg['Domain']['Dim']), order='F'
-            )
-            
-            return energy_absorbed
+        #reads the temporary output generated with MCX
+        with open(mcx_out_file+'.mc2', 'rb') as f:
+            mcx_out = f.read()
+        mcx_out = struct.unpack(
+            '%df' % (len(mcx_out) / 4), mcx_out
+        )
+        mcx_out = np.asarray(mcx_out).reshape(
+            (self.mcx_cfg['Domain']['Dim']), order='F'
+        )
+        
+        return mcx_out
         
         
     def delete_temporary_files(self) -> None:

@@ -1,12 +1,14 @@
 import numpy as np
-from core.phantoms.Clara_experiment_phantom import Clara_experiment_phantom
+from phantoms.Clara_experiment_phantom import Clara_experiment_phantom
 import json
 import h5py
+import os
 import geometry_func as gf
 import BphP_func as bf
 import utility_func as uf
 import optical_simulation
-#import acoustic_simulation
+import acoustic_forward_simulation
+import acoustic_inverse_simulation
 import plot_func as pf
 
 if __name__ == '__main__':
@@ -69,6 +71,7 @@ if __name__ == '__main__':
     cfg = {
         'name' : '202307020_python_Clara_phantom_ReBphP_0p001',
         'seed' : None,
+        'nsensors' : 256,
         'ncycles' : 1,
         'npulses' : 1,
         'nphotons' : 1e8,
@@ -82,6 +85,7 @@ if __name__ == '__main__':
         'c_0' : c_0,
         'alpha_coeff' : 0.01,
         'alpha_power' : 1.1,
+        'recon_iterations' : 1
     }
     
     print('main config ', cfg)
@@ -111,8 +115,8 @@ if __name__ == '__main__':
     
     # save configuration to JSON file
     uf.create_dir(cfg['name'])
-    with open(cfg['name']+'/config.json', 'w') as outfile:
-        json.dump(cfg, outfile)
+    with open(cfg['name']+'/config.json', 'w') as f:
+        json.dump(cfg, f)
         
     # save 2D slice of the volume to HDF5 file
     with h5py.File(cfg['name']+'/data.h5', 'w') as f:
@@ -127,32 +131,51 @@ if __name__ == '__main__':
         )     
         # allocate storage for the fluence, initial and reconstructed pressure
         # index as data['arg'][cycle, wavelength, pulse, x, z]
-        for arg in ['fluence', 'p0', 'p0_recon', 'ReBphP_PCM_Pr_c', 'ReBphP_PCM_Pfr_c']:
+        print('allocating storage for data.h5')
+        for arg in ['Phi', 'p0', 'p0_recon', 'ReBphP_PCM_Pr_c', 'ReBphP_PCM_Pfr_c']:
+            print(arg)
             f.create_dataset(
                 arg,
-                np.zeros(
-                    (
-                        cfg['ncycles'],
-                        len(cfg['wavelengths']),
-                        cfg['npulses'],
-                        cfg['grid_size'][0],
-                        cfg['grid_size'][2]
-                    ),
+                shape=(
+                    cfg['ncycles'],
+                    len(cfg['wavelengths']),
+                    cfg['npulses'],
+                    cfg['grid_size'][0],
+                    cfg['grid_size'][2]
+                ),
                     dtype=np.float32
-                )
-                
             )
+                        
+    with h5py.File(cfg['name']+'/temp.h5', 'w') as f:
+        # p0 will be saved in 3D for the acoustic simulation before finally
+        # being condensed to 2D slices so the dataset isn't too large
+        # 1 cycle * 2 wavelengths * 16 pules * 512 * (1024**2) * 32 bits = 64 GB
+        f.create_dataset(
+            'p0_3D',
+            shape=(
+                cfg['ncycles'],
+                len(cfg['wavelengths']),
+                cfg['npulses'],
+                cfg['grid_size'][0],
+                cfg['grid_size'][1],
+                cfg['grid_size'][2]
+            ), 
+            dtype=np.float32
+        )
 
     # optical simulation
-    mcx_simulation = optical_simulation.MCX_adapter(cfg)
+    simulation = optical_simulation.MCX_adapter(cfg)
     
     for cycle in range(cfg['ncycles']):
         for wavelength_index in range(len(cfg['wavelengths'])):
             for pulse in range(cfg['npulses']):
                 
-                print('cycle: ', cycle+1, ', pulse: ', pulse+1)
+                print('cycle: ', cycle+1, 'wavelength_index', wavelength_index+1, ', pulse: ', pulse+1)
                 
-                mcx_out = mcx_simulation.run_mcx(
+                # out can be energy absorbed, fluence, pressure, sensor data
+                # or recontructed pressure, each is overwritten when no longer
+                # needed to save space
+                out = simulation.run_mcx(
                     mcx_bin_path,
                     volume[wavelength_index], 
                     ReBphP_PCM_Pr_c,
@@ -162,40 +185,101 @@ if __name__ == '__main__':
                 )
                 
                 # convert from [voxel^-1] to [J voxel^-1]
-                mcx_out *= cfg['LaserEnergy'][cycle, wavelength_index, pulse]
+                out *= cfg['LaserEnergy'][cycle][wavelength_index][pulse]
+                
+                # save 3D p0 to temp.h5
+                with h5py.File(cfg['name']+'/temp.h5', 'r+') as f:
+                    f['p0_3D'][cycle,wavelength_index,pulse] = cfg['gruneisen'] * out
                 
                 # Convert from [J voxel^-1] to [J m^-3]
-                mcx_out /= cfg['dx']**3 
+                out /= cfg['dx']**3 
                 
                 # divide by absorption coefficient to get fluence
-                mcx_out /= volume[wavelength_index, 0] # [J m^-3] -> [J m^-2]
+                out /= volume[wavelength_index, 0] # [J m^-3] -> [J m^-2]
                 
                 # zero nan values (since all background voxels have zero absorption)
-                mcx_out = np.nan_to_num(mcx_out, nan=0.0, posinf=0.0, neginf=0.0)
+                out = np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0)
                 
-                # save fluence, Pr and Pfr concentrations to HDF5 file
+                # save fluence, Pr and Pfr concentrations to data HDF5 file
                 with h5py.File(cfg['name']+'/data.h5', 'r+') as f:
-                    f['fluence'][cycle,wavelength_index,pulse,:,:] = mcx_out[:,cfg['grid_size'][1]//2,:]
-                    f['ReBphP_PCM_Pr_c'][cycle,wavelength_index,pulse,:,:] = ReBphP_PCM_Pr_c[:,cfg['grid_size'][1]//2,:]
-                    f['ReBphP_PCM_Pfr_c'][cycle,wavelength_index,pulse,:,:] = ReBphP_PCM_Pfr_c[:cfg['grid_size'][1]//2,:]
-                
+                    f['Phi'][cycle,wavelength_index,pulse] = out[:,cfg['grid_size'][1]//2,:]
+                    f['ReBphP_PCM_Pr_c'][cycle,wavelength_index,pulse] = ReBphP_PCM_Pr_c[:,cfg['grid_size'][1]//2,:]
+                    f['ReBphP_PCM_Pfr_c'][cycle,wavelength_index,pulse] = ReBphP_PCM_Pfr_c[:,cfg['grid_size'][1]//2,:]
+                    
                 # compute photoisomerisation
                 bf.switch_BphP(
                     ReBphP_PCM['Pr'], 
                     ReBphP_PCM['Pfr'],
                     ReBphP_PCM_Pr_c,
                     ReBphP_PCM_Pfr_c,
-                    mcx_out,
+                    out,
                     cfg['wavelengths'],
                     wavelength_index
                 )
                 
-    mcx_simulation.delete_temporary_files()
+    # deleted mcx input and out files, they are not needed anymore
+    simulation.delete_temporary_files()
+    # overwrite mcx simulation to save memory
+    simulation = acoustic_forward_simulation.kwave_forward_adapter(cfg)
+    # k-wave automatically determines dt and Nt, update cfg
+    cfg = simulation.cfg
     
-    '''
+    # save updated cfg to JSON file
+    with open(cfg['name']+'/config.json', 'w') as f:
+        json.dump(cfg, f)
+    # create dataset for sensor data based on k-wave Nt
+    with h5py.File(cfg['name']+'/data.h5', 'r+') as f:
+        f.create_dataset(
+            'sensor_data',
+            shape=(   
+                cfg['ncycles'],
+                len(cfg['wavelengths']),
+                cfg['npulses'],
+                cfg['nsensors'],
+                cfg['Nt']
+            ),
+            dtype=np.float16
+        )            
+    
+    simulation.configure_simulation()
+    simulation.create_point_sensor_array()
+    
     # acoustic forward simulation
     for cycle in range(cfg['ncycles']):
         for wavelength_index in range(len(cfg['wavelengths'])):
             for pulse in range(cfg['npulses']):
-    '''
+                
+                print('cycle: ', cycle+1, 'wavelength_index', wavelength_index+1, ', pulse: ', pulse+1)
+                
+                with h5py.File(cfg['name']+'/temp.h5', 'r') as f:
+                    out = f['p0_3D'][cycle,wavelength_index,pulse]
+                
+                # run also saves the sensor data to data.h5 as float16
+                out = simulation.run_kwave_forward(out)
+    
+    
+    
+    # delete temp p0_3D dataset
+    os.remove(cfg['name']+'/temp.h5')
+    
+    simulation = acoustic_inverse_simulation.kwave_inverse_adapter(cfg)
+    simulation.configure_simulation()
+    simulation.create_point_source_array()
+    
     # acoustic reconstruction
+    for cycle in range(cfg['ncycles']):
+        for wavelength_index in range(len(cfg['wavelengths'])):
+            for pulse in range(cfg['npulses']):
+                
+                print('time reversal, cycle: ', cycle+1, 'wavelength_index', wavelength_index+1, ', pulse: ', pulse+1)
+                
+                with h5py.File(cfg['name']+'/data.h5', 'r') as f:
+                    out = f['sensor_data'][cycle,wavelength_index,pulse]
+                    
+                out = simulation.run_time_reversal(out)
+
+                with h5py.File(cfg['name']+'/data.h5', 'r+') as f:
+                    f['p0_recon'][cycle,wavelength_index,pulse] = out
+    
+    
+    
