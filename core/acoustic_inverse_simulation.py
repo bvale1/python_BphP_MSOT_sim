@@ -19,17 +19,19 @@ class kwave_inverse_adapter():
     '''
     ==================================Workflow==================================
 
-    1. define kwave simulation grid object (KWaveGrid)
+    1. define kwave simulation grid object (KWaveGrid) and medium object (KWaveMedium)
     
-    2. define transducer object (KWaveArray)
+    2. define source with dirichlet boundary condition object (KSource)
     
-    3
+    3. define sensor object (KSensor) to record final pressure field
     
-    3. run time reversal simulation on GPU with CUDA binaries (KWaveFirstOrder2DG)
+    4. reverse time axis of sensor data and assign to source object
+    
+    5. run time reversal simulation on GPU with CUDA binaries (KWaveFirstOrder2DG)
             
-    7. TODO: implement iterative time reversal reconstruction (ITR)
-    
-    8. Save reconstruction to HDF5 file
+    6. TODO: implement iterative time reversal reconstruction (ITR)
+
+    7. Return inital pressure reconstruction
 
     ============================================================================
     '''
@@ -80,38 +82,36 @@ class kwave_inverse_adapter():
                 plot_circle=False
             )
         )
+        print('time_reversal_source_xz')
+        print(type(time_reversal_source_xz), time_reversal_source_xz.shape, time_reversal_source_xz.dtype)
         
-        sensor_mask = cart2grid(self.kgrid, time_reversal_source_xz)[0]
-        sensor = kSensor(sensor_mask)
-        sensor.record = ['p_final']
-        self.sensor = sensor
+        self.source_mask = cart2grid(self.kgrid, time_reversal_source_xz)[0]
         
         
     def run_time_reversal(self, sensor_data):
         # reverse time axis
-        sensor_data = np.flip(sensor_data, axis=1)
+        sensor_data = np.flip(sensor_data, axis=1).astype(np.float32)
         # use sensor data as source with dirichlet boundary condition
+        
+        sensor = kSensor(self.source_mask)
+        sensor.record = ['p_final']
+        
         source = kSource()
-        source.p = sensor_data
-        source.p_mask = self.sensor.mask
+        source.p_mask = self.source_mask
         source.p_mode = 'dirichlet'
+        source.p = sensor_data
         
         # run time reversal reconstruction
         p0_estimate = kspaceFirstOrder2DG(
             self.kgrid,
             source,
-            self.sensor,
+            sensor,
             self.medium,
             self.simulation_options,
             self.execution_options
         )['p_final']
         
         # apply positivity constraint
-        p0_estimate = p0_estimate * (p0_estimate > 0.0)
-       
-        import matplotlib.pyplot as plt
-        plt.cla()
-        plt.imshow(p0_estimate)
-        plt.savefig('p0_estimate.png')
+        p0_estimate *= (p0_estimate > 0.0)       
         
         return p0_estimate

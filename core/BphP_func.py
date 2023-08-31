@@ -18,9 +18,6 @@ def switch_BphP(Pr, Pfr, Pr_c, Pfr_c, Phi, wavelengths, wavelength_idx):
     
     c_tot = Pr_c + Pfr_c
     
-    # mask BphPs to prevent division by zero
-    mask = c_tot != 0.0
-    
     a = (Pr['epsilon_a'][wavelength_idx] * Pr['eta'][wavelength_idx] +
         Pfr['epsilon_a'][wavelength_idx] * Pfr['eta'][wavelength_idx])
     

@@ -12,7 +12,6 @@ from kwave.utils.interp import interp_cart_data
 from kwave.utils.conversion import cart2grid
 import utility_func as uf
 import numpy as np
-import h5py
 import timeit
 
 # k-wave simulation may be run as a function, or as a class
@@ -23,13 +22,13 @@ class kwave_forward_adapter():
     '''
     ==================================Workflow==================================
 
-    1. define kwave simulation grid object (KWaveGrid)
+    1. define kwave simulation grid object (KWaveGrid) and medium object (KWaveMedium)
     
     2. define transducer object (KWaveArray)
     
     3. run simulation on GPU with CUDA binaries (KWaveFirstOrder3DG)
     
-    4. save senor data to HDF5 file
+    4. return save senor data to HDF5
     
     5. TODO: add bandlimited impulse response (BLI) and noise
 
@@ -179,8 +178,6 @@ class kwave_forward_adapter():
             self.simulation_options,
             self.execution_options
         )['p'].T
-        print('sensor data')
-        print(type(sensor_data), sensor_data.shape, sensor_data.dtype)
         
         if self.combine_data:
             start = timeit.default_timer()
@@ -191,12 +188,8 @@ class kwave_forward_adapter():
                 self.sensor_mask
             )
             print(f'sensor data combined in {timeit.default_timer() - start} seconds')
-        
-        import matplotlib.pyplot as plt
-        plt.imshow(sensor_data)
-        plt.savefig('sensor_data.png')
-        
-        return sensor_data.astype(np.float16)
+                
+        return sensor_data#.astype(np.float16)
     
     
 # test script

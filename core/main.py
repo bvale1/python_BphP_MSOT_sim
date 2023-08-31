@@ -10,6 +10,8 @@ import optical_simulation
 import acoustic_forward_simulation
 import acoustic_inverse_simulation
 import plot_func as pf
+import matplotlib.pyplot as plt
+
 
 if __name__ == '__main__':
 
@@ -61,7 +63,7 @@ if __name__ == '__main__':
         domain_size,
         c0_min=c_0,
         pml_size=pml_size,
-        points_per_wavelength=1
+        points_per_wavelength=2
     )
     domain_size = [grid_size[0]*dx,
                    grid_size[1]*dx,
@@ -85,7 +87,8 @@ if __name__ == '__main__':
         'c_0' : c_0,
         'alpha_coeff' : 0.01,
         'alpha_power' : 1.1,
-        'recon_iterations' : 1
+        'recon_iterations' : 1, # time reversal iterations
+        'crop_size' : 256 # pixel with of output images and ground truth
     }
     
     print('main config ', cfg)
@@ -93,6 +96,8 @@ if __name__ == '__main__':
     phantom = Clara_experiment_phantom()
     H2O = phantom.define_water()
     ReBphP_PCM = phantom.define_ReBphP_PCM()
+    # NOTE: ensure sample is contained within crop_size*crop_size of the centre
+    # of the xz plane, all other voxels are background
     (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg)
     
     # Energy total delivered is wavelength dependant and normally disributed
@@ -121,14 +126,25 @@ if __name__ == '__main__':
     # save 2D slice of the volume to HDF5 file
     with h5py.File(cfg['name']+'/data.h5', 'w') as f:
         f.create_dataset(
-            'background_volume', 
-            data=volume[:,:,:,cfg['grid_size'][1]//2,:]
+            'background_mua_mus', 
+            data=uf.square_centre_crop(volume[:,:,:,cfg['grid_size'][1]//2,:],
+                                       cfg['crop_size'])
         )
+        # protein concentration ground truth is the most important besides the
+        # reconstructed images of the pressure
         f.create_dataset(
             'ReBphP_PCM_c_tot', 
-            data=ReBphP_PCM_Pr_c[:,cfg['grid_size'][1]//2,:] +
-                 ReBphP_PCM_Pfr_c[:,cfg['grid_size'][1]//2,:]
-        )     
+            data=(
+                uf.square_centre_crop(
+                    ReBphP_PCM_Pr_c[:,cfg['grid_size'][1]//2,:],
+                    cfg['crop_size']
+                ) +
+                uf.square_centre_crop(
+                    ReBphP_PCM_Pfr_c[:,cfg['grid_size'][1]//2,:],
+                    cfg['crop_size']
+                )
+            )
+        )
         # allocate storage for the fluence, initial and reconstructed pressure
         # index as data['arg'][cycle, wavelength, pulse, x, z]
         print('allocating storage for data.h5')
@@ -140,25 +156,29 @@ if __name__ == '__main__':
                     cfg['ncycles'],
                     len(cfg['wavelengths']),
                     cfg['npulses'],
-                    cfg['grid_size'][0],
-                    cfg['grid_size'][2]
+                    cfg['crop_size'],
+                    cfg['crop_size']
                 ),
                     dtype=np.float32
             )
                         
     with h5py.File(cfg['name']+'/temp.h5', 'w') as f:
         # p0 will be saved in 3D for the acoustic simulation before finally
-        # being condensed to 2D slices so the dataset isn't too large
-        # 1 cycle * 2 wavelengths * 16 pules * 512 * (1024**2) * 32 bits = 64 GB
+        # being deleted
+        # 1 cycle * 2 wavelengths * 16 pulses * 512 * (1024**2) * 32 bits = 64 GB
+        # the entire sample should be contained within crop_size*crop_size in 
+        # the centre of the xz plane, all other voxels are background equal zero
+        # 1 cycle * 2 wavelengths * 16 pulses * 512 * (256**2) * 32 bits = 4 GB
+        # hdf5 compression also helps reduce size
         f.create_dataset(
             'p0_3D',
             shape=(
                 cfg['ncycles'],
                 len(cfg['wavelengths']),
                 cfg['npulses'],
-                cfg['grid_size'][0],
+                cfg['crop_size'],
                 cfg['grid_size'][1],
-                cfg['grid_size'][2]
+                cfg['crop_size']
             ), 
             dtype=np.float32
         )
@@ -189,7 +209,11 @@ if __name__ == '__main__':
                 
                 # save 3D p0 to temp.h5
                 with h5py.File(cfg['name']+'/temp.h5', 'r+') as f:
-                    f['p0_3D'][cycle,wavelength_index,pulse] = cfg['gruneisen'] * out
+                    f['p0_3D'][cycle,wavelength_index,pulse] =  uf.crop_p0_3D(
+                        out, cfg['crop_size']) * cfg['gruneisen']
+                with h5py.File(cfg['name']+'/data.h5', 'r+') as f:
+                    f['p0'][cycle,wavelength_index,pulse] =  uf.square_centre_crop(
+                        out[:,cfg['grid_size'][1]//2,:], cfg['crop_size']) * cfg['gruneisen']
                 
                 # Convert from [J voxel^-1] to [J m^-3]
                 out /= cfg['dx']**3 
@@ -200,14 +224,17 @@ if __name__ == '__main__':
                 # zero nan values (since all background voxels have zero absorption)
                 out = np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0)
                 
-                # save fluence, Pr and Pfr concentrations to data HDF5 file
+                # save fluence, Pr and Pfr concentrations (additional ground truth) to data HDF5 file
                 with h5py.File(cfg['name']+'/data.h5', 'r+') as f:
-                    f['Phi'][cycle,wavelength_index,pulse] = out[:,cfg['grid_size'][1]//2,:]
-                    f['ReBphP_PCM_Pr_c'][cycle,wavelength_index,pulse] = ReBphP_PCM_Pr_c[:,cfg['grid_size'][1]//2,:]
-                    f['ReBphP_PCM_Pfr_c'][cycle,wavelength_index,pulse] = ReBphP_PCM_Pfr_c[:,cfg['grid_size'][1]//2,:]
+                    f['Phi'][cycle,wavelength_index,pulse] = uf.square_centre_crop(
+                        out[:,cfg['grid_size'][1]//2,:], cfg['crop_size'])
+                    f['ReBphP_PCM_Pr_c'][cycle,wavelength_index,pulse] = uf.square_centre_crop(
+                        ReBphP_PCM_Pr_c[:,cfg['grid_size'][1]//2,:], cfg['crop_size'])
+                    f['ReBphP_PCM_Pfr_c'][cycle,wavelength_index,pulse] = uf.square_centre_crop(
+                        ReBphP_PCM_Pfr_c[:,cfg['grid_size'][1]//2,:], cfg['crop_size'])
                     
                 # compute photoisomerisation
-                bf.switch_BphP(
+                ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c = bf.switch_BphP(
                     ReBphP_PCM['Pr'], 
                     ReBphP_PCM['Pfr'],
                     ReBphP_PCM_Pr_c,
@@ -238,7 +265,7 @@ if __name__ == '__main__':
                 cfg['nsensors'],
                 cfg['Nt']
             ),
-            dtype=np.float16
+            dtype=np.float32# dtype=np.float16
         )            
     
     simulation.configure_simulation()
@@ -252,10 +279,16 @@ if __name__ == '__main__':
                 print('cycle: ', cycle+1, 'wavelength_index', wavelength_index+1, ', pulse: ', pulse+1)
                 
                 with h5py.File(cfg['name']+'/temp.h5', 'r') as f:
-                    out = f['p0_3D'][cycle,wavelength_index,pulse]
+                    out = uf.pad_p0_3D(
+                        f['p0_3D'][cycle,wavelength_index,pulse],
+                        cfg['grid_size'][0]
+                    )
                 
                 # run also saves the sensor data to data.h5 as float16
                 out = simulation.run_kwave_forward(out)
+                
+                with h5py.File(cfg['name']+'/data.h5', 'r+') as f:
+                    f['sensor_data'][cycle,wavelength_index,pulse] = out
     
     
     
@@ -279,7 +312,7 @@ if __name__ == '__main__':
                 out = simulation.run_time_reversal(out)
 
                 with h5py.File(cfg['name']+'/data.h5', 'r+') as f:
-                    f['p0_recon'][cycle,wavelength_index,pulse] = out
+                    f['p0_recon'][cycle,wavelength_index,pulse] = uf.square_centre_crop(out, cfg['crop_size'])
     
     
     

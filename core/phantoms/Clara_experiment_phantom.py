@@ -12,7 +12,7 @@ class Clara_experiment_phantom(phantom):
         Pr_frac, Pfr_frac = bf.steady_state_BphP(
             self.ReBphP_PCM['Pr'],
             self.ReBphP_PCM['Pfr'],
-            wavelength_idx=0
+            wavelength_idx=1
         )
         ReBphP_PCM_Pr_c = 0.001 * gf.cylinder_mask(
             cfg['dx'],
