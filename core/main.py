@@ -75,7 +75,7 @@ if __name__ == '__main__':
         'seed' : None,
         'nsensors' : 256,
         'ncycles' : 1,
-        'npulses' : 1,
+        'npulses' : 16,
         'nphotons' : 1e8,
         'nsources' : 10,
         'wavelengths' : [680e-9, 770e-9],
@@ -190,7 +190,7 @@ if __name__ == '__main__':
         for wavelength_index in range(len(cfg['wavelengths'])):
             for pulse in range(cfg['npulses']):
                 
-                print('cycle: ', cycle+1, 'wavelength_index', wavelength_index+1, ', pulse: ', pulse+1)
+                print('mcx, cycle: ', cycle+1, 'wavelength_index', wavelength_index+1, ', pulse: ', pulse+1)
                 
                 # out can be energy absorbed, fluence, pressure, sensor data
                 # or recontructed pressure, each is overwritten when no longer
@@ -276,7 +276,7 @@ if __name__ == '__main__':
         for wavelength_index in range(len(cfg['wavelengths'])):
             for pulse in range(cfg['npulses']):
                 
-                print('cycle: ', cycle+1, 'wavelength_index', wavelength_index+1, ', pulse: ', pulse+1)
+                print('k-wave forward, cycle: ', cycle+1, 'wavelength_index', wavelength_index+1, ', pulse: ', pulse+1)
                 
                 with h5py.File(cfg['name']+'/temp.h5', 'r') as f:
                     out = uf.pad_p0_3D(
