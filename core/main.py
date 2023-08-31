@@ -11,7 +11,7 @@ import acoustic_forward_simulation
 import acoustic_inverse_simulation
 import plot_func as pf
 import matplotlib.pyplot as plt
-
+#import argparse
 
 if __name__ == '__main__':
 
@@ -54,8 +54,9 @@ if __name__ == '__main__':
     '''
 
     # path to MCX binary
-    mcx_bin_path = '/home/wv00017/mcx/bin/mcx'
-    
+    #parser = argparse.ArgumentParser()
+    #parser.add_argument('--mcx_bin_path', type=str, default='/home/wv00017/mcx/bin/mcx')
+    mcx_bin_path = 'mcx/bin/mcx'
     c_0 = 1500.0 # speed of sound [m s^-1]
     domain_size = [0.082, 0.041, 0.082] # [m]
     pml_size = 10 # perfectly matched layer size in grid points
