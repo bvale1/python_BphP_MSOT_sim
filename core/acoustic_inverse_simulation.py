@@ -1,13 +1,13 @@
 from kwave.kgrid import kWaveGrid
 from kwave.kmedium import kWaveMedium
-from kwave.utils.kwave_array import kWaveArray
+#from kwave.utils.kwave_array import kWaveArray
 from kwave.ksensor import kSensor
 from kwave.kspaceFirstOrder2D import kspaceFirstOrder2DG
 from kwave.options.simulation_execution_options import SimulationExecutionOptions
 from kwave.options.simulation_options import SimulationOptions
 from kwave.ksource import kSource
 from kwave.utils.mapgen import make_cart_circle
-from kwave.utils.interp import interp_cart_data
+#from kwave.utils.interp import interp_cart_data
 from kwave.utils.conversion import cart2grid
 import utility_func as uf
 import numpy as np
@@ -89,10 +89,16 @@ class kwave_inverse_adapter():
         
         
     def run_time_reversal(self, sensor_data):
+        # for iterative time reversal reconstruction with positivity contraint
+        # see k-wave example Matlab script (http://www.k-wave.org)
+        # example_pr_2D_TR_iterative.m
+
+        # for cropping pml out of reconstruction
+        pml = self.cfg['pml_size']
+        
         # reverse time axis
         sensor_data = np.flip(sensor_data, axis=1).astype(np.float32)
         # use sensor data as source with dirichlet boundary condition
-        
         sensor = kSensor(self.source_mask)
         sensor.record = ['p_final']
         
@@ -102,16 +108,59 @@ class kwave_inverse_adapter():
         source.p = sensor_data
         
         # run time reversal reconstruction
-        p0_estimate = kspaceFirstOrder2DG(
+        p0_recon = kspaceFirstOrder2DG(
             self.kgrid,
             source,
             sensor,
             self.medium,
             self.simulation_options,
             self.execution_options
-        )['p_final']
+        )['p_final'][pml:-pml, pml:-pml]
+        
+        # crop pml from reconstruction
         
         # apply positivity constraint
-        p0_estimate *= (p0_estimate > 0.0)       
+        p0_recon *= (p0_recon > 0.0)       
         
-        return p0_estimate
+        if self.cfg['recon_iterations'] > 1:
+            for i in range(2, self.cfg['recon_iterations']+1):
+                print(f'time reversal iteration {i} of {self.cfg["recon_iterations"]}')
+                
+                # run 2D simulation forward
+                sensor = kSensor(self.source_mask)
+                sensor.record = ['p']
+                source = kSource()
+                source.p0 = p0_recon
+                
+                # subtract residual sensor data from sensor data
+                sensor_data -= kspaceFirstOrder2DG(
+                    self.kgrid,
+                    source,
+                    sensor,
+                    self.medium,
+                    self.simulation_options,
+                    self.execution_options
+                )['p'].T
+                
+                # redefine sensor and source for time reversal
+                sensor = kSensor(self.source_mask)
+                sensor.record = ['p_final']
+                source = kSource()
+                source.p_mask = self.source_mask
+                source.p_mode = 'dirichlet'
+                source.p = np.flip(sensor_data, axis=1)
+                
+                # run time reversal reconstruction
+                p0_recon += kspaceFirstOrder2DG(
+                    self.kgrid,
+                    source,
+                    sensor,
+                    self.medium,
+                    self.simulation_options,
+                    self.execution_options
+                )['p_final'][pml:-pml, pml:-pml]
+
+                # apply positivity constraint
+                p0_recon *= (p0_recon > 0.0)
+        
+        return p0_recon

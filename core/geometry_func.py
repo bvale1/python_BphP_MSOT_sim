@@ -44,7 +44,7 @@ def get_optical_grid_size(domain_size=[0.082, 0.01, 0.082],
     
     # calculate grid size from powers of 2
     dx_min = c0_min / (points_per_wavelength * f_max)
-    nx = 2**(np.ceil(np.log2(domain_size[0] / dx_min)))*0.75
+    nx = 2**(np.ceil(np.log2(domain_size[0] / dx_min)))
     
     # subtract pml from each edge
     nx = int(nx - 2 * pml_size)

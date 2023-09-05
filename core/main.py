@@ -53,14 +53,15 @@ if __name__ == '__main__':
     ============================================================================
     '''
 
-    # path to MCX binary
+    # TODO: use argparse to set mcx_bin_path and other arguements for cfg
     #parser = argparse.ArgumentParser()
     #parser.add_argument('--mcx_bin_path', type=str, default='/home/wv00017/mcx/bin/mcx')
-    mcx_bin_path = 'mcx/bin/mcx'
+    # path to MCX binary
+    mcx_bin_path = '/mcx/bin/mcx'
     c_0 = 1500.0 # speed of sound [m s^-1]
     domain_size = [0.082, 0.041, 0.082] # [m]
     pml_size = 10 # perfectly matched layer size in grid points
-    grid_size, dx = gf.get_optical_grid_size(
+    [grid_size, dx] = gf.get_optical_grid_size(
         domain_size,
         c0_min=c_0,
         pml_size=pml_size,
@@ -73,10 +74,10 @@ if __name__ == '__main__':
     # configure simulation
     cfg = {
         'name' : '202307020_python_Clara_phantom_ReBphP_0p001',
-        'seed' : None,
+        'seed' : None, # can be used
         'nsensors' : 256,
         'ncycles' : 1,
-        'npulses' : 16,
+        'npulses' : 1,
         'nphotons' : 1e8,
         'nsources' : 10,
         'wavelengths' : [680e-9, 770e-9],
@@ -88,7 +89,7 @@ if __name__ == '__main__':
         'c_0' : c_0,
         'alpha_coeff' : 0.01,
         'alpha_power' : 1.1,
-        'recon_iterations' : 1, # time reversal iterations
+        'recon_iterations' : 3, # time reversal iterations
         'crop_size' : 256 # pixel with of output images and ground truth
     }
     
