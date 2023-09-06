@@ -36,7 +36,7 @@ def cylinder_mask(dx, grid_size, radius, origin):
     return distances <= radius
 
 
-def get_optical_grid_size(domain_size=[0.082, 0.01, 0.082],
+def get_optical_grid_size(domain_size=[0.082, 0.041, 0.082],
                           c0_min=1500,
                           points_per_wavelength=2,
                           f_max=6e6,
@@ -49,10 +49,10 @@ def get_optical_grid_size(domain_size=[0.082, 0.01, 0.082],
     # subtract pml from each edge
     nx = int(nx - 2 * pml_size)
     dx = domain_size[0] / nx
-    ny = int(np.ceil(domain_size[1] / dx))
+    ny = int(np.round(domain_size[1] / dx))
     if ny % 2 == 1:
         ny += 1
-    nz = int(np.ceil(domain_size[2] / dx))
+    nz = int(np.round(domain_size[2] / dx))
     
     return [nx, ny, nz], dx
     

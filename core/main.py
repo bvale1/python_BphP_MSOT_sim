@@ -10,7 +10,8 @@ import optical_simulation
 import acoustic_forward_simulation
 import acoustic_inverse_simulation
 import plot_func as pf
-import matplotlib.pyplot as plt
+import timeit
+import logging
 #import argparse
 
 if __name__ == '__main__':
@@ -52,20 +53,22 @@ if __name__ == '__main__':
 
     ============================================================================
     '''
-
+    logging.basicConfig(level=logging.INFO)
     # TODO: use argparse to set mcx_bin_path and other arguements for cfg
     #parser = argparse.ArgumentParser()
     #parser.add_argument('--mcx_bin_path', type=str, default='/home/wv00017/mcx/bin/mcx')
     # path to MCX binary
     mcx_bin_path = '/mcx/bin/mcx'
+    mcx_bin_path = '/home/wv00017/mcx/bin/mcx'
     c_0 = 1500.0 # speed of sound [m s^-1]
     domain_size = [0.082, 0.041, 0.082] # [m]
+    kwave_domain_size = [0.082, 0.0205, 0.082] # [m]
     pml_size = 10 # perfectly matched layer size in grid points
     [grid_size, dx] = gf.get_optical_grid_size(
         domain_size,
         c0_min=c_0,
         pml_size=pml_size,
-        points_per_wavelength=2
+        points_per_wavelength=1
     )
     domain_size = [grid_size[0]*dx,
                    grid_size[1]*dx,
@@ -93,7 +96,7 @@ if __name__ == '__main__':
         'crop_size' : 256 # pixel with of output images and ground truth
     }
     
-    print('main config ', cfg)
+    logging.info(f'main config , {cfg}')
     
     phantom = Clara_experiment_phantom()
     H2O = phantom.define_water()
@@ -149,9 +152,9 @@ if __name__ == '__main__':
         )
         # allocate storage for the fluence, initial and reconstructed pressure
         # index as data['arg'][cycle, wavelength, pulse, x, z]
-        print('allocating storage for data.h5')
+        logging.info('allocating storage for data.h5')
         for arg in ['Phi', 'p0', 'p0_recon', 'ReBphP_PCM_Pr_c', 'ReBphP_PCM_Pfr_c']:
-            print(arg)
+            logging.info(arg)
             f.create_dataset(
                 arg,
                 shape=(
@@ -192,11 +195,12 @@ if __name__ == '__main__':
         for wavelength_index in range(len(cfg['wavelengths'])):
             for pulse in range(cfg['npulses']):
                 
-                print('mcx, cycle: ', cycle+1, 'wavelength_index', wavelength_index+1, ', pulse: ', pulse+1)
+                logging.info(f'mcx, cycle: {cycle+1}, wavelength_index: {wavelength_index+1}, pulse: {pulse+1}')
                 
+                start = timeit.default_timer()
                 # out can be energy absorbed, fluence, pressure, sensor data
-                # or recontructed pressure, each is overwritten when no longer
-                # needed to save space
+                # or recontructed pressure, the variable is overwritten when
+                # multiple times to save memory
                 out = simulation.run_mcx(
                     mcx_bin_path,
                     volume[wavelength_index], 
@@ -205,8 +209,10 @@ if __name__ == '__main__':
                     ReBphP_PCM,
                     wavelength_index
                 )
+                logging.info(f'mcx run in {timeit.default_timer() - start} seconds')
                 
                 # convert from [voxel^-1] to [J voxel^-1]
+                start = timeit.default_timer()
                 out *= cfg['LaserEnergy'][cycle][wavelength_index][pulse]
                 
                 # save 3D p0 to temp.h5
@@ -216,7 +222,9 @@ if __name__ == '__main__':
                 with h5py.File(cfg['name']+'/data.h5', 'r+') as f:
                     f['p0'][cycle,wavelength_index,pulse] =  uf.square_centre_crop(
                         out[:,cfg['grid_size'][1]//2,:], cfg['crop_size']) * cfg['gruneisen']
+                logging.info(f'pressure saved in {timeit.default_timer() - start} seconds')
                 
+                start = timeit.default_timer()
                 # Convert from [J voxel^-1] to [J m^-3]
                 out /= cfg['dx']**3 
                 
@@ -234,7 +242,9 @@ if __name__ == '__main__':
                         ReBphP_PCM_Pr_c[:,cfg['grid_size'][1]//2,:], cfg['crop_size'])
                     f['ReBphP_PCM_Pfr_c'][cycle,wavelength_index,pulse] = uf.square_centre_crop(
                         ReBphP_PCM_Pfr_c[:,cfg['grid_size'][1]//2,:], cfg['crop_size'])
-                    
+                logging.info(f'fluence saved in {timeit.default_timer() - start} seconds')
+                
+                start = timeit.default_timer()
                 # compute photoisomerisation
                 ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c = bf.switch_BphP(
                     ReBphP_PCM['Pr'], 
@@ -245,7 +255,9 @@ if __name__ == '__main__':
                     cfg['wavelengths'],
                     wavelength_index
                 )
-                
+                logging.info(f'photoisomerisation computed in {timeit.default_timer() - start} seconds')
+    
+    start = timeit.default_timer()
     # deleted mcx input and out files, they are not needed anymore
     simulation.delete_temporary_files()
     # overwrite mcx simulation to save memory
@@ -256,6 +268,13 @@ if __name__ == '__main__':
     # save updated cfg to JSON file
     with open(cfg['name']+'/config.json', 'w') as f:
         json.dump(cfg, f)
+    
+    
+    simulation.configure_simulation()
+    simulation.create_point_sensor_array()
+    logging.info(f'kwave forward initialised in {timeit.default_timer() - start} seconds')
+    
+    start = timeit.default_timer()
     # create dataset for sensor data based on k-wave Nt
     with h5py.File(cfg['name']+'/data.h5', 'r+') as f:
         f.create_dataset(
@@ -268,53 +287,65 @@ if __name__ == '__main__':
                 cfg['Nt']
             ),
             dtype=np.float32# dtype=np.float16
-        )            
-    
-    simulation.configure_simulation()
-    simulation.create_point_sensor_array()
+        )
+    logging.info(f'sensor data dataset created in {timeit.default_timer() - start} seconds')
     
     # acoustic forward simulation
     for cycle in range(cfg['ncycles']):
         for wavelength_index in range(len(cfg['wavelengths'])):
             for pulse in range(cfg['npulses']):
                 
-                print('k-wave forward, cycle: ', cycle+1, 'wavelength_index', wavelength_index+1, ', pulse: ', pulse+1)
+                logging.info(f'k-wave forward, cycle: {cycle+1}, wavelength_index: {wavelength_index+1}, pulse: {pulse+1}')
                 
+                start = timeit.default_timer()
                 with h5py.File(cfg['name']+'/temp.h5', 'r') as f:
                     out = uf.pad_p0_3D(
                         f['p0_3D'][cycle,wavelength_index,pulse],
                         cfg['grid_size'][0]
                     )
+                logging.info(f'p0 loaded in {timeit.default_timer() - start} seconds')
                 
+                start = timeit.default_timer()
                 # run also saves the sensor data to data.h5 as float16
                 out = simulation.run_kwave_forward(out)
+                logging.info(f'kwave forward run in {timeit.default_timer() - start} seconds')
                 
+                start = timeit.default_timer()
                 with h5py.File(cfg['name']+'/data.h5', 'r+') as f:
                     f['sensor_data'][cycle,wavelength_index,pulse] = out
-    
-    
+                logging.info(f'sensor data saved in {timeit.default_timer() - start} seconds')
+        
     
     # delete temp p0_3D dataset
+    start = timeit.default_timer()
     os.remove(cfg['name']+'/temp.h5')
+    logging.info(f'temp.h5 (p0_3D) deleted in {timeit.default_timer() - start} seconds')
     
+    start = timeit.default_timer()
     simulation = acoustic_inverse_simulation.kwave_inverse_adapter(cfg)
     simulation.configure_simulation()
     simulation.create_point_source_array()
+    logging.info(f'kwave inverse initialised in {timeit.default_timer() - start} seconds')
     
     # acoustic reconstruction
     for cycle in range(cfg['ncycles']):
         for wavelength_index in range(len(cfg['wavelengths'])):
             for pulse in range(cfg['npulses']):
                 
-                print('time reversal, cycle: ', cycle+1, 'wavelength_index', wavelength_index+1, ', pulse: ', pulse+1)
+                logging.info(f'time reversal, cycle: {cycle+1}, wavelength_index: {wavelength_index+1}, pulse: {pulse+1}')
                 
+                start = timeit.default_timer()
                 with h5py.File(cfg['name']+'/data.h5', 'r') as f:
                     out = f['sensor_data'][cycle,wavelength_index,pulse]
-                    
+                logging.info(f'sensor data loaded in {timeit.default_timer() - start} seconds')
+                
+                start = timeit.default_timer()
                 out = simulation.run_time_reversal(out)
+                logging.info(f'time reversal run in {timeit.default_timer() - start} seconds')
 
+                start = timeit.default_timer()
                 with h5py.File(cfg['name']+'/data.h5', 'r+') as f:
                     f['p0_recon'][cycle,wavelength_index,pulse] = uf.square_centre_crop(out, cfg['crop_size'])
-    
+                logging.info(f'p0_recon saved in {timeit.default_timer() - start} seconds')
     
     

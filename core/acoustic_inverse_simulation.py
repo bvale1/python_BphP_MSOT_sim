@@ -82,8 +82,6 @@ class kwave_inverse_adapter():
                 plot_circle=False
             )
         )
-        print('time_reversal_source_xz')
-        print(type(time_reversal_source_xz), time_reversal_source_xz.shape, time_reversal_source_xz.dtype)
         
         self.source_mask = cart2grid(self.kgrid, time_reversal_source_xz)[0]
         
