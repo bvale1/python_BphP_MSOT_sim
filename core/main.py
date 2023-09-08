@@ -240,7 +240,9 @@ if __name__ == '__main__':
                 cfg['wavelength_index'] = wavelength_index
                 for pulse in range(cfg['pulse'], cfg['npulses']):
                     cfg['pulse'] = pulse
-                    
+                    with open(cfg['name']+'/config.json', 'w') as f:
+                        json.dump(cfg, f)
+        
                     logging.info(f'mcx, cycle: {cycle+1}, wavelength_index: {wavelength_index+1}, pulse: {pulse+1}')
                     
                     start = timeit.default_timer()
@@ -348,6 +350,8 @@ if __name__ == '__main__':
                 cfg['wavelength_index'] = wavelength_index
                 for pulse in range(cfg['pulses'], cfg['npulses']):
                     cfg['pulse'] = pulse
+                    with open(cfg['name']+'/config.json', 'w') as f:
+                       json.dump(cfg, f)
                     
                     logging.info(f'k-wave forward, cycle: {cycle+1}, wavelength_index: {wavelength_index+1}, pulse: {pulse+1}')
                     
@@ -392,6 +396,8 @@ if __name__ == '__main__':
                 cfg['wavelength_index'] = wavelength_index
                 for pulse in range(cfg['pulse'], cfg['npulses']):
                     cfg['pulse'] = pulse
+                    with open(cfg['name']+'/config.json', 'w') as f:
+                        json.dump(cfg, f)
                     
                     logging.info(f'time reversal, cycle: {cycle+1}, wavelength_index: {wavelength_index+1}, pulse: {pulse+1}')
                     
