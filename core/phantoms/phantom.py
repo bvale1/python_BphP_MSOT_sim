@@ -33,11 +33,11 @@ class phantom:
         self.ReBphP_PCM = {
             'Pr' : { # Red absorbing form
                 'epsilon_a': [0.8e4, 0.05e4], # molar absorption coefficient [M^-1 cm^-1]=[m^2 mol^-1]
-                'eta' : [0.01, 0.0] # photoisomerisation quantum yield (dimensionless)
+                'eta' : [0.03, 0.0] # photoisomerisation quantum yield (dimensionless)
                 },
             'Pfr' : { # Far-red absorbing form
                 'epsilon_a': [0.6e4, 0.8e4], # molar absorption coefficient [M^-1 cm^-1]=[m^2 mol^-1]
-                'eta' : [0.0, 0.015] # photoisomerisation quantum yield (dimensionless)
+                'eta' : [0.0, 0.005] # photoisomerisation quantum yield (dimensionless)
             }   
         }
         return self.ReBphP_PCM

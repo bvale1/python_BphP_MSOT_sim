@@ -186,8 +186,8 @@ class MCX_adapter():
                 wavelength_index
                 ) -> np.array:
         """
-        runs subprocess calling MCX with the flags built with `self.get_command`. Rises a `RuntimeError` if the code
-        exit of the subprocess is not 0.
+        runs subprocess calling MCX with the flags built with `self.get_command`.
+        Rises a `RuntimeError` if the code exit of the subprocess is not 0.
 
         :param cmd: list defining command to parse to `subprocess.run`
         :return: None
@@ -201,14 +201,14 @@ class MCX_adapter():
         
         # Output flag 'E' returns the energy absorbed in each voxel
         # Output flag 'F' returns the fluence in each voxel
-        cmd = [mcx_bin_path, '-f', self.mcx_config_file, '-O', 'E']
+        cmd = [mcx_bin_path, '-f', self.mcx_config_file, '-O', 'F']
         mcx_out = np.zeros(self.mcx_cfg['Domain']['Dim'], dtype=np.float32)
         
         for i in range(10):
             print('source no: ', i)
             self.set_source(i)
             self.save_mcx_config()
-            print('mcx config ', self.mcx_cfg)
+            print(f'mcx config: {self.mcx_cfg}')
             
             results = None
             try:

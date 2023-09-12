@@ -106,7 +106,7 @@ if __name__ == '__main__':
         # It is imperative that dx is small enough to support high enough 
         # frequencies and that [nx, ny, nz] have low prime factors i.e. 2, 3, 5
         c_0 = 1500.0 # speed of sound [m s^-1]
-        mcx_domain_size = [0.082, 0.041/2, 0.082] # [m]
+        mcx_domain_size = [0.082, 0.0205, 0.082] # [m]
         kwave_domain_size = [0.082, mcx_domain_size[1]/2, 0.082] # [m]
         pml_size = 10 # perfectly matched layer size in grid points
         [mcx_grid_size, dx] = gf.get_optical_grid_size(
@@ -247,11 +247,11 @@ if __name__ == '__main__':
                 ), 
                 dtype=np.float32
             )
-
-    gc.collect()
-    
+ 
     # optical simulation
     simulation = optical_simulation.MCX_adapter(cfg)
+    
+    gc.collect()
     
     if cfg['stage'] == 'optical':
         for cycle in range(cfg['cycle'], cfg['ncycles']):
@@ -267,7 +267,7 @@ if __name__ == '__main__':
                     
                     start = timeit.default_timer()
                     # out can be energy absorbed, fluence, pressure, sensor data
-                    # or recontructed pressure, the variable is overwritten when
+                    # or recontructed pressure, the variable is overwritten
                     # multiple times to save memory
                     out = simulation.run_mcx(
                         mcx_bin_path,
@@ -279,33 +279,9 @@ if __name__ == '__main__':
                     )
                     logging.info(f'mcx run in {timeit.default_timer() - start} seconds')
                     
-                    # convert from [voxel^-1] to [J voxel^-1]
+                    # convert from [mm^-2] -> [J m^-2]
                     start = timeit.default_timer()
-                    out *= cfg['LaserEnergy'][cycle][wavelength_index][pulse]
-                    
-                    # save 3D p0 to temp.h5
-                    with h5py.File(cfg['name']+'temp.h5', 'r+') as f:
-                        f['p0_3D'][cycle,wavelength_index,pulse] =  uf.crop_p0_3D(
-                            out,
-                            [cfg['crop_size'], cfg['kwave_grid_size'][1], cfg['crop_size']]
-                        ) * cfg['gruneisen']
-                    with h5py.File(cfg['name']+'data.h5', 'r+') as f:
-                        f['p0'][cycle,wavelength_index,pulse] =  uf.square_centre_crop(
-                            out[:,cfg['mcx_grid_size'][1]//2,:], cfg['crop_size']
-                        ) * cfg['gruneisen']
-                    logging.info(f'pressure saved in {timeit.default_timer() - start} seconds')
-                    
-                    start = timeit.default_timer()
-                    # Convert from [J voxel^-1] to [J m^-3]
-                    out /= cfg['dx']**3 
-                    
-                    # divide by absorption coefficient to get fluence
-                    out /= (volume[wavelength_index, 0] +
-                            ReBphP_PCM_Pr_c * ReBphP_PCM['Pr']['epsilon_a'][wavelength_index] + 
-                            ReBphP_PCM_Pfr_c * ReBphP_PCM['Pfr']['epsilon_a'][wavelength_index]) # [J m^-3] -> [J m^-2]
-                    
-                    # zero nan values (since all background voxels have zero absorption)
-                    #out = np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0)
+                    out *= cfg['LaserEnergy'][cycle][wavelength_index][pulse] * 1e6
                     
                     # save fluence, Pr and Pfr concentrations (additional ground truth) to data HDF5 file
                     with h5py.File(cfg['name']+'data.h5', 'r+') as f:
@@ -315,8 +291,26 @@ if __name__ == '__main__':
                             ReBphP_PCM_Pr_c[:,cfg['mcx_grid_size'][1]//2,:], cfg['crop_size'])
                         f['ReBphP_PCM_Pfr_c'][cycle,wavelength_index,pulse] = uf.square_centre_crop(
                             ReBphP_PCM_Pfr_c[:,cfg['mcx_grid_size'][1]//2,:], cfg['crop_size'])
-                    logging.info(f'fluence saved in {timeit.default_timer() - start} seconds')
+                    logging.info(f'fluence and protein concentrations saved in {timeit.default_timer() - start} seconds')
                     
+                    start = timeit.default_timer()
+                    # convert fluence to initial pressure [J m^-2] -> [J m^-3]
+                    out *= cfg['gruneisen'] * (volume[wavelength_index, 0] +
+                            ReBphP_PCM_Pr_c * ReBphP_PCM['Pr']['epsilon_a'][wavelength_index] + 
+                            ReBphP_PCM_Pfr_c * ReBphP_PCM['Pfr']['epsilon_a'][wavelength_index])
+                    
+                    # save 3D p0 to temp.h5
+                    with h5py.File(cfg['name']+'temp.h5', 'r+') as f:
+                        f['p0_3D'][cycle,wavelength_index,pulse] =  uf.crop_p0_3D(
+                            out,
+                            [cfg['crop_size'], cfg['kwave_grid_size'][1], cfg['crop_size']]
+                        )
+                    with h5py.File(cfg['name']+'data.h5', 'r+') as f:
+                        f['p0'][cycle,wavelength_index,pulse] =  uf.square_centre_crop(
+                            out[:,cfg['mcx_grid_size'][1]//2,:], cfg['crop_size']
+                        )
+                    logging.info(f'pressure saved in {timeit.default_timer() - start} seconds')    
+                                        
                     start = timeit.default_timer()
                     # compute photoisomerisation
                     ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c = bf.switch_BphP(
@@ -329,8 +323,7 @@ if __name__ == '__main__':
                         wavelength_index
                     )
                     logging.info(f'photoisomerisation computed in {timeit.default_timer() - start} seconds')
-        
-    
+            
     gc.collect()
     
     start = timeit.default_timer()
