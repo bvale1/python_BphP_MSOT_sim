@@ -3,7 +3,6 @@ import subprocess
 import os
 import json
 import struct
-import gc
 import utility_func as uf
 
 
@@ -67,7 +66,7 @@ class MCX_adapter():
                     {'mua': 1, 'mus': 1, 'g': 0.9, 'n': 1.33}
                 ], 
                 'MediaFormat': 'muamus_float',
-                'Dim': cfg['grid_size'], 
+                'Dim': cfg['mcx_grid_size'], 
                 'VolumeFile': self.mcx_volume_binary_file
             }
         }
@@ -221,7 +220,7 @@ class MCX_adapter():
                 
             mcx_out += self.read_mcx_output(self.mcx_out_file)
             
-        # renormalise
+        # normalise
         mcx_out /= 10           
         
         return mcx_out
@@ -242,9 +241,11 @@ class MCX_adapter():
         
         
     def delete_temporary_files(self) -> None:
-        os.remove(self.mcx_config_file)
-        os.remove(self.mcx_volume_binary_file)
-        os.remove(self.mcx_out_file+'.mc2')
-        os.rmdir('temp')
-        # collect garbage
-        gc.collect()
+        try:
+            os.remove(self.mcx_config_file)
+            os.remove(self.mcx_volume_binary_file)
+            os.remove(self.mcx_out_file+'.mc2')
+            os.rmdir('temp')
+        except:
+            print('could not delete temporary files')
+        

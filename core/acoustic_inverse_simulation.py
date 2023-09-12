@@ -37,7 +37,7 @@ class kwave_inverse_adapter():
     '''
     def __init__(self, cfg):
         self.kgrid = kWaveGrid(
-            [cfg['grid_size'][0], cfg['grid_size'][2]],
+            [cfg['kwave_grid_size'][0], cfg['kwave_grid_size'][2]],
             [cfg['dx'], cfg['dx']],
         )
         self.kgrid.setTime(cfg['Nt'], cfg['dt'])

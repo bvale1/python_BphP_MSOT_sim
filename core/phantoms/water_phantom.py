@@ -12,9 +12,9 @@ class water_phantom(phantom):
             (
                 len(cfg['wavelengths']),
                 2, 
-                cfg['grid_size'][0], 
-                cfg['grid_size'][1], 
-                cfg['grid_size'][2]            
+                cfg['mcx_grid_size'][0], 
+                cfg['mcx_grid_size'][1], 
+                cfg['mcx_grid_size'][2]            
             ), dtype=np.float32
         )
         for i in range(len(cfg['wavelengths'])):

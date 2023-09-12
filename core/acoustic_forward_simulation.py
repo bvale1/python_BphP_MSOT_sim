@@ -36,7 +36,7 @@ class kwave_forward_adapter():
     '''
     def __init__(self, cfg):
         self.kgrid = kWaveGrid(
-            cfg['grid_size'],
+            cfg['kwave_grid_size'],
             [cfg['dx'], cfg['dx'], cfg['dx']],
         )
         self.kgrid.makeTime(cfg['c_0'])
@@ -195,12 +195,12 @@ class kwave_forward_adapter():
 # test script
 if __name__ == '__main__':
     cfg = {
-        'grid_size': [108, 108, 108],
+        'kwave_grid_size': [108, 108, 108],
         'dx': 0.001,
         'c_0': 1500,
         'pml_size': 10
     }
-    p0 = np.zeros(cfg['grid_size'], dtype=np.float32)
+    p0 = np.zeros(cfg['kwave_grid_size'], dtype=np.float32)
     p0[48:81, 48:81, 48:81] = 1.0
     forawrd_simulation = kwave_forward_adapter(cfg)
     forawrd_simulation.create_transducer_array()

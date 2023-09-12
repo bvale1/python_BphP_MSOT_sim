@@ -47,18 +47,19 @@ def square_centre_pad(image : np.ndarray, size : int) -> np.ndarray:
         padded_image[..., x:x+width, y:y+height] = image
         return padded_image
         
-def crop_p0_3D(p0 : np.ndarray, size : int) -> np.ndarray:
+def crop_p0_3D(p0 : np.ndarray, size : (list, np.ndarray)) -> np.ndarray:
     # similar to square_centre_crop but for arrays containing 3D volume data
     # rather than 2D slices, the crop is applied to the xz plane while the
     # y axis is ignored
     width, depth, height = p0.shape[-3:]
-    if width < size or height < size:
-        print('Image is smaller than crop size, returning original image')
+    if width < size[0] or depth < size[1] or height < size[2]:
+        print('Array is smaller than crop size, returning original image')
         return p0
     else:
-        x = (width - size) // 2
-        y = (height - size) // 2
-        p0 = p0[..., x:x+size, :, y:y+size]
+        x = (width - size[0]) // 2
+        y = (depth - size[1]) // 2
+        z = (height - size[2]) // 2
+        p0 = p0[..., x:x+size[0], y:y+size[1], z:z+size[2]]
         return p0
 
 def pad_p0_3D(p0 : np.ndarray, size : int) -> np.ndarray:
