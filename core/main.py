@@ -73,7 +73,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--name',
         type=str,
-        default='202307020_python_Clara_phantom_ReBphP_0p001/',
+        default='20230912_Clara_phantom_ReBphP_0p001/',
         action='store'
     )
     parser.add_argument('--npulses', type=int, default=16, action='store')
@@ -178,7 +178,7 @@ if __name__ == '__main__':
         # save configuration to JSON file
         uf.create_dir(cfg['name'])
         with open(cfg['name']+'config.json', 'w') as f:
-            json.dump(cfg, f)
+            json.dump(cfg, f, indent='\t')
             
         phantom = Clara_experiment_phantom()
         H2O = phantom.define_water()
@@ -261,7 +261,7 @@ if __name__ == '__main__':
                 for pulse in range(cfg['pulse'], cfg['npulses']):
                     cfg['pulse'] = pulse
                     with open(cfg['name']+'config.json', 'w') as f:
-                        json.dump(cfg, f)
+                        json.dump(cfg, f, indent='\t')
         
                     logging.info(f'mcx, cycle: {cycle+1}, wavelength_index: {wavelength_index+1}, pulse: {pulse+1}')
                     
@@ -322,6 +322,7 @@ if __name__ == '__main__':
                         cfg['wavelengths'],
                         wavelength_index
                     )
+                    
                     logging.info(f'photoisomerisation computed in {timeit.default_timer() - start} seconds')
             
     gc.collect()
@@ -336,7 +337,7 @@ if __name__ == '__main__':
     
     # save updated cfg to JSON file
     with open(cfg['name']+'config.json', 'w') as f:
-        json.dump(cfg, f)
+        json.dump(cfg, f, indent='\t')
     
     
     simulation.configure_simulation()
@@ -375,7 +376,7 @@ if __name__ == '__main__':
                 for pulse in range(cfg['pulse'], cfg['npulses']):
                     cfg['pulse'] = pulse
                     with open(cfg['name']+'config.json', 'w') as f:
-                       json.dump(cfg, f)
+                       json.dump(cfg, f, indent='\t')
                     
                     logging.info(f'k-wave forward, cycle: {cycle+1}, wavelength_index: {wavelength_index+1}, pulse: {pulse+1}')
                     
@@ -423,7 +424,7 @@ if __name__ == '__main__':
                 for pulse in range(cfg['pulse'], cfg['npulses']):
                     cfg['pulse'] = pulse
                     with open(cfg['name']+'/config.json', 'w') as f:
-                        json.dump(cfg, f)
+                        json.dump(cfg, f, indent='\t')
                     
                     logging.info(f'time reversal, cycle: {cycle+1}, wavelength_index: {wavelength_index+1}, pulse: {pulse+1}')
                     

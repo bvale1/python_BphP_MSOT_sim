@@ -191,7 +191,7 @@ class MCX_adapter():
 
         :param cmd: list defining command to parse to `subprocess.run`
         :return: None
-        """
+        """        
         # add the absorption coefficient of BphPs to the volume
         volume[0] += (ReBphP_PCM_Pr_c * ReBphP_PCM['Pr']['epsilon_a'][wavelength_index] + 
                       ReBphP_PCM_Pfr_c * ReBphP_PCM['Pfr']['epsilon_a'][wavelength_index])
