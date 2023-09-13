@@ -61,7 +61,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--mcx_bin_path',
         type=str,
-        default='/mcx/bin/mcx',
+        default='/home/wv00017/mcx/bin/mcx',
         action='store'
     )
     parser.add_argument(
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     # path to MCX binary
     mcx_bin_path = args.mcx_bin_path   
     #mcx_bin_path = '/mcx/bin/mcx' # billy_docker
-    mcx_bin_path = '/home/wv00017/mcx/bin/mcx' # Billy's workstation
+    #mcx_bin_path = '/home/wv00017/mcx/bin/mcx' # Billy's workstation
     
     # check for a checkpointed simulation of the same name
     if (os.path.exists(args.save_dir+args.name+'config.json') 

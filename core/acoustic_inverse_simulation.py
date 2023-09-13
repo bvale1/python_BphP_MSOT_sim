@@ -86,16 +86,19 @@ class kwave_inverse_adapter():
         self.source_mask = cart2grid(self.kgrid, time_reversal_source_xz)[0]
         
         
-    def run_time_reversal(self, sensor_data):
+    def run_time_reversal(self, sensor_data0, alpha=1.0):
         # for iterative time reversal reconstruction with positivity contraint
         # see k-wave example Matlab script (http://www.k-wave.org)
         # example_pr_2D_TR_iterative.m
-
+        # along with S. R. Arridge et al. On the adjoint operator in
+        # photoacoustic tomography. 2016. equation 28.
+        # https://iopscience.iop.org/article/10.1088/0266-5611/32/11/115012/pdf
+        
         # for cropping pml out of reconstruction
         pml = self.cfg['pml_size']
         
-        # reverse time axis
-        sensor_data = np.flip(sensor_data, axis=1).astype(np.float32)
+        # reverse time axis for sensor data at first iteration
+        sensor_data0 = np.flip(sensor_data0, axis=1).astype(np.float32)
         # use sensor data as source with dirichlet boundary condition
         sensor = kSensor(self.source_mask)
         sensor.record = ['p_final']
@@ -103,7 +106,7 @@ class kwave_inverse_adapter():
         source = kSource()
         source.p_mask = self.source_mask
         source.p_mode = 'dirichlet'
-        source.p = sensor_data
+        source.p = sensor_data0
         
         # run time reversal reconstruction
         p0_recon = kspaceFirstOrder2DG(
@@ -131,7 +134,7 @@ class kwave_inverse_adapter():
                 source.p0 = p0_recon
                 
                 # subtract residual sensor data from sensor data
-                sensor_data -= kspaceFirstOrder2DG(
+                sensor_datai = kspaceFirstOrder2DG(
                     self.kgrid,
                     source,
                     sensor,
@@ -146,10 +149,10 @@ class kwave_inverse_adapter():
                 source = kSource()
                 source.p_mask = self.source_mask
                 source.p_mode = 'dirichlet'
-                source.p = np.flip(sensor_data, axis=1)
+                source.p = np.flip(sensor_datai, axis=1) - sensor_data0
                 
                 # run time reversal reconstruction
-                p0_recon += kspaceFirstOrder2DG(
+                p0_recon -= alpha*kspaceFirstOrder2DG(
                     self.kgrid,
                     source,
                     sensor,
