@@ -121,7 +121,7 @@ class kwave_inverse_adapter():
         # crop pml from reconstruction
         
         # apply positivity constraint
-        p0_recon *= (p0_recon > 0.0)       
+        #p0_recon *= (p0_recon > 0.0)       
         
         if self.cfg['recon_iterations'] > 1:
             for i in range(2, self.cfg['recon_iterations']+1):
@@ -162,6 +162,6 @@ class kwave_inverse_adapter():
                 )['p_final'][pml:-pml, pml:-pml]
 
                 # apply positivity constraint
-                p0_recon *= (p0_recon > 0.0)
+                #p0_recon *= (p0_recon > 0.0)
         
         return p0_recon

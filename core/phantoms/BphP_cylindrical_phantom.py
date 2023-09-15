@@ -6,7 +6,7 @@ import BphP_func as bf
 
 class BphP_cylindrical_phantom(phantom):
     
-    def create_volume(self, cfg : dict, seed=None) -> tuple:
+    def create_volume(self, cfg : dict, seed=None, n_wavelengths=2) -> tuple:
         
         # instantiate random number generator
         if seed is None:
@@ -21,7 +21,11 @@ class BphP_cylindrical_phantom(phantom):
             wavelength_idx=1
         )
         
-        n_hotspots = np.random.randint(0, 5)
+        n_hotspots = rng.randint(0, 5)
+        # Corrigendum: Optical properties of biological tissues: a review
+        # Steven L Jacques, 2013
+        background_mu_a = rng.normal(0.0, 0.1, size=n_wavelengths)
+        background_mu_s = rng.normal(0.0, 0.1, size=n_wavelengths)
         
         
         # define volume scattering and absorption coefficients

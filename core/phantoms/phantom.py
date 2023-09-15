@@ -9,7 +9,7 @@ class phantom:
     @abstractmethod
     def create_volume(self, cfg : dict):
         pass
-    
+
     # call any chromophore's needed for the phantom
     def define_water(self) -> dict:
         # temperature coefficients https://pubs.acs.org/doi/10.1021/jp010093m
@@ -28,18 +28,57 @@ class phantom:
         }
         return self.H2O
     
-    def define_ReBphP_PCM(self) -> dict:
+    def define_ReBphP_PCM(self, wavelengths_interp: (list, np.ndarray)) -> dict:
+        # (m^2 mol^-1) = (mm^-1 M^-1) = (mm^-1 mol^-1 dm^3) = (mm^-1 mol^-1 L^3)
+        wavelengths_interp = np.asarray(wavelengths_interp) * 1e9 # [m] -> [nm]
+        # ignore first line, load both columns into numpy array
+        with open('Chromophores/epsilon_a_ReBphP_PCM_Pr.txt', 'r') as f:
+            data = np.loadtxt(f, skiprows=1, dtype=np.float32)
+        wavelengths = data[:,0] # [nm]
+        epsilon_a_Pr = data[:,1] * 1e4 # [1e5 M^-1 cm^-1] -> [M^-1 mm^-1]
+        with open('Chromophores/epsilon_a_ReBphP_PCM_Pfr.txt', 'r') as f:
+            data = np.loadtxt(f, skiprows=1, dtype=np.float32)
+        wavelengths = data[:,0] # [nm]
+        epsilon_a_Pfr = data[:,1] * 1e4 # [1e5 M^-1 cm^-1] -> [M^-1 mm^-1]
+            
         # properties of the bacterial phytochrome
         self.ReBphP_PCM = {
             'Pr' : { # Red absorbing form
-                'epsilon_a': [0.8e4, 0.05e4], # molar absorption coefficient [M^-1 cm^-1]=[m^2 mol^-1]
+                'epsilon_a': np.interp(wavelengths_interp, wavelengths, epsilon_a_Pr).tolist(), # molar absorption coefficient [M^-1 cm^-1]=[m^2 mol^-1]
                 'eta' : [0.03, 0.0] # photoisomerisation quantum yield (dimensionless)
                 },
             'Pfr' : { # Far-red absorbing form
-                'epsilon_a': [0.6e4, 0.8e4], # molar absorption coefficient [M^-1 cm^-1]=[m^2 mol^-1]
+                'epsilon_a': np.interp(wavelengths_interp, wavelengths, epsilon_a_Pfr).tolist(), # molar absorption coefficient [M^-1 cm^-1]=[m^2 mol^-1]
                 'eta' : [0.0, 0.005] # photoisomerisation quantum yield (dimensionless)
             }   
         }
         return self.ReBphP_PCM
+    
+    
+    
+    def define_agarose_gel(self):
+        # TODO: find optical properties of agarose gel
+        self.agarose_gel = {
+            'mu_a' : [0.0, 0.0], # [m^-1]
+            'mu_s' : [0.0, 0.0], # [m^-1]
+            'n' : [1.33, 1.33], # refractive index
+            'g' : [0.9, 0.9] # anisotropy
+        }
+        return self.agarose_gel    
+    
+    def define_intralipid_10(self, wavelengths : (list, np.ndarray)) -> dict:
+        # Light scattering in Intralipid-10% in the wavelength range of 400-1100 nm
+        # Hugo J. van Staveren. 1991
+        # https://opg.optica.org/ao/fulltext.cfm?uri=ao-30-31-4507&id=39328
+        # TODO: find mu_a and make sense of the units [mL L^-1 mm^-1]
+        wavelengths = np.asarray(wavelengths) * 1e6 # [m] -> [um]
+        self.intralipid10 = {
+            'mu_a' : [0.0, 0.0], # [m^-1]
+            'mu_s' : (0.016 * (wavelengths**(-2.4)) * 1e-6).tolist(), # [mL L^-1 mm^-1]
+            'n' : 1.33 * np.ones_like(wavelengths), # refractive index
+            'g' : (1.1 - (0.58*wavelengths)).tolist() # anisotropy
+        }
+        return self.intralipid10
+    
     
     #TODO: define other chromophores

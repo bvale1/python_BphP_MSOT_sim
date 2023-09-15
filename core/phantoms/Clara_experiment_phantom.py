@@ -7,7 +7,8 @@ import BphP_func as bf
 class Clara_experiment_phantom(phantom):
     
     def create_volume(self, cfg : dict) -> tuple:
-    
+        # phantom is made from 1.5% agarose 3.5% intralipid emulsion
+        
         # initialise proteins, Pr to Pfr ratio is the steady state
         Pr_frac, Pfr_frac = bf.steady_state_BphP(
             self.ReBphP_PCM['Pr'],
