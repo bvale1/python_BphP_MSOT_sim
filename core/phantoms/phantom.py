@@ -1,10 +1,11 @@
 import numpy as np
 from abc import ABC, abstractmethod
+import os
 
 
 class phantom:
     def __init__(self):
-        pass
+        self.path = os.path.dirname(os.path.realpath(__file__))
     
     @abstractmethod
     def create_volume(self, cfg : dict):
@@ -28,27 +29,32 @@ class phantom:
         }
         return self.H2O
     
+    
     def define_ReBphP_PCM(self, wavelengths_interp: (list, np.ndarray)) -> dict:
         # (m^2 mol^-1) = (mm^-1 M^-1) = (mm^-1 mol^-1 dm^3) = (mm^-1 mol^-1 L^3)
         wavelengths_interp = np.asarray(wavelengths_interp) * 1e9 # [m] -> [nm]
         # ignore first line, load both columns into numpy array
-        with open('Chromophores/epsilon_a_ReBphP_PCM_Pr.txt', 'r') as f:
-            data = np.loadtxt(f, skiprows=1, dtype=np.float32)
-        wavelengths = data[:,0] # [nm]
+        with open(self.path+'/Chromophores/epsilon_a_ReBphP_PCM_Pr.txt', 'r') as f:
+            data = np.loadtxt(f, skiprows=1, dtype=np.float32, delimiter=', ')
+        wavelengths_Pr = data[:,0] # [nm]
         epsilon_a_Pr = data[:,1] * 1e4 # [1e5 M^-1 cm^-1] -> [M^-1 mm^-1]
-        with open('Chromophores/epsilon_a_ReBphP_PCM_Pfr.txt', 'r') as f:
-            data = np.loadtxt(f, skiprows=1, dtype=np.float32)
-        wavelengths = data[:,0] # [nm]
+        with open(self.path+'/Chromophores/epsilon_a_ReBphP_PCM_Pfr.txt', 'r') as f:
+            data = np.loadtxt(f, skiprows=1, dtype=np.float32, delimiter=', ')
+        wavelengths_Pfr = data[:,0] # [nm]
         epsilon_a_Pfr = data[:,1] * 1e4 # [1e5 M^-1 cm^-1] -> [M^-1 mm^-1]
             
         # properties of the bacterial phytochrome
         self.ReBphP_PCM = {
             'Pr' : { # Red absorbing form
-                'epsilon_a': np.interp(wavelengths_interp, wavelengths, epsilon_a_Pr).tolist(), # molar absorption coefficient [M^-1 cm^-1]=[m^2 mol^-1]
+                'epsilon_a': np.interp(
+                    wavelengths_interp, wavelengths_Pr, epsilon_a_Pr
+                ).tolist(), # molar absorption coefficient [M^-1 cm^-1]=[m^2 mol^-1]
                 'eta' : [0.03, 0.0] # photoisomerisation quantum yield (dimensionless)
                 },
             'Pfr' : { # Far-red absorbing form
-                'epsilon_a': np.interp(wavelengths_interp, wavelengths, epsilon_a_Pfr).tolist(), # molar absorption coefficient [M^-1 cm^-1]=[m^2 mol^-1]
+                'epsilon_a': np.interp(
+                    wavelengths_interp, wavelengths_Pfr, epsilon_a_Pfr
+                ).tolist(), # molar absorption coefficient [M^-1 cm^-1]=[m^2 mol^-1]
                 'eta' : [0.0, 0.005] # photoisomerisation quantum yield (dimensionless)
             }   
         }

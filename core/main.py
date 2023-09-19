@@ -80,16 +80,19 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
     
-    save_dir = args.save_dir
     # path to MCX binary
     mcx_bin_path = args.mcx_bin_path   
     #mcx_bin_path = '/mcx/bin/mcx' # billy_docker
     #mcx_bin_path = '/home/wv00017/mcx/bin/mcx' # Billy's workstation
     
+    if list(args.save_dir)[-1] != '/':
+        args.save_dir += '/'
+    if list(args.name)[-1] != '/':
+        args.name += '/'
+    
     # check for a checkpointed simulation of the same name
     if (os.path.exists(args.save_dir+args.name+'config.json') 
-        and os.path.exists(args.save_dir+args.name+'data.h5') 
-        and os.path.exists(args.save_dir+args.name+'temp.h5')):
+        and os.path.exists(args.save_dir+args.name+'data.h5')):
         
         with open(args.save_dir+args.name+'config.json', 'r') as f:
             cfg = json.load(f)
@@ -97,7 +100,7 @@ if __name__ == '__main__':
         
         phantom = Clara_experiment_phantom()
         H2O = phantom.define_water()
-        ReBphP_PCM = phantom.define_ReBphP_PCM()
+        ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
         # NOTE: ensure sample is contained within crop_size*crop_size of the centre
         # of the xz plane, all other voxels are background
         (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg)
@@ -129,7 +132,7 @@ if __name__ == '__main__':
         
         # configure simulation
         cfg = {
-            'name' : save_dir+args.name,
+            'name' : args.save_dir+args.name,
             'seed' : None, # TODO: use to procedurally generate phantom
             'nsensors' : 256,
             'ncycles' : 1,
@@ -182,7 +185,7 @@ if __name__ == '__main__':
             
         phantom = Clara_experiment_phantom()
         H2O = phantom.define_water()
-        ReBphP_PCM = phantom.define_ReBphP_PCM()
+        ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
         # NOTE: ensure sample is contained within crop_size*crop_size of the centre
         # of the xz plane, all other voxels are background
         (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg)
@@ -329,7 +332,7 @@ if __name__ == '__main__':
     
     start = timeit.default_timer()
     # deleted mcx input and out files, they are not needed anymore
-    simulation.delete_temporary_files()
+    #simulation.delete_temporary_files()
     # overwrite mcx simulation to save memory
     simulation = acoustic_forward_simulation.kwave_forward_adapter(cfg)
     # k-wave automatically determines dt and Nt, update cfg
@@ -393,6 +396,10 @@ if __name__ == '__main__':
                     out = simulation.run_kwave_forward(out)
                     logging.info(f'kwave forward run in {timeit.default_timer() - start} seconds')
                     
+                    if not np.any(out):
+                        logging.error('sensor data is all zeros')
+                        exit(1)                        
+                    
                     start = timeit.default_timer()
                     with h5py.File(cfg['name']+'data.h5', 'r+') as f:
                         f['sensor_data'][cycle,wavelength_index,pulse] = out
@@ -403,9 +410,9 @@ if __name__ == '__main__':
         cfg['stage'] = 'inverse'; cfg['cycle'] = 0; cfg['wavelength_index'] = 0; cfg['pulse'] = 0
     
     # delete temp p0_3D dataset
-    start = timeit.default_timer()
-    os.remove(cfg['name']+'temp.h5')
-    logging.info(f'temp.h5 (p0_3D) deleted in {timeit.default_timer() - start} seconds')
+    #start = timeit.default_timer()
+    #os.remove(cfg['name']+'temp.h5')
+    #logging.info(f'temp.h5 (p0_3D) deleted in {timeit.default_timer() - start} seconds')
     
     start = timeit.default_timer()
     simulation = acoustic_inverse_simulation.kwave_inverse_adapter(cfg)

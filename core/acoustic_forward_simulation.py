@@ -78,10 +78,7 @@ class kwave_forward_adapter():
             ), axis=0
         )
         
-        sensor_mask = cart2grid(self.kgrid, sensor_xyz)[0]
-        sensor = kSensor(sensor_mask)
-        sensor.record = ['p']
-        self.sensor = sensor
+        self.sensor_mask = cart2grid(self.kgrid, sensor_xyz)[0]
         self.combine_data = False
         
         
@@ -166,6 +163,9 @@ class kwave_forward_adapter():
         
     def run_kwave_forward(self, p0):
         
+        sensor = kSensor(self.sensor_mask)
+        sensor.record = ['p']
+        sensor = sensor
         source = kSource()
         source.p0 = p0
         
@@ -173,7 +173,7 @@ class kwave_forward_adapter():
         sensor_data = kspaceFirstOrder3DG(
             self.kgrid,
             source,
-            self.sensor,
+            sensor,
             self.medium,
             self.simulation_options,
             self.execution_options
