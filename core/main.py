@@ -101,8 +101,9 @@ if __name__ == '__main__':
         logging.info(f'checkpoint config found {cfg}')
         
         phantom = Clara_experiment_phantom()
-        H2O = phantom.define_water()
+        #H2O = phantom.define_water()
         ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
+        water89_gelatin1_intralipid10 = phantom.define_water89_gelatin1_intralipid10(cfg['wavelengths'])
         # NOTE: ensure sample is contained within crop_size*crop_size of the centre
         # of the xz plane, all other voxels are background
         (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg)

@@ -7,9 +7,11 @@ class phantom:
     def __init__(self):
         self.path = os.path.dirname(os.path.realpath(__file__))
     
+    
     @abstractmethod
     def create_volume(self, cfg : dict):
         pass
+
 
     # call any chromophore's needed for the phantom
     def define_water(self) -> dict:
@@ -29,14 +31,15 @@ class phantom:
         }
         return self.H2O
 
+
     @classmethod
     def interp_property(cls, property, wavelengths, wavelengths_interp) -> list:
         # sort to wavelength ascending order
         sort_index = wavelengths.argsort()
         wavelengths = wavelengths[sort_index]
-        epsilon_a = epsilon_a[sort_index]
+        property = property[sort_index]
         # interpolate to wavelengths_interp
-        return np.interp(wavelengths_interp, wavelengths, epsilon_a).tolist()
+        return np.interp(wavelengths_interp, wavelengths, property).tolist()
 
 
     def define_ReBphP_PCM(self, wavelengths_interp: (list, np.ndarray)) -> dict:
@@ -53,23 +56,23 @@ class phantom:
             data = np.loadtxt(f, skiprows=1, dtype=np.float32, delimiter=', ')
         wavelengths_Pfr = data[:,0] # [nm]
         epsilon_a_Pfr = data[:,1] * 1e4 # [1e5 M^-1 cm^-1] -> [M^-1 mm^-1]        
-            
         # properties of the bacterial phytochrome
         self.ReBphP_PCM = {
             'Pr' : { # Red absorbing form
-                'epsilon_a': interp_property(
+                'epsilon_a': self.interp_property(
                     epsilon_a_Pr, wavelengths_Pr, wavelengths_interp
                 ), # molar absorption coefficient [M^-1 cm^-1]=[m^2 mol^-1]
                 'eta' : [0.03, 0.0] # photoisomerisation quantum yield (dimensionless)
                 },
             'Pfr' : { # Far-red absorbing form
-                'epsilon_a': interp_property(
+                'epsilon_a': self.interp_property(
                     epsilon_a_Pfr, wavelengths_Pfr, wavelengths_interp
                 ), # molar absorption coefficient [M^-1 cm^-1]=[m^2 mol^-1]
                 'eta' : [0.0, 0.005] # photoisomerisation quantum yield (dimensionless)
             }   
         }
         return self.ReBphP_PCM
+    
     
     def define_water89_gelatin1_intralipid10(self, wavelengths_interp : (list, np.ndarray)) -> dict:
         # Hanna Jonasson et al. 2022. Water and hemoglobin modulated gelatin-based
@@ -89,10 +92,10 @@ class phantom:
         mu_s = data[:,1] * 1e3 # [mm^-1] -> [m^-1]
 
         self.water89_gelatin1_intralipid10 = {
-            'mu_a' : interp_property(
+            'mu_a' : self.interp_property(
                 mu_a, wavelengths_mu_a, wavelengths_interp
             ), # [m^-1]
-            'mu_s' : interp_property(
+            'mu_s' : self.interp_property(
                 mu_s, wavelengths_mu_s, wavelengths_interp
             ), # [m^-1]
             'n' : [1.33, 1.33], # refractive index
