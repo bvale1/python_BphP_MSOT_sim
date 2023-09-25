@@ -1,5 +1,6 @@
 import numpy as np
-from phantoms.Clara_experiment_phantom import Clara_experiment_phantom
+#from phantoms.Clara_experiment_phantom import Clara_experiment_phantom
+from phantoms.BphP_cylindrical_phantom import BphP_cylindrical_phantom
 import json
 import h5py
 import os
@@ -78,6 +79,7 @@ if __name__ == '__main__':
     )
     parser.add_argument('--npulses', type=int, default=16, action='store')
     parser.add_argument('--crop_size', type=int, default=256, action='store')
+    parser.add_argument('--sim_git_hash', type=str, default=None, action='store')
     args = parser.parse_args()
     
     # path to MCX binary
@@ -100,6 +102,7 @@ if __name__ == '__main__':
             cfg = json.load(f)
         logging.info(f'checkpoint config found {cfg}')
         
+        '''
         phantom = Clara_experiment_phantom()
         #H2O = phantom.define_water()
         ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
@@ -107,6 +110,10 @@ if __name__ == '__main__':
         # NOTE: ensure sample is contained within crop_size*crop_size of the centre
         # of the xz plane, all other voxels are background
         (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg)
+        '''
+        phantom = BphP_cylindrical_phantom()
+        ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
+        (cfg, volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg)
         
     else:
         # It is imperative that dx is small enough to support high enough 
@@ -119,7 +126,7 @@ if __name__ == '__main__':
             mcx_domain_size,
             c0_min=c_0,
             pml_size=pml_size,
-            points_per_wavelength=1
+            points_per_wavelength=2
         )
         mcx_domain_size = [mcx_grid_size[0]*dx,
                            mcx_grid_size[1]*dx,
@@ -136,13 +143,14 @@ if __name__ == '__main__':
         # configure simulation
         cfg = {
             'name' : args.save_dir+args.name,
+            'sim_git_hash' : args.sim_git_hash, # git hash of simulation code
             'seed' : None,
             'nsensors' : 256,
             'ncycles' : 1,
             'npulses' : args.npulses,
             'nphotons' : 1e8,
             'nsources' : 10,
-            'wavelengths' : [680e-9],#, 770e-9],
+            'wavelengths' : [680e-9, 770e-9],
             'mcx_domain_size' : mcx_domain_size,
             'kwave_domain_size' : kwave_domain_size,
             'mcx_grid_size': mcx_grid_size,
@@ -185,19 +193,24 @@ if __name__ == '__main__':
         uf.create_dir(cfg['name'])
         with open(cfg['name']+'config.json', 'w') as f:
             json.dump(cfg, f, indent='\t')
-            
+        
+        '''
         phantom = Clara_experiment_phantom()
         water89_gelatin1_intralipid10 = phantom.define_water89_gelatin1_intralipid10(cfg['wavelengths'])
         ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
         # NOTE: ensure sample is contained within crop_size*crop_size of the centre
         # of the xz plane, all other voxels are background
         (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg)
+        '''
+        phantom = BphP_cylindrical_phantom()
+        ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
+        (cfg, volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg)
             
         # save 2D slice of the volume to HDF5 file
         with h5py.File(cfg['name']+'data.h5', 'w') as f:
             f.create_dataset(
                 'background_mua_mus', 
-                data=uf.square_centre_crop(volume[:,:,:,cfg['mcx_grid_size'][1]//2,:],
+                data=uf.square_centre_crop(volume[:,:,:,(cfg['mcx_grid_size'][1]//2)-1,:],
                                         cfg['crop_size'])
             )
             # protein concentration ground truth is the most important besides the
@@ -206,11 +219,11 @@ if __name__ == '__main__':
                 'ReBphP_PCM_c_tot', 
                 data=(
                     uf.square_centre_crop(
-                        ReBphP_PCM_Pr_c[:,cfg['mcx_grid_size'][1]//2,:],
+                        ReBphP_PCM_Pr_c[:,(cfg['mcx_grid_size'][1]//2)-1,:],
                         cfg['crop_size']
                     ) +
                     uf.square_centre_crop(
-                        ReBphP_PCM_Pfr_c[:,cfg['mcx_grid_size'][1]//2,:],
+                        ReBphP_PCM_Pfr_c[:,(cfg['mcx_grid_size'][1]//2)-1,:],
                         cfg['crop_size']
                     )
                 )
@@ -293,11 +306,11 @@ if __name__ == '__main__':
                     # save fluence, Pr and Pfr concentrations (additional ground truth) to data HDF5 file
                     with h5py.File(cfg['name']+'data.h5', 'r+') as f:
                         f['Phi'][cycle,wavelength_index,pulse] = uf.square_centre_crop(
-                            out[:,cfg['mcx_grid_size'][1]//2,:], cfg['crop_size'])
+                            out[:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size'])
                         f['ReBphP_PCM_Pr_c'][cycle,wavelength_index,pulse] = uf.square_centre_crop(
-                            ReBphP_PCM_Pr_c[:,cfg['mcx_grid_size'][1]//2,:], cfg['crop_size'])
+                            ReBphP_PCM_Pr_c[:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size'])
                         f['ReBphP_PCM_Pfr_c'][cycle,wavelength_index,pulse] = uf.square_centre_crop(
-                            ReBphP_PCM_Pfr_c[:,cfg['mcx_grid_size'][1]//2,:], cfg['crop_size'])
+                            ReBphP_PCM_Pfr_c[:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size'])
                     logging.info(f'fluence and protein concentrations saved in {timeit.default_timer() - start} seconds')
                     
                     start = timeit.default_timer()
@@ -314,7 +327,7 @@ if __name__ == '__main__':
                         )
                     with h5py.File(cfg['name']+'data.h5', 'r+') as f:
                         f['p0'][cycle,wavelength_index,pulse] =  uf.square_centre_crop(
-                            out[:,cfg['mcx_grid_size'][1]//2,:], cfg['crop_size']
+                            out[:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size']
                         )
                     logging.info(f'pressure saved in {timeit.default_timer() - start} seconds')    
                                         
