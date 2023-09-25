@@ -157,7 +157,8 @@ class kwave_forward_adapter():
         )
         
         self.execution_options = SimulationExecutionOptions(
-            is_gpu_simulation=True
+            is_gpu_simulation=True,
+            verbose_level=2
         )
         
         

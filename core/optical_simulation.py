@@ -28,14 +28,16 @@ class MCX_adapter():
 
     ============================================================================
     '''
-    def __init__(self, cfg) -> None:
+    def __init__(self, cfg, source='invision') -> None:
+        
+        if source not in ['planar', 'invision']:
+            raise ValueError(f'source must be "planar" or "invision", not "{source}"')
         
         uf.create_dir('temp')
         
         self.mcx_config_file = 'temp/InVision_BphP_MCX_Simulation.json'
         self.mcx_volume_binary_file = 'temp/InVision_BphP_MCX_Simulation.bin'
         self.mcx_out_file = 'temp/InVision_BphP_MCX_Simulation_out'
-        self.grunesien = cfg['gruneisen']
         
         # initialize simulation configuration
         self.mcx_cfg = {
@@ -43,15 +45,14 @@ class MCX_adapter():
                 'ID': self.mcx_out_file,
                 'DoAutoThread': 1,
                 'Photons': cfg['nphotons'] // cfg['nsources'], 
-                'DoMismatch': 0, 
-                'RNGSeed': 4711
+                'DoMismatch': 0
             }, 
             'Forward': {
                 'T0': 0, 'T1': 1e-09, 'Dt': 1e-09
             }, 
             'Optode': {
                 'Source': {
-                    'Type': 'invision',
+                    'Type': source,
                     'Pos': [0, 0, 0], 
                     'Dir': [0, 0, 0], 
                     'Param1': [0.5, 0, 0, 0], 
@@ -71,36 +72,40 @@ class MCX_adapter():
             }
         }
         
-    '''
-    def set_source(self, source_no) -> None:
-        # source number must be 0 to 9 for the invision source,
-        # don't really know what these number mean, found them in SIMPA
-        dx = self.mcx_cfg['Domain']['LengthUnit']
-        angle = -2.51327 # [rad]
-        angle -= 1.256635 * np.floor(source_no / 2)
-        det_iso_distance = 37.025 # [mm]
-        illumination_angle = -0.41608649 * ((-1)**source_no) # [rad]
-        det_sep_half = 12.37 * ((-1)**source_no) # [mm]
-        
-        # [mm] -> [grid points]
-        postion = np.array([np.sin(angle) * det_iso_distance,
-                            det_sep_half,
-                            np.cos(angle) * det_iso_distance]) / dx + 1
-        # mcx bottom front left corner is (0,0,0)
-        postion += np.asarray(self.mcx_cfg['Domain']['Dim']) / 2
-        # [vector]
-        direction = np.array([-np.sin(angle),
-                              np.sin(illumination_angle),
-                              np.cos(angle)])
+    def set_planar_source(self, source_no) -> None:
+        nxz = self.mcx_cfg['Domain']['Dim'][0]
+        ny = self.mcx_cfg['Domain']['Dim'][1]
+        nsource = 10        
+        # SRCPOS Approximates the light source as a ring around the image plane
+        # The ring is approximated as nsource quadrilaterals
 
-        self.mcx_cfg['Optode']['Source']['Pos'] = postion.tolist()
-        # normalize direction vector
-        self.mcx_cfg['Optode']['Source']['Dir'] = (
-            direction / np.linalg.norm(direction)
-        ).tolist()
-        self.mcx_cfg['Optode']['Source']['Param1'] = [0.5, source_no, 0, 0]
-    '''
-    def set_source(self, source_no) -> None:
+        # angle between n straight lines which approximate the ring
+        srcang = np.pi - (2 * np.pi / nsource)
+        # source length
+        srclen = (nxz / 2) * np.sin(2 * np.pi / nsource) / np.sin(srcang / 2)
+        # position of 1st line source
+        pos = np.array([[1 + (nxz / 2) - (srclen / 2)], [1], [1]])  # - [nxz*0.1, 0, 0];
+        # specify vectors for the sides of the quadrilateral-shaped source
+        param1 = np.array([[0], [ny], [0]])
+        param2 = np.array([[srclen], [0], [0]])
+        # incident photon direction of 1st source
+        srcdir = np.array([[0], [0], [1]])
+        # rotation matrix operator by 2*pi/nsource rads about y axis
+        rotate = uf.Ry3D(-2 * np.pi / nsource)
+        # iteratively place other sources around the xz plane
+        for i in range(0, source_no + 1):
+            pos = pos + param2
+            param1 = np.dot(rotate, param1)
+            param2 = np.dot(rotate, param2)
+            srcdir = np.dot(rotate, srcdir)
+
+        self.mcx_cfg['Optode']['Source']['Pos'] = pos[:,0].tolist()
+        self.mcx_cfg['Optode']['Source']['Dir'] = srcdir[:,0].tolist()
+        self.mcx_cfg['Optode']['Source']['Param1'] = param1[:,0].tolist()
+        self.mcx_cfg['Optode']['Source']['Param2'] = param2[:,0].tolist()
+    
+    
+    def set_invision_source(self, source_no) -> None:
 
         dx_mm = self.mcx_cfg['Domain']['LengthUnit'] # [mm]
         angle = 0.0 # [rad]
@@ -168,14 +173,12 @@ class MCX_adapter():
     
     
     def save_mcx_volume_binary(self, volume):
-        # volume must be a numpy array of shape (2, nx, ny, nz)
-        # possibly needs to be float64 but if not float32 is prefered
-        # no idea how this works but it does
+        # volume must be a float32 numpy array of shape (2, nx, ny, nz)
         volume = list(np.reshape(volume, volume.size, "F"))
         volume  = struct.pack("f" * len(volume), *volume)
         with open(self.mcx_volume_binary_file, "wb") as input_file:
-            input_file.write(volume)        
-        
+            input_file.write(volume)
+            
         
     def run_mcx(self, 
                 mcx_bin_path, 
@@ -206,7 +209,10 @@ class MCX_adapter():
         
         for i in range(10):
             print('source no: ', i)
-            self.set_source(i)
+            if self.mcx_cfg['Optode']['Source']['Type'] == 'planar':
+                self.set_planar_source(i)
+            elif self.mcx_cfg['Optode']['Source']['Type'] == 'invision':
+                self.set_invision_source(i)
             self.save_mcx_config()
             print(f'mcx config: {self.mcx_cfg}')
             

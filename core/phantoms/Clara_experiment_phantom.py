@@ -10,19 +10,19 @@ class Clara_experiment_phantom(phantom):
         # phantom is made from 1.5% agarose 3.5% intralipid emulsion
         
         # initialise proteins, Pr to Pfr ratio is the steady state
-        Pr_frac, Pfr_frac = bf.steady_state_BphP(
-            self.ReBphP_PCM['Pr'],
-            self.ReBphP_PCM['Pfr'],
-            wavelength_idx=1
-        )
+        #Pr_frac, Pfr_frac = bf.steady_state_BphP(
+        #    self.ReBphP_PCM['Pr'],
+        #    self.ReBphP_PCM['Pfr'],
+        #    wavelength_idx=1
+        #)
         c_tot = 0.001 * gf.cylinder_mask(
             cfg['dx'],
             cfg['mcx_grid_size'],
             1.5e-3,
             [(cfg['mcx_domain_size'][0]/2)-4e-3, 0.0, (cfg['mcx_domain_size'][2]/2)-2e-3]
         )
-        ReBphP_PCM_Pfr_c = Pfr_frac * c_tot
-        ReBphP_PCM_Pr_c = Pr_frac * c_tot
+        ReBphP_PCM_Pfr_c = c_tot # * Pfr_frac
+        ReBphP_PCM_Pr_c = c_tot # * Pr_frac
         
         # define volume scattering and absorption coefficients
         # index as [1, ..., lambda]->[mu_a, mu_s]->[x]->[y]->[z]

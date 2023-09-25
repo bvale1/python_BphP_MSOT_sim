@@ -85,10 +85,12 @@ if __name__ == '__main__':
     #mcx_bin_path = '/mcx/bin/mcx' # billy_docker
     #mcx_bin_path = '/home/wv00017/mcx/bin/mcx' # Billy's workstation
     
-    if list(args.save_dir)[-1] != '/':
-        args.save_dir += '/'
-    if list(args.name)[-1] != '/':
-        args.name += '/'
+    if len(args.save_dir) != 0:
+        if list(args.save_dir)[-1] != '/':
+            args.save_dir += '/'
+    if len(args.name) != 0:
+        if list(args.name)[-1] != '/':
+            args.name += '/'
     
     # check for a checkpointed simulation of the same name
     if (os.path.exists(args.save_dir+args.name+'config.json') 
@@ -139,7 +141,7 @@ if __name__ == '__main__':
             'npulses' : args.npulses,
             'nphotons' : 1e8,
             'nsources' : 10,
-            'wavelengths' : [680e-9, 770e-9],
+            'wavelengths' : [680e-9],#, 770e-9],
             'mcx_domain_size' : mcx_domain_size,
             'kwave_domain_size' : kwave_domain_size,
             'mcx_grid_size': mcx_grid_size,
@@ -252,7 +254,7 @@ if __name__ == '__main__':
             )
  
     # optical simulation
-    simulation = optical_simulation.MCX_adapter(cfg)
+    simulation = optical_simulation.MCX_adapter(cfg, source='invision')
     
     gc.collect()
     
@@ -274,7 +276,7 @@ if __name__ == '__main__':
                     # multiple times to save memory
                     out = simulation.run_mcx(
                         mcx_bin_path,
-                        volume[wavelength_index], 
+                        volume[wavelength_index].copy(), 
                         ReBphP_PCM_Pr_c,
                         ReBphP_PCM_Pfr_c,
                         ReBphP_PCM,
@@ -285,6 +287,7 @@ if __name__ == '__main__':
                     # convert from [mm^-2] -> [J m^-2]
                     start = timeit.default_timer()
                     out *= cfg['LaserEnergy'][cycle][wavelength_index][pulse] * 1e6
+                    logging.info(f'{100*np.sum(out==0.0)/np.prod(out.shape)}% of Phi is zeros')
                     
                     # save fluence, Pr and Pfr concentrations (additional ground truth) to data HDF5 file
                     with h5py.File(cfg['name']+'data.h5', 'r+') as f:
@@ -325,6 +328,18 @@ if __name__ == '__main__':
                         cfg['wavelengths'],
                         wavelength_index
                     )
+                    if np.any(np.logical_not(np.isfinite(ReBphP_PCM_Pr_c))):
+                        logging.error('ReBphP_PCM_Pr_c is not finite')
+                        exit(1)
+                    if np.any(np.logical_not(np.isfinite(ReBphP_PCM_Pfr_c))):
+                        logging.error('ReBphP_PCM_Pfr_c is not finite')
+                        exit(1)
+                    if np.any(ReBphP_PCM_Pr_c < 0.0):
+                        logging.error('ReBphP_PCM_Pr_c is negative')
+                        exit(1)
+                    if np.any(ReBphP_PCM_Pfr_c < 0.0):
+                        logging.error('ReBphP_PCM_Pfr_c is negative')
+                        exit(1)
                     
                     logging.info(f'photoisomerisation computed in {timeit.default_timer() - start} seconds')
             

@@ -28,20 +28,31 @@ class phantom:
             'g' : [0.9, 0.9] # anisotropy
         }
         return self.H2O
-    
+
     
     def define_ReBphP_PCM(self, wavelengths_interp: (list, np.ndarray)) -> dict:
         # (m^2 mol^-1) = (mm^-1 M^-1) = (mm^-1 mol^-1 dm^3) = (mm^-1 mol^-1 L^3)
         wavelengths_interp = np.asarray(wavelengths_interp) * 1e9 # [m] -> [nm]
+        
         # ignore first line, load both columns into numpy array
         with open(self.path+'/Chromophores/epsilon_a_ReBphP_PCM_Pr.txt', 'r') as f:
             data = np.loadtxt(f, skiprows=1, dtype=np.float32, delimiter=', ')
         wavelengths_Pr = data[:,0] # [nm]
         epsilon_a_Pr = data[:,1] * 1e4 # [1e5 M^-1 cm^-1] -> [M^-1 mm^-1]
+        # sort to wavelength ascending order
+        sort_index = wavelengths_Pr.argsort()
+        wavelengths_Pr = wavelengths_Pr[sort_index]
+        epsilon_a_Pr = epsilon_a_Pr[sort_index]    
+        
         with open(self.path+'/Chromophores/epsilon_a_ReBphP_PCM_Pfr.txt', 'r') as f:
             data = np.loadtxt(f, skiprows=1, dtype=np.float32, delimiter=', ')
         wavelengths_Pfr = data[:,0] # [nm]
         epsilon_a_Pfr = data[:,1] * 1e4 # [1e5 M^-1 cm^-1] -> [M^-1 mm^-1]
+        # sort to wavelength ascending order
+        sort_index = wavelengths_Pfr.argsort()
+        wavelengths_Pfr = wavelengths_Pfr[sort_index]
+        epsilon_a_Pfr = epsilon_a_Pfr[sort_index]
+        
             
         # properties of the bacterial phytochrome
         self.ReBphP_PCM = {
@@ -61,9 +72,10 @@ class phantom:
         return self.ReBphP_PCM
     
     
-    
-    def define_agarose_gel(self):
+    def define_agarose_gel(self, wavelengths : (list, np.ndarray)) -> dict:
         # TODO: find optical properties of agarose gel
+        # Afrina Mustari et al. 2018. Agarose-based Tissue Mimicking Optical
+        # Phantoms for Diffuse Reflectance Spectroscopy
         self.agarose_gel = {
             'mu_a' : [0.0, 0.0], # [m^-1]
             'mu_s' : [0.0, 0.0], # [m^-1]
@@ -71,6 +83,7 @@ class phantom:
             'g' : [0.9, 0.9] # anisotropy
         }
         return self.agarose_gel    
+    
     
     def define_intralipid_10(self, wavelengths : (list, np.ndarray)) -> dict:
         # Light scattering in Intralipid-10% in the wavelength range of 400-1100 nm
