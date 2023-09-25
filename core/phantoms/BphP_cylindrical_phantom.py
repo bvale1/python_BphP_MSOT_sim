@@ -52,8 +52,8 @@ class BphP_cylindrical_phantom(phantom):
         ReBphP_PCM_Pfr_c = np.zeros((cfg['mcx_grid_size']), dtype=np.float32)
 
         # randomly place hotspots containing proteins based on arbitrary criteria
-        n_hotspots = rng.randint(0, 4)
-        hotpots = [] # index as [x,y,z,radius]
+        n_hotspots = rng.integers(0, 4, 1)
+        hotspots = [] # index as [x,y,z,radius]
         for i in range(n_hotspots):
             # propose a new region/hotspot containing proteins
             origin = [rng.uniform(-0.008, 0.008), # x
