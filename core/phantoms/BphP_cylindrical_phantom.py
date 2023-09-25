@@ -48,8 +48,8 @@ class BphP_cylindrical_phantom(phantom):
             self.ReBphP_PCM['Pfr'],
             wavelength_idx=1
         )
-        ReBphP_PCM_Pr_c = np.zeros((cfg['grid_size']), dtype=np.float32)
-        ReBphP_PCM_Pfr_c = np.zeros((cfg['grid_size']), dtype=np.float32)
+        ReBphP_PCM_Pr_c = np.zeros((cfg['mcx_grid_size']), dtype=np.float32)
+        ReBphP_PCM_Pfr_c = np.zeros((cfg['mcx_grid_size']), dtype=np.float32)
 
         # randomly place hotspots containing proteins based on arbitrary criteria
         n_hotspots = rng.randint(0, 4)
