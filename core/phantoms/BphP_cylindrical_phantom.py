@@ -54,7 +54,7 @@ class BphP_cylindrical_phantom(phantom):
         # randomly place hotspots containing proteins based on arbitrary criteria
         n_hotspots = rng.integers(0, 4, 1)
         hotspots = [] # index as [x,y,z,radius]
-        for i in range(n_hotspots):
+        for i in range(n_hotspots[0]):
             # propose a new region/hotspot containing proteins
             origin = [rng.uniform(-0.008, 0.008), # x
                       0.0,                        # y
