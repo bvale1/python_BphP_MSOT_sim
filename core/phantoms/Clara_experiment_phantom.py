@@ -36,13 +36,13 @@ class Clara_experiment_phantom(phantom):
             ), dtype=np.float32
         )
         for i in range(len(cfg['wavelengths'])):
-            volume[i,0,:,:,:] = self.H2O['mu_a'][i] * gf.cylinder_mask(
+            volume[i,0,:,:,:] = self.water89_gelatin1_intralipid10['mu_a'][i] * gf.cylinder_mask(
                 cfg['dx'],
                 cfg['mcx_grid_size'],
                 0.01,
                 [(cfg['mcx_domain_size'][0]/2), 0.0, (cfg['mcx_domain_size'][2]/2)]
             )
-            volume[i,1,:,:,:] = self.H2O['mu_s'][i] * gf.cylinder_mask(
+            volume[i,1,:,:,:] = self.water89_gelatin1_intralipid10['mu_s'][i] * gf.cylinder_mask(
                 cfg['dx'],
                 cfg['mcx_grid_size'],
                 0.01,

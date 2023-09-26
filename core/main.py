@@ -186,7 +186,7 @@ if __name__ == '__main__':
             json.dump(cfg, f, indent='\t')
             
         phantom = Clara_experiment_phantom()
-        H2O = phantom.define_water()
+        water89_gelatin1_intralipid10 = phantom.define_water89_gelatin1_intralipid10(cfg['wavelengths'])
         ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
         # NOTE: ensure sample is contained within crop_size*crop_size of the centre
         # of the xz plane, all other voxels are background

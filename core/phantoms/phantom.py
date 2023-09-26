@@ -29,7 +29,16 @@ class phantom:
         }
         return self.H2O
 
-    
+    @classmethod
+    def interp_property(cls, property, wavelengths, wavelengths_interp) -> list:
+        # sort to wavelength ascending order
+        sort_index = wavelengths.argsort()
+        wavelengths = wavelengths[sort_index]
+        epsilon_a = epsilon_a[sort_index]
+        # interpolate to wavelengths_interp
+        return np.interp(wavelengths_interp, wavelengths, epsilon_a).tolist()
+
+
     def define_ReBphP_PCM(self, wavelengths_interp: (list, np.ndarray)) -> dict:
         # (m^2 mol^-1) = (mm^-1 M^-1) = (mm^-1 mol^-1 dm^3) = (mm^-1 mol^-1 L^3)
         wavelengths_interp = np.asarray(wavelengths_interp) * 1e9 # [m] -> [nm]
@@ -39,39 +48,59 @@ class phantom:
             data = np.loadtxt(f, skiprows=1, dtype=np.float32, delimiter=', ')
         wavelengths_Pr = data[:,0] # [nm]
         epsilon_a_Pr = data[:,1] * 1e4 # [1e5 M^-1 cm^-1] -> [M^-1 mm^-1]
-        # sort to wavelength ascending order
-        sort_index = wavelengths_Pr.argsort()
-        wavelengths_Pr = wavelengths_Pr[sort_index]
-        epsilon_a_Pr = epsilon_a_Pr[sort_index]    
         
         with open(self.path+'/Chromophores/epsilon_a_ReBphP_PCM_Pfr.txt', 'r') as f:
             data = np.loadtxt(f, skiprows=1, dtype=np.float32, delimiter=', ')
         wavelengths_Pfr = data[:,0] # [nm]
-        epsilon_a_Pfr = data[:,1] * 1e4 # [1e5 M^-1 cm^-1] -> [M^-1 mm^-1]
-        # sort to wavelength ascending order
-        sort_index = wavelengths_Pfr.argsort()
-        wavelengths_Pfr = wavelengths_Pfr[sort_index]
-        epsilon_a_Pfr = epsilon_a_Pfr[sort_index]
-        
+        epsilon_a_Pfr = data[:,1] * 1e4 # [1e5 M^-1 cm^-1] -> [M^-1 mm^-1]        
             
         # properties of the bacterial phytochrome
         self.ReBphP_PCM = {
             'Pr' : { # Red absorbing form
-                'epsilon_a': np.interp(
-                    wavelengths_interp, wavelengths_Pr, epsilon_a_Pr
-                ).tolist(), # molar absorption coefficient [M^-1 cm^-1]=[m^2 mol^-1]
+                'epsilon_a': interp_property(
+                    epsilon_a_Pr, wavelengths_Pr, wavelengths_interp
+                ), # molar absorption coefficient [M^-1 cm^-1]=[m^2 mol^-1]
                 'eta' : [0.03, 0.0] # photoisomerisation quantum yield (dimensionless)
                 },
             'Pfr' : { # Far-red absorbing form
-                'epsilon_a': np.interp(
-                    wavelengths_interp, wavelengths_Pfr, epsilon_a_Pfr
-                ).tolist(), # molar absorption coefficient [M^-1 cm^-1]=[m^2 mol^-1]
+                'epsilon_a': interp_property(
+                    epsilon_a_Pfr, wavelengths_Pfr, wavelengths_interp
+                ), # molar absorption coefficient [M^-1 cm^-1]=[m^2 mol^-1]
                 'eta' : [0.0, 0.005] # photoisomerisation quantum yield (dimensionless)
             }   
         }
         return self.ReBphP_PCM
     
-    
+    def define_water89_gelatin1_intralipid10(self, wavelengths_interp : (list, np.ndarray)) -> dict:
+        # Hanna Jonasson et al. 2022. Water and hemoglobin modulated gelatin-based
+        # phantoms to spectrally mimic inflamed tissue in the
+        # validation of biomedical techniques and the modeling
+        # of microdialysis data
+        wavelengths_interp = np.asarray(wavelengths_interp) * 1e9 # [m] -> [nm]
+
+        with open(self.path+'/Chromophores/mu_a_water89_gelatin1_intralipid10.txt', 'r') as f:
+            data = np.loadtxt(f, skiprows=1, dtype=np.float32, delimiter=', ')
+        wavelengths_mu_a = data[:,0] # [nm]
+        mu_a = data[:,1] * 1e3 # [mm^-1] -> [m^-1]
+
+        with open(self.path+'/Chromophores/mu_s_water89_gelatin1_intralipid10.txt', 'r') as f:
+            data = np.loadtxt(f, skiprows=1, dtype=np.float32, delimiter=', ')
+        wavelengths_mu_s = data[:,0] # [nm]
+        mu_s = data[:,1] * 1e3 # [mm^-1] -> [m^-1]
+
+        self.water89_gelatin1_intralipid10 = {
+            'mu_a' : interp_property(
+                mu_a, wavelengths_mu_a, wavelengths_interp
+            ), # [m^-1]
+            'mu_s' : interp_property(
+                mu_s, wavelengths_mu_s, wavelengths_interp
+            ), # [m^-1]
+            'n' : [1.33, 1.33], # refractive index
+            'g' : [0.9, 0.9] # anisotropy
+        }
+        return self.water89_gelatin1_intralipid10
+
+
     def define_agarose_gel(self, wavelengths : (list, np.ndarray)) -> dict:
         # TODO: find optical properties of agarose gel
         # Afrina Mustari et al. 2018. Agarose-based Tissue Mimicking Optical
