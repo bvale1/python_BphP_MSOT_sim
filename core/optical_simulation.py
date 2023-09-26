@@ -55,7 +55,7 @@ class MCX_adapter():
                     'Type': source,
                     'Pos': [0, 0, 0], 
                     'Dir': [0, 0, 0], 
-                    'Param1': [0.5, 0, 0, 0], 
+                    'Param1': [cfg['dx'] * 1e3, 0, 0, 0], 
                     'Param2': [0, 0, 0, 0]
                 }
             }, 

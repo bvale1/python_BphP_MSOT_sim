@@ -301,7 +301,6 @@ if __name__ == '__main__':
                     # convert from [mm^-2] -> [J m^-2]
                     start = timeit.default_timer()
                     out *= cfg['LaserEnergy'][cycle][wavelength_index][pulse] * 1e6
-                    logging.info(f'{100*np.sum(out==0.0)/np.prod(out.shape)}% of Phi is zeros')
                     
                     # save fluence, Pr and Pfr concentrations (additional ground truth) to data HDF5 file
                     with h5py.File(cfg['name']+'data.h5', 'r+') as f:
@@ -356,6 +355,10 @@ if __name__ == '__main__':
                         exit(1)
                     
                     logging.info(f'photoisomerisation computed in {timeit.default_timer() - start} seconds')
+
+                cfg['pulse'] = 0
+            cfg['wavelength_index'] = 0
+        cfg['cycle'] = 0
             
     gc.collect()
     
@@ -365,20 +368,22 @@ if __name__ == '__main__':
     # overwrite mcx simulation to save memory
     simulation = acoustic_forward_simulation.kwave_forward_adapter(cfg)
     # k-wave automatically determines dt and Nt, update cfg
-    cfg = simulation.cfg
-    
-    # save updated cfg to JSON file
-    with open(cfg['name']+'config.json', 'w') as f:
-        json.dump(cfg, f, indent='\t')
-    
+    cfg = simulation.cfg    
     
     simulation.configure_simulation()
     simulation.create_point_sensor_array()
     logging.info(f'kwave forward initialised in {timeit.default_timer() - start} seconds')
     
     if cfg['stage'] == 'optical':
+        logging.info('optical stage complete')
+        cfg['stage'] = 'acoustic'
+        # save updated cfg to JSON file
+        with open(cfg['name']+'config.json', 'w') as f:
+            json.dump(cfg, f, indent='\t')
         start = timeit.default_timer()
         # create dataset for sensor data based on k-wave Nt
+        # float16 is used for two reasons: 1. sensor data is massive
+        # and 2. the MSOT data acquisition system uses 12 bits
         with h5py.File(cfg['name']+'data.h5', 'r+') as f:
             f.create_dataset(
                 'sensor_data',
@@ -389,14 +394,10 @@ if __name__ == '__main__':
                     cfg['nsensors'],
                     cfg['Nt']
                 ),
-                dtype=np.float32# dtype=np.float16
+                dtype=np.float16
             )
         logging.info(f'sensor data dataset created in {timeit.default_timer() - start} seconds')
-    
-    if cfg['stage'] == 'optical':
-        logging.info('optical stage complete')
-        cfg['stage'] = 'acoustic'; cfg['cycle'] = 0; cfg['wavelength_index'] = 0; cfg['pulse'] = 0
-    
+        
     gc.collect()
     
     # acoustic forward simulation
@@ -431,12 +432,18 @@ if __name__ == '__main__':
                     
                     start = timeit.default_timer()
                     with h5py.File(cfg['name']+'data.h5', 'r+') as f:
-                        f['sensor_data'][cycle,wavelength_index,pulse] = out
+                        f['sensor_data'][cycle,wavelength_index,pulse] = out.astype(np.float16)
                     logging.info(f'sensor data saved in {timeit.default_timer() - start} seconds')
+
+                cfg['pulse'] = 0
+            cfg['wavelength_index'] = 0
+        cfg['cycle'] = 0
         
     if cfg['stage'] == 'acoustic':
         logging.info('acoustic stage complete')
-        cfg['stage'] = 'inverse'; cfg['cycle'] = 0; cfg['wavelength_index'] = 0; cfg['pulse'] = 0
+        cfg['stage'] = 'inverse'
+        with open(cfg['name']+'config.json', 'w') as f:
+            json.dump(cfg, f, indent='\t')
     
     # delete temp p0_3D dataset
     #start = timeit.default_timer()
@@ -466,7 +473,7 @@ if __name__ == '__main__':
                     
                     start = timeit.default_timer()
                     with h5py.File(cfg['name']+'data.h5', 'r') as f:
-                        out = f['sensor_data'][cycle,wavelength_index,pulse]
+                        out = f['sensor_data'][cycle,wavelength_index,pulse].astype(np.float32)
                     logging.info(f'sensor data loaded in {timeit.default_timer() - start} seconds')
                     
                     start = timeit.default_timer()
@@ -477,5 +484,9 @@ if __name__ == '__main__':
                     with h5py.File(cfg['name']+'data.h5', 'r+') as f:
                         f['p0_recon'][cycle,wavelength_index,pulse] = uf.square_centre_crop(out, cfg['crop_size'])
                     logging.info(f'p0_recon saved in {timeit.default_timer() - start} seconds')
+                    
+                cfg['pulse'] = 0
+            cfg['wavelength_index'] = 0
+        cfg['cycle'] = 0
         
     
