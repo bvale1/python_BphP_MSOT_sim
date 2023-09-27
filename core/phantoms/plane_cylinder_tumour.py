@@ -31,8 +31,8 @@ class plane_cyclinder_tumour(phantom):
         
         volume[0, 0] += mu_a_background * background_mask
         volume[0, 1] += mu_s_background * background_mask
-        volume[0, 0] += self.H20['mu_a'][0] * np.logincal_not(background_mask)
-        volume[0, 1] += self.H20['mu_s'][0] * np.logincal_not(background_mask)
+        volume[0, 0] += self.H2O['mu_a'][0] * np.logincal_not(background_mask)
+        volume[0, 1] += self.H2O['mu_s'][0] * np.logincal_not(background_mask)
         
         # at its peak absorption the tomour has double mu_a of the background
         volume[0, 0] += mu_a_background * gf.quadratic_profile_tumor(
@@ -41,12 +41,18 @@ class plane_cyclinder_tumour(phantom):
             r_tumour, # [m]
             [(cfg['mcx_domain_size'][0]/2), 0.0, (cfg['mcx_domain_size'][2]/2)]
         )
-        volume[0, 1] = mu_s_tumour * gf.cylinder_mask(
+        tumour_mask = gf.sphere_mask(
             cfg['dx'], # [m]
             cfg['mcx_grid_size'], # [grid points]
             r_tumour, # [m]
-            [(cfg['mcx_domain_size'][0]/2), 0.0, (cfg['mcx_domain_size'][2]/2)]
+            [
+                cfg['mcx_domain_size'][0]/2,
+                cfg['mcx_domain_size'][1]/2,
+                cfg['mcx_domain_size'][2]/2
+            ]
         )
+        
+        volume[0, 1][tumour_mask] = mu_s_tumour
         
         # no proteins are in this experiment
         ReBphP_PCM_Pr_c = np.zeros((cfg['mcx_grid_size']), dtype=np.float32)
