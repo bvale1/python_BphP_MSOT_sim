@@ -1,6 +1,7 @@
 import numpy as np
 #from phantoms.Clara_experiment_phantom import Clara_experiment_phantom
-from phantoms.BphP_cylindrical_phantom import BphP_cylindrical_phantom
+#from phantoms.BphP_cylindrical_phantom import BphP_cylindrical_phantom
+from phantoms.plane_cylinder_tumour import plane_cyclinder_tumour
 import json
 import h5py
 import os
@@ -102,10 +103,13 @@ if __name__ == '__main__':
         # of the xz plane, all other voxels are background
         (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg)
         '''
+        phantom = plane_cyclinder_tumour()
+        (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg,  mu_a_tomour=1700, r_tumour=0.001)
+        '''
         phantom = BphP_cylindrical_phantom()
         ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
         (cfg, volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg)
-        
+        '''
     else:
         # It is imperative that dx is small enough to support high enough 
         # frequencies and that [nx, ny, nz] have low prime factors i.e. 2, 3, 5
@@ -141,7 +145,7 @@ if __name__ == '__main__':
             'npulses' : args.npulses,
             'nphotons' : 1e8,
             'nsources' : 10,
-            'wavelengths' : [680e-9, 770e-9],
+            'wavelengths' : [680e-9],#, 770e-9],
             'mcx_domain_size' : mcx_domain_size,
             'kwave_domain_size' : kwave_domain_size,
             'mcx_grid_size': mcx_grid_size,
@@ -193,10 +197,13 @@ if __name__ == '__main__':
         # of the xz plane, all other voxels are background
         (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg)
         '''
+        phantom = plane_cyclinder_tumour()
+        (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg,  mu_a_tomour=1700, r_tumour=0.001)
+        '''
         phantom = BphP_cylindrical_phantom()
         ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
         (cfg, volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg)
-            
+        '''
         # save 2D slice of the volume to HDF5 file
         with h5py.File(cfg['save_dir']+'data.h5', 'w') as f:
             f.create_dataset(

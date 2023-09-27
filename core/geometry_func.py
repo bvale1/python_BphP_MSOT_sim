@@ -1,13 +1,16 @@
 import numpy as np
 
-def sphere_mask(dx, grid_size, radius, origin):
-    
-    [X,Y,Z] = np.meshgrid(
-        np.arange(grid_size[0], dtype=np.float32) * dx, 
-        np.arange(grid_size[1], dtype=np.float32) * dx, 
+def grid_xyz(dx, grid_size):
+    return np.meshgrid(
+        np.arange(grid_size[0], dtype=np.float32) * dx,
+        np.arange(grid_size[1], dtype=np.float32) * dx,
         np.arange(grid_size[2], dtype=np.float32) * dx,
         indexing='ij'
     )
+
+def sphere_mask(dx, grid_size, radius, origin):
+    
+    [X,Y,Z] = grid_xyz(dx, grid_size)
     
     distances = np.sqrt(
         (X - origin[1])**2 + 
@@ -17,7 +20,6 @@ def sphere_mask(dx, grid_size, radius, origin):
     
     return distances <= radius
 
-
 def cylinder_mask(dx : (int, float),
                   grid_size : (list, tuple, np.ndarray),
                   radius : (int, float), 
@@ -25,12 +27,7 @@ def cylinder_mask(dx : (int, float),
     # Note origin and radius are in mm
     # Note origin is in the form [x, y, z]
     # Note the cylinder is aligned along the y-axis
-    [X,Y,Z] = np.meshgrid(
-        np.arange(grid_size[0], dtype=np.float32) * dx, 
-        np.arange(grid_size[1], dtype=np.float32) * dx, 
-        np.arange(grid_size[2], dtype=np.float32) * dx,
-        indexing='ij'
-    )
+    [X,Y,Z] = grid_xyz(dx, grid_size)
     
     distances = np.sqrt(
         (X - origin[0])**2 + 
@@ -39,6 +36,21 @@ def cylinder_mask(dx : (int, float),
     
     return distances <= radius
 
+def quadratic_profile_tumor(dx, grid_size, radius, origin):
+    
+    [X,Y,Z] = grid_xyz(dx, grid_size)
+    
+    distances = np.sqrt(
+        (X - origin[0])**2 + 
+        (Y - origin[1])**2 +
+        (Z - origin[2])**2
+    )
+    
+    absoption_profile = 1 - ((distances / radius)**2)
+    # zero outside the radius
+    absoption_profile *= (distances <= radius)
+    
+    return absoption_profile
 
 def get_optical_grid_size(domain_size=[0.082, 0.0205, 0.082],
                           c0_min=1500,

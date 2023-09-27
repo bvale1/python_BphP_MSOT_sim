@@ -18,8 +18,8 @@ class BphP_cylindrical_phantom(phantom):
         # define background phantom scattering and absorption coefficients
         # Corrigendum: Optical properties of biological tissues: a review
         # Steven L Jacques, 2013
-        background_mu_a = rng.normal(1, 0.3, size=n_wavelengths)
-        background_mu_s = rng.normal(2000, 300, size=n_wavelengths)
+        background_mu_a = rng.normal(0.8, 0.3, size=n_wavelengths)
+        background_mu_s = rng.normal(1500, 300, size=n_wavelengths)
         # index as [1, ..., lambda]->[mu_a, mu_s]->[x]->[y]->[z]
         volume = np.zeros(
             (
