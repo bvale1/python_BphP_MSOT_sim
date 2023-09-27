@@ -6,9 +6,8 @@ import BphP_func as bf
 
 class plane_cyclinder_tumour(phantom):
 
-    def create_volume(cfg, mu_a_tomour=1700, r_tumour=0.001):
+    def create_volume(cfg, mu_a_background=0.7, r_tumour=0.001):
     
-        mu_a_background = 0.7 # [m^-1]
         mu_s_background = 2500 # [m^-1]
         mu_s_tumour = 1700 # [m^-1]
     

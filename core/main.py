@@ -104,7 +104,9 @@ if __name__ == '__main__':
         (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg)
         '''
         phantom = plane_cyclinder_tumour()
-        (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg,  mu_a_tomour=1700, r_tumour=0.001)
+        (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(
+            cfg,  mu_a_background=0.7, r_tumour=0.001
+        )
         '''
         phantom = BphP_cylindrical_phantom()
         ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
@@ -198,7 +200,9 @@ if __name__ == '__main__':
         (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg)
         '''
         phantom = plane_cyclinder_tumour()
-        (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg,  mu_a_tomour=1700, r_tumour=0.001)
+        (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(
+            cfg,  mu_a_background=0.7, r_tumour=0.001
+        )
         '''
         phantom = BphP_cylindrical_phantom()
         ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])

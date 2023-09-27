@@ -164,7 +164,7 @@ class MCX_adapter():
             source_direction_vector / np.linalg.norm(source_direction_vector)
         ).tolist()
         
-        self.mcx_cfg['Optode']['Source']['Param1'] = [0.5, source_no, 0, 0]
+        self.mcx_cfg['Optode']['Source']['Param1'][1] = source_no
 
 
     def save_mcx_config(self) -> None:
