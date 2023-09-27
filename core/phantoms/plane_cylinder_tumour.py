@@ -31,8 +31,8 @@ class plane_cyclinder_tumour(phantom):
         
         volume[0, 0] += mu_a_background * background_mask
         volume[0, 1] += mu_s_background * background_mask
-        volume[0, 0] += self.H2O['mu_a'][0] * np.logincal_not(background_mask)
-        volume[0, 1] += self.H2O['mu_s'][0] * np.logincal_not(background_mask)
+        volume[0, 0] += self.H2O['mu_a'][0] * np.logical_not(background_mask)
+        volume[0, 1] += self.H2O['mu_s'][0] * np.logical_not(background_mask)
         
         # at its peak absorption the tomour has double mu_a of the background
         volume[0, 0] += mu_a_background * gf.quadratic_profile_tumor(
