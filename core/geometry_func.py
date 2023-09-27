@@ -18,8 +18,12 @@ def sphere_mask(dx, grid_size, radius, origin):
     return distances <= radius
 
 
-def cylinder_mask(dx, grid_size, radius, origin):
-    
+def cylinder_mask(dx : (int, float),
+                  grid_size : (list, tuple, np.ndarray),
+                  radius : (int, float), 
+                  origin : (list, tuple, np.ndarray)) -> np.ndarray:
+    # Note origin and radius are in mm
+    # Note origin is in the form [x, y, z]
     # Note the cylinder is aligned along the y-axis
     [X,Y,Z] = np.meshgrid(
         np.arange(grid_size[0], dtype=np.float32) * dx, 

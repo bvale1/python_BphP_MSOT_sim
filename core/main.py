@@ -77,7 +77,7 @@ if __name__ == '__main__':
         action='store'
     )
     parser.add_argument('--npulses', type=int, default=16, action='store')
-    
+    parser.add_argument('--crop_size', type=int, default=256, action='store')
     args = parser.parse_args()
     
     # path to MCX binary
@@ -135,7 +135,7 @@ if __name__ == '__main__':
         # configure simulation
         cfg = {
             'name' : args.save_dir+args.name,
-            'seed' : None, # TODO: use to procedurally generate phantom
+            'seed' : None,
             'nsensors' : 256,
             'ncycles' : 1,
             'npulses' : args.npulses,
@@ -153,7 +153,7 @@ if __name__ == '__main__':
             'alpha_coeff' : 0.01,
             'alpha_power' : 1.1,
             'recon_iterations' : 1, # time reversal iterations
-            'crop_size' : 256, # pixel with of output images and ground truth
+            'crop_size' : args.crop_size, # pixel with of output images and ground truth
             'cycle' : 0, # for checkpointing
             'wavelength_index' : 0, # for checkpointing
             'pulse' : 0, # for checkpointing
