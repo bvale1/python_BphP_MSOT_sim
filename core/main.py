@@ -75,6 +75,7 @@ if __name__ == '__main__':
     parser.add_argument('--npulses', type=int, default=16, action='store')
     parser.add_argument('--crop_size', type=int, default=256, action='store')
     parser.add_argument('--sim_git_hash', type=str, default=None, action='store')
+    parser.add_argument('--recon_iterations', type=int, default=1, action='store')
     args = parser.parse_args()
     
     # path to MCX binary
@@ -105,8 +106,9 @@ if __name__ == '__main__':
         '''
         phantom = plane_cyclinder_tumour()
         ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
+        H2O = phantom.define_water()
         (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(
-            cfg, mu_a_background=0.7, r_tumour=0.001
+            cfg, mu_a_background=1, r_tumour=0.002
         )
         '''
         phantom = BphP_cylindrical_phantom()
@@ -159,7 +161,7 @@ if __name__ == '__main__':
             'c_0' : c_0,
             'alpha_coeff' : 0.01,
             'alpha_power' : 1.1,
-            'recon_iterations' : 1, # time reversal iterations
+            'recon_iterations' : args.recon_iterations, # time reversal iterations
             'crop_size' : args.crop_size, # pixel with of output images and ground truth
             'cycle' : 0, # for checkpointing
             'wavelength_index' : 0, # for checkpointing
@@ -201,9 +203,10 @@ if __name__ == '__main__':
         (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg)
         '''
         phantom = plane_cyclinder_tumour()
+        H2O = phantom.define_water()
         ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
         (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(
-            cfg, mu_a_background=0.7, r_tumour=0.001
+            cfg, mu_a_background=1, r_tumour=0.002
         )
         '''
         phantom = BphP_cylindrical_phantom()
