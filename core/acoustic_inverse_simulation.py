@@ -118,8 +118,6 @@ class kwave_inverse_adapter():
             self.execution_options
         )['p_final'][pml:-pml, pml:-pml]# crop pml from reconstruction
         
-        
-        
         # apply positivity constraint
         p0_recon *= (p0_recon > 0.0)
         
@@ -149,10 +147,10 @@ class kwave_inverse_adapter():
                 source = kSource()
                 source.p_mask = self.source_mask
                 source.p_mode = 'dirichlet'
-                source.p = sensor_data0 - np.flip(sensor_datai, axis=1)
+                source.p =  np.flip(sensor_datai, axis=1) - sensor_data0
                 
                 # run time reversal reconstruction
-                p0_recon -= alpha * kspaceFirstOrder2DG(
+                p0_recon += alpha * kspaceFirstOrder2DG(
                     self.kgrid,
                     source,
                     sensor,
