@@ -39,7 +39,11 @@ class plane_cyclinder_tumour(phantom):
             cfg['dx'], # [m]
             cfg['mcx_grid_size'], # [grid points]
             r_tumour, # [m]
-            [(cfg['mcx_domain_size'][0]/2), 0.0, (cfg['mcx_domain_size'][2]/2)]
+            [
+                cfg['mcx_domain_size'][0]/2,
+                cfg['mcx_domain_size'][1]/2,
+                cfg['mcx_domain_size'][2]/2
+            ]
         )
         tumour_mask = gf.sphere_mask(
             cfg['dx'], # [m]
