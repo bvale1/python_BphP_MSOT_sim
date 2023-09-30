@@ -84,7 +84,7 @@ class kwave_inverse_adapter():
         self.source_mask = cart2grid(self.kgrid, self.reconstruction_source_xz)[0]
         
         
-    def run_time_reversal(self, sensor_data0, alpha=3.0):
+    def run_time_reversal(self, sensor_data0, alpha=2.0):
         # for iterative time reversal reconstruction with positivity contraint
         # see k-wave example Matlab script (http://www.k-wave.org)
         # example_pr_2D_TR_iterative.m
