@@ -121,13 +121,13 @@ if __name__ == '__main__':
         # frequencies and that [nx, ny, nz] have low prime factors i.e. 2, 3, 5
         c_0 = 1500.0 # speed of sound [m s^-1]
         mcx_domain_size = [0.082, 0.0205, 0.082] # [m]
-        kwave_domain_size = [0.082, mcx_domain_size[1]/2, 0.082] # [m]
+        kwave_domain_size = [0.082, mcx_domain_size[1], 0.082] # [m]
         pml_size = 10 # perfectly matched layer size in grid points
         [mcx_grid_size, dx] = gf.get_optical_grid_size(
             mcx_domain_size,
             c0_min=c_0,
             pml_size=pml_size,
-            points_per_wavelength=2
+            points_per_wavelength=1
         )
         mcx_domain_size = [mcx_grid_size[0]*dx,
                            mcx_grid_size[1]*dx,
@@ -169,7 +169,7 @@ if __name__ == '__main__':
             'wavelength_index' : 0, # for checkpointing
             'pulse' : 0, # for checkpointing
             'stage' : 'optical', # for checkpointing (optical, acoustic, inverse)
-            'backprojection' : True # also include backprojection in reconstruction
+            'backprojection' : False # also include backprojection in reconstruction
         }
         
         logging.info(f'no checkpoint, creating config {cfg}')
@@ -373,8 +373,6 @@ if __name__ == '__main__':
             
     gc.collect()
     
-    
-    
     if cfg['stage'] == 'optical':
         logging.info('optical stage complete')
         
@@ -382,12 +380,13 @@ if __name__ == '__main__':
         # deleted mcx input and out files, they are not needed anymore
         #simulation.delete_temporary_files()
         # overwrite mcx simulation to save memory
-        simulation = acoustic_forward_simulation.kwave_forward_adapter(cfg)
+        simulation = acoustic_forward_simulation.kwave_forward_adapter(cfg, tran)
         # k-wave automatically determines dt and Nt, update cfg
         cfg = simulation.cfg    
         
         simulation.configure_simulation()
-        simulation.create_point_sensor_array()
+        #simulation.create_point_sensor_array()
+        simulation.create_transducer_array()
         logging.info(f'kwave forward initialised in {timeit.default_timer() - start} seconds')
         
         cfg['stage'] = 'acoustic'

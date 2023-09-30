@@ -34,11 +34,13 @@ class kwave_forward_adapter():
 
     ============================================================================
     '''
-    def __init__(self, cfg):
+    def __init__(self, cfg, transducer_model='point'):
         self.kgrid = kWaveGrid(
             cfg['kwave_grid_size'],
             [cfg['dx'], cfg['dx'], cfg['dx']],
         )
+        if transducer_model== 'array':
+            self.combine_data = True
         self.kgrid.makeTime(cfg['c_0'])
         cfg['dt'] = self.kgrid.dt
         cfg['Nt'] = self.kgrid.Nt

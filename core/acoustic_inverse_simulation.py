@@ -81,7 +81,9 @@ class kwave_inverse_adapter():
             )
         )
         
-        self.source_mask = cart2grid(self.kgrid, self.reconstruction_source_xz)[0]
+        [self.source_mask, self.mask_order_index, self.mask_reorder_index] = cart2grid(
+            self.kgrid, self.reconstruction_source_xz
+        )
         
         
     def run_time_reversal(self, sensor_data0):
@@ -202,14 +204,23 @@ class kwave_inverse_adapter():
         source_grid_pos -= self.cfg['crop_size']
         self.bp_source_xz = source_grid_pos.T * self.cfg['dx']
             
-        
+    #def interpolate_sensor_data(self, sensor_data):
     
     def run_backprojection(self, sensor_data):
         # TODO: FIX THIS
         # I THINK I AM INDEXING THE SENSOR DATA IN THE WRONG ORDER
         
-        # reverse time axis for sensor data at first iteration
-        #sensor_data = np.flip(sensor_data, axis=1)
+        # minus one since MATLAB indexes from 1
+        print('self.mask_order_index.shape')
+        print(self.mask_order_index.shape)
+        #print(self.mask_order_index)
+        print('self.mask_reorder_index.shape')
+        print(self.mask_reorder_index.shape)
+        #print(self.mask_reorder_index)
+        
+        print('sensor_data.shape')
+        print(sensor_data.shape)
+        sensor_data = sensor_data[self.mask_order_index-1,:][:,0,:]
         print('sensor_data.shape')
         print(sensor_data.shape)
         # reconstruct only region within 'crop_size'
@@ -243,28 +254,29 @@ class kwave_inverse_adapter():
         # time for wave to travel from each sensor to each grid point
         print('self.reconstruction_source_xz.shape')
         print(self.reconstruction_source_xz.shape)
-        print('self.bp_source_xz.shape')
-        print(self.bp_source_xz.shape)
+        #print('self.bp_source_xz.shape')
+        #print(self.bp_source_xz.shape)
         # reconstruction_source_xz should be shape (2, 256)
         delay = np.sqrt(
-            (X - self.bp_source_xz[0, :])**2 + 
-            (Z - self.bp_source_xz[1, :])**2
+            (X - self.reconstruction_source_xz[0, :])**2 + 
+            (Z - self.reconstruction_source_xz[1, :])**2
         ) / self.cfg['c_0']
         #delay = np.sort(delay, axis=0)
         print('delay.shape')
         print(type(delay))
         print(delay.shape)
         signal_amplitude = np.zeros_like(delay, dtype=np.float32)
+        t_array = np.arange(self.cfg['Nt'], dtype=np.float32) * self.cfg['dt']
         for i, sensor in enumerate(sensor_data):
             print(f'backprojection sensor {i+1}/{sensor_data.shape[0]}')
             print('sensor.shape')
             print(sensor.shape)
             print('delay[:,i].shape')
             print(delay[:,i].shape)
-            print('self.kgrid.t_array.shape[0]')
-            print(self.kgrid.t_array.shape[0])
+            print('t_array')
+            print(t_array.shape)
             signal_amplitude[:,i] = np.interp(
-                delay[:,i], self.kgrid.t_array[0], sensor
+                delay[:,i], t_array, sensor
             )
             with h5py.File(self.cfg['save_dir']+'data.h5', 'r+') as f:
                 f['p0_bp_sensors'][i] = np.reshape(
