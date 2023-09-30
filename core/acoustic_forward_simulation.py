@@ -8,7 +8,6 @@ from kwave.options.simulation_execution_options import SimulationExecutionOption
 from kwave.options.simulation_options import SimulationOptions
 from kwave.ksource import kSource
 from kwave.utils.mapgen import make_cart_circle, make_circle
-from kwave.utils.interp import interp_cart_data
 from kwave.utils.conversion import cart2grid
 import utility_func as uf
 import numpy as np
@@ -41,6 +40,13 @@ class kwave_forward_adapter():
         )
         if transducer_model== 'array':
             self.combine_data = True
+            self.create_transducer_array()
+        else:
+            if transducer_model != 'point':
+                print('transducer model not recognised, using point sensor array')
+            self.combine_data = False
+            self.create_point_sensor_array()
+            
         self.kgrid.makeTime(cfg['c_0'])
         cfg['dt'] = self.kgrid.dt
         cfg['Nt'] = self.kgrid.Nt

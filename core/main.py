@@ -77,6 +77,7 @@ if __name__ == '__main__':
     parser.add_argument('--sim_git_hash', type=str, default=None, action='store')
     parser.add_argument('--recon_iterations', type=int, default=1, action='store')
     parser.add_argument('--recon_alpha', type=float, default=1.0, action='store')
+    parser.add_argument('--ppw', type=int, default=2, action='store')
     args = parser.parse_args()
     
     # path to MCX binary
@@ -127,7 +128,7 @@ if __name__ == '__main__':
             mcx_domain_size,
             c0_min=c_0,
             pml_size=pml_size,
-            points_per_wavelength=1
+            points_per_wavelength=args.ppw
         )
         mcx_domain_size = [mcx_grid_size[0]*dx,
                            mcx_grid_size[1]*dx,
@@ -156,6 +157,7 @@ if __name__ == '__main__':
             'kwave_domain_size' : kwave_domain_size,
             'mcx_grid_size': mcx_grid_size,
             'kwave_grid_size' : kwave_grid_size,
+            'points_per_wavelength' : args.ppw, # only lower to 1 to test if enough RAM is not available
             'dx' : dx,
             'pml_size' : pml_size,
             'gruneisen' : 1.0,
@@ -380,13 +382,11 @@ if __name__ == '__main__':
         # deleted mcx input and out files, they are not needed anymore
         #simulation.delete_temporary_files()
         # overwrite mcx simulation to save memory
-        simulation = acoustic_forward_simulation.kwave_forward_adapter(cfg, tran)
+        simulation = acoustic_forward_simulation.kwave_forward_adapter(cfg)
         # k-wave automatically determines dt and Nt, update cfg
         cfg = simulation.cfg    
         
         simulation.configure_simulation()
-        #simulation.create_point_sensor_array()
-        simulation.create_transducer_array()
         logging.info(f'kwave forward initialised in {timeit.default_timer() - start} seconds')
         
         cfg['stage'] = 'acoustic'

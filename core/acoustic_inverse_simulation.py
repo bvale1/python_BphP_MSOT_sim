@@ -7,7 +7,7 @@ from kwave.options.simulation_execution_options import SimulationExecutionOption
 from kwave.options.simulation_options import SimulationOptions
 from kwave.ksource import kSource
 from kwave.utils.mapgen import make_cart_circle
-#from kwave.utils.interp import interp_cart_data
+from kwave.utils.interp import interp_cart_data
 from kwave.utils.conversion import cart2grid
 import utility_func as uf
 import numpy as np
@@ -203,9 +203,13 @@ class kwave_inverse_adapter():
         source_grid_pos = np.asarray(source_grid_pos).astype(np.float32)
         source_grid_pos -= self.cfg['crop_size']
         self.bp_source_xz = source_grid_pos.T * self.cfg['dx']
-            
-    #def interpolate_sensor_data(self, sensor_data):
-    
+    '''
+    def interpolate_sensor_data(self, sensor_data):
+        
+        sensor_data_interp = interp_cart_data(
+            self.kgrid, sensor_data, 
+        )
+    '''
     def run_backprojection(self, sensor_data):
         # TODO: FIX THIS
         # I THINK I AM INDEXING THE SENSOR DATA IN THE WRONG ORDER
