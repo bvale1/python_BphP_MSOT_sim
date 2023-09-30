@@ -84,7 +84,7 @@ class kwave_inverse_adapter():
         self.source_mask = cart2grid(self.kgrid, self.reconstruction_source_xz)[0]
         
         
-    def run_time_reversal(self, sensor_data0, alpha=1.0):
+    def run_time_reversal(self, sensor_data0, alpha=3.0):
         # for iterative time reversal reconstruction with positivity contraint
         # see k-wave example Matlab script (http://www.k-wave.org)
         # example_pr_2D_TR_iterative.m
@@ -196,7 +196,7 @@ class kwave_inverse_adapter():
         for x in range(self.source_mask.shape[0]):
             for z in range(self.source_mask.shape[1]):
                 if self.source_mask[x, z] == 1:
-                    source_grid_pos.append([z, x])
+                    source_grid_pos.append([x, z])
         # convert to cartesian coordinates
         source_grid_pos = np.asarray(source_grid_pos).astype(np.float32)
         source_grid_pos -= self.cfg['crop_size']
