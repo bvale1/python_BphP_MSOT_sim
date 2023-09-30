@@ -126,7 +126,7 @@ if __name__ == '__main__':
             mcx_domain_size,
             c0_min=c_0,
             pml_size=pml_size,
-            points_per_wavelength=1
+            points_per_wavelength=2
         )
         mcx_domain_size = [mcx_grid_size[0]*dx,
                            mcx_grid_size[1]*dx,
