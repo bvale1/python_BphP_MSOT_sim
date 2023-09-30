@@ -76,6 +76,7 @@ if __name__ == '__main__':
     parser.add_argument('--crop_size', type=int, default=256, action='store')
     parser.add_argument('--sim_git_hash', type=str, default=None, action='store')
     parser.add_argument('--recon_iterations', type=int, default=1, action='store')
+    parser.add_argument('--recon_alpha', type=float, default=1.0, action='store')
     args = parser.parse_args()
     
     # path to MCX binary
@@ -162,6 +163,7 @@ if __name__ == '__main__':
             'alpha_coeff' : 0.01,
             'alpha_power' : 1.1,
             'recon_iterations' : args.recon_iterations, # time reversal iterations
+            'recon_alpha' : args.recon_alpha, # time reversal alpha
             'crop_size' : args.crop_size, # pixel with of output images and ground truth
             'cycle' : 0, # for checkpointing
             'wavelength_index' : 0, # for checkpointing
