@@ -45,6 +45,16 @@ class plane_cyclinder_tumour(phantom):
                 cfg['mcx_domain_size'][2]/2
             ]
         )
+        volume[0, 0] += mu_a_background * gf.quadratic_profile_tumor(
+            cfg['dx'], # [m]
+            cfg['mcx_grid_size'], # [grid points]
+            r_tumour, # [m]
+            [
+                cfg['mcx_domain_size'][0]/2 + 0.004,
+                cfg['mcx_domain_size'][1]/2,
+                cfg['mcx_domain_size'][2]/2 + 0.004
+            ]
+        )
         tumour_mask = gf.sphere_mask(
             cfg['dx'], # [m]
             cfg['mcx_grid_size'], # [grid points]
@@ -55,7 +65,18 @@ class plane_cyclinder_tumour(phantom):
                 cfg['mcx_domain_size'][2]/2
             ]
         )
+        volume[0, 1][tumour_mask] = mu_s_tumour
         
+        tumour_mask = gf.sphere_mask(
+            cfg['dx'], # [m]
+            cfg['mcx_grid_size'], # [grid points]
+            r_tumour, # [m]
+            [
+                cfg['mcx_domain_size'][0]/2 + 0.004,
+                cfg['mcx_domain_size'][1]/2,
+                cfg['mcx_domain_size'][2]/2 + 0.004
+            ]
+        )
         volume[0, 1][tumour_mask] = mu_s_tumour
         
         # no proteins are in this experiment

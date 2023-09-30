@@ -12,8 +12,6 @@ from kwave.utils.conversion import cart2grid
 import utility_func as uf
 import numpy as np
 import h5py
-import timeit
-
 
 class kwave_inverse_adapter():
     '''
@@ -72,7 +70,7 @@ class kwave_inverse_adapter():
         number_detector_elements = 256
         radius_mm = 40.5
         
-        time_reversal_source_xz = np.matmul(
+        self.reconstruction_source_xz = np.matmul(
             uf.Ry2D(225 * np.pi / 180),
             make_cart_circle(
                 radius_mm * 1e-3, 
@@ -83,7 +81,7 @@ class kwave_inverse_adapter():
             )
         )
         
-        self.source_mask = cart2grid(self.kgrid, time_reversal_source_xz)[0]
+        self.source_mask = cart2grid(self.kgrid, self.reconstruction_source_xz)[0]
         
         
     def run_time_reversal(self, sensor_data0, alpha=1.0):
@@ -96,9 +94,8 @@ class kwave_inverse_adapter():
         
         # for cropping pml out of reconstruction
         pml = self.cfg['pml_size']
-        
         # reverse time axis for sensor data at first iteration
-        sensor_data0 = np.flip(sensor_data0, axis=1).astype(np.float32)
+        sensor_data0 = np.flip(sensor_data0, axis=1)
         # use sensor data as source with dirichlet boundary condition
         sensor = kSensor(self.source_mask)
         sensor.record = ['p_final']
@@ -120,6 +117,18 @@ class kwave_inverse_adapter():
         
         # apply positivity constraint
         p0_recon *= (p0_recon > 0.0)
+        
+        # comment out later
+        with h5py.File(self.cfg['save_dir']+'data.h5', 'r+') as f:
+            try:
+                print(f'creating p0_tr_{1} dataset')
+                f.create_dataset(
+                    f'p0_tr_{1}', data=uf.square_centre_crop(
+                        p0_recon, self.cfg['crop_size']
+                    )
+                )
+            except:
+                print(f'p0_tr_{1} already exists')
         
         if self.cfg['recon_iterations'] > 1:
             for i in range(2, self.cfg['recon_iterations']+1):
@@ -150,7 +159,7 @@ class kwave_inverse_adapter():
                 source.p =  np.flip(sensor_datai, axis=1) - sensor_data0
                 
                 # run time reversal reconstruction
-                p0_recon += alpha * kspaceFirstOrder2DG(
+                p0_recon -= alpha * kspaceFirstOrder2DG(
                     self.kgrid,
                     source,
                     sensor,
@@ -162,4 +171,114 @@ class kwave_inverse_adapter():
                 # apply positivity constraint
                 p0_recon *= (p0_recon > 0.0)
         
+                with h5py.File(self.cfg['save_dir']+'data.h5', 'r+') as f:
+                    try:
+                        print(f'creating p0_tr_{i} dataset')
+                        f.create_dataset(
+                            f'p0_tr_{i}', data=uf.square_centre_crop(
+                                p0_recon, self.cfg['crop_size']
+                            )
+                        )
+                    except:
+                        print(f'p0_tr_{i} already exists')
+        
         return p0_recon
+    
+    
+    def reorder_sensor_xz(self):
+        # this function should only be needed before running backprojection
+        # k-wave indexes the binary sensor mask in column wise linear order
+        # so senor_data[sensor_idx] is also in this order
+        
+        # inefficient sorting algorithm but it works for now
+        source_grid_pos = []
+        # index binary mask in column wise linear order
+        for x in range(self.source_mask.shape[0]):
+            for z in range(self.source_mask.shape[1]):
+                if self.source_mask[x, z] == 1:
+                    source_grid_pos.append([z, x])
+        # convert to cartesian coordinates
+        source_grid_pos = np.asarray(source_grid_pos).astype(np.float32)
+        source_grid_pos -= self.cfg['crop_size']
+        self.bp_source_xz = source_grid_pos.T * self.cfg['dx']
+            
+        
+    
+    def run_backprojection(self, sensor_data):
+        # TODO: FIX THIS
+        # I THINK I AM INDEXING THE SENSOR DATA IN THE WRONG ORDER
+        
+        # reverse time axis for sensor data at first iteration
+        #sensor_data = np.flip(sensor_data, axis=1)
+        print('sensor_data.shape')
+        print(sensor_data.shape)
+        # reconstruct only region within 'crop_size'
+        crop_size = self.cfg['crop_size']
+        [X, Z] = np.meshgrid(
+            (np.arange(crop_size) - crop_size/2) * self.cfg['dx'], 
+            (np.arange(crop_size) - crop_size/2) * self.cfg['dx'],
+            indexing='ij'
+        )
+        
+        with h5py.File(self.cfg['save_dir']+'data.h5', 'r+') as f:
+            try:
+                print('creating p0_bp_sensors dataset')
+                f.create_dataset(
+                    'p0_bp_sensors',
+                    data=np.zeros(
+                        (sensor_data.shape[0], crop_size, crop_size), 
+                        dtype=np.float32
+                    )
+                )
+            except:
+                print('p0_bp_sensors already exists')
+        
+        # X and Z can be flat
+        X = X.ravel(); Z = Z.ravel()
+        # compute euclidian distance from each sensor position to each grid point
+        X = np.repeat(X[:, np.newaxis], sensor_data.shape[0], axis=1)
+        Z = np.repeat(Z[:, np.newaxis], sensor_data.shape[0], axis=1)
+        print('X.shape')
+        print(X.shape)
+        # time for wave to travel from each sensor to each grid point
+        print('self.reconstruction_source_xz.shape')
+        print(self.reconstruction_source_xz.shape)
+        print('self.bp_source_xz.shape')
+        print(self.bp_source_xz.shape)
+        # reconstruction_source_xz should be shape (2, 256)
+        delay = np.sqrt(
+            (X - self.bp_source_xz[0, :])**2 + 
+            (Z - self.bp_source_xz[1, :])**2
+        ) / self.cfg['c_0']
+        #delay = np.sort(delay, axis=0)
+        print('delay.shape')
+        print(type(delay))
+        print(delay.shape)
+        signal_amplitude = np.zeros_like(delay, dtype=np.float32)
+        for i, sensor in enumerate(sensor_data):
+            print(f'backprojection sensor {i+1}/{sensor_data.shape[0]}')
+            print('sensor.shape')
+            print(sensor.shape)
+            print('delay[:,i].shape')
+            print(delay[:,i].shape)
+            print('self.kgrid.t_array.shape[0]')
+            print(self.kgrid.t_array.shape[0])
+            signal_amplitude[:,i] = np.interp(
+                delay[:,i], self.kgrid.t_array[0], sensor
+            )
+            with h5py.File(self.cfg['save_dir']+'data.h5', 'r+') as f:
+                f['p0_bp_sensors'][i] = np.reshape(
+                    signal_amplitude[:,i], (crop_size, crop_size)
+                )
+        
+        print('signal_amplitude.shape')
+        print(signal_amplitude.shape)
+        
+        bp_recon = np.sum(signal_amplitude, axis=1)
+        print('bp_recon.shape')
+        print(bp_recon.shape)
+        
+        # apply positivity constraint
+        bp_recon *= (bp_recon > 0.0)
+        
+        return np.reshape(bp_recon, (self.cfg['crop_size'], self.cfg['crop_size']))

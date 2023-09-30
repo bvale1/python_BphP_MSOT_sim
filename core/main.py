@@ -126,7 +126,7 @@ if __name__ == '__main__':
             mcx_domain_size,
             c0_min=c_0,
             pml_size=pml_size,
-            points_per_wavelength=2
+            points_per_wavelength=1
         )
         mcx_domain_size = [mcx_grid_size[0]*dx,
                            mcx_grid_size[1]*dx,
@@ -167,6 +167,7 @@ if __name__ == '__main__':
             'wavelength_index' : 0, # for checkpointing
             'pulse' : 0, # for checkpointing
             'stage' : 'optical', # for checkpointing (optical, acoustic, inverse)
+            'backprojection' : True # also include backprojection in reconstruction
         }
         
         logging.info(f'no checkpoint, creating config {cfg}')
@@ -238,7 +239,10 @@ if __name__ == '__main__':
             # allocate storage for the fluence, initial and reconstructed pressure
             # index as data['arg'][cycle, wavelength, pulse, x, z]
             logging.info('allocating storage for data.h5')
-            for arg in ['Phi', 'p0', 'p0_recon', 'ReBphP_PCM_Pr_c', 'ReBphP_PCM_Pfr_c']:
+            args = ['Phi', 'p0', 'p0_tr', 'ReBphP_PCM_Pr_c', 'ReBphP_PCM_Pfr_c']
+            if cfg['backprojection'] is True:
+                args.append('p0_bp')
+            for arg in args:
                 logging.info(arg)
                 f.create_dataset(
                     arg,
@@ -248,8 +252,7 @@ if __name__ == '__main__':
                         cfg['npulses'],
                         cfg['crop_size'],
                         cfg['crop_size']
-                    ),
-                        dtype=np.float32
+                    ), dtype=np.float32
                 )
                         
         with h5py.File(cfg['save_dir']+'temp.h5', 'w') as f:
@@ -270,8 +273,7 @@ if __name__ == '__main__':
                     cfg['crop_size'],
                     cfg['kwave_grid_size'][1],
                     cfg['crop_size']
-                ), 
-                dtype=np.float32
+                ), dtype=np.float32
             )
  
     # optical simulation
@@ -369,20 +371,23 @@ if __name__ == '__main__':
             
     gc.collect()
     
-    start = timeit.default_timer()
-    # deleted mcx input and out files, they are not needed anymore
-    #simulation.delete_temporary_files()
-    # overwrite mcx simulation to save memory
-    simulation = acoustic_forward_simulation.kwave_forward_adapter(cfg)
-    # k-wave automatically determines dt and Nt, update cfg
-    cfg = simulation.cfg    
     
-    simulation.configure_simulation()
-    simulation.create_point_sensor_array()
-    logging.info(f'kwave forward initialised in {timeit.default_timer() - start} seconds')
     
     if cfg['stage'] == 'optical':
         logging.info('optical stage complete')
+        
+        start = timeit.default_timer()
+        # deleted mcx input and out files, they are not needed anymore
+        #simulation.delete_temporary_files()
+        # overwrite mcx simulation to save memory
+        simulation = acoustic_forward_simulation.kwave_forward_adapter(cfg)
+        # k-wave automatically determines dt and Nt, update cfg
+        cfg = simulation.cfg    
+        
+        simulation.configure_simulation()
+        simulation.create_point_sensor_array()
+        logging.info(f'kwave forward initialised in {timeit.default_timer() - start} seconds')
+        
         cfg['stage'] = 'acoustic'
         # save updated cfg to JSON file
         with open(cfg['save_dir']+'config.json', 'w') as f:
@@ -453,14 +458,19 @@ if __name__ == '__main__':
             json.dump(cfg, f, indent='\t')
     
     # delete temp p0_3D dataset
-    #start = timeit.default_timer()
-    #os.remove(cfg['save_dir']+'temp.h5')
-    #logging.info(f'temp.h5 (p0_3D) deleted in {timeit.default_timer() - start} seconds')
+    try:
+        start = timeit.default_timer()
+        os.remove(cfg['save_dir']+'temp.h5')
+        logging.info(f'temp.h5 (p0_3D) deleted in {timeit.default_timer() - start} seconds')
+    except:
+        logging.error('temp.h5 (p0_3D) not found')
     
     start = timeit.default_timer()
     simulation = acoustic_inverse_simulation.kwave_inverse_adapter(cfg)
     simulation.configure_simulation()
     simulation.create_point_source_array()
+    if cfg['backprojection'] is True:
+        simulation.reorder_sensor_xz()
     logging.info(f'kwave inverse initialised in {timeit.default_timer() - start} seconds')
     
     gc.collect()
@@ -478,18 +488,27 @@ if __name__ == '__main__':
                     
                     logging.info(f'time reversal, cycle: {cycle+1}, wavelength_index: {wavelength_index+1}, pulse: {pulse+1}')
                     
+                    # load sensor data
                     start = timeit.default_timer()
                     with h5py.File(cfg['save_dir']+'data.h5', 'r') as f:
                         out = f['sensor_data'][cycle,wavelength_index,pulse].astype(np.float32)
                     logging.info(f'sensor data loaded in {timeit.default_timer() - start} seconds')
                     
+                    # TODO: interpolate sensor data from 256 to 512 sensors
+                    
                     start = timeit.default_timer()
-                    out = simulation.run_time_reversal(out)
+                    tr = simulation.run_time_reversal(out)
                     logging.info(f'time reversal run in {timeit.default_timer() - start} seconds')
+                    if cfg['backprojection'] is True:
+                        start = timeit.default_timer()
+                        bp = simulation.run_backprojection(out)
+                        logging.info(f'backprojection run in {timeit.default_timer() - start} seconds')
 
                     start = timeit.default_timer()
                     with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
-                        f['p0_recon'][cycle,wavelength_index,pulse] = uf.square_centre_crop(out, cfg['crop_size'])
+                        f['p0_tr'][cycle,wavelength_index,pulse] = uf.square_centre_crop(tr, cfg['crop_size'])
+                        if cfg['backprojection'] is True:
+                            f['p0_bp'][cycle,wavelength_index,pulse] = bp
                     logging.info(f'p0_recon saved in {timeit.default_timer() - start} seconds')
                     
                 cfg['pulse'] = 0
