@@ -159,7 +159,7 @@ class kwave_inverse_adapter():
                 source.p =  np.flip(sensor_datai, axis=1) - sensor_data0
                 
                 # run time reversal reconstruction
-                p0_recon -= self.cfg['alpha'] * kspaceFirstOrder2DG(
+                p0_recon -= self.cfg['recon_alpha'] * kspaceFirstOrder2DG(
                     self.kgrid,
                     source,
                     sensor,
