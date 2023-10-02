@@ -71,12 +71,6 @@ if __name__ == '__main__':
         default='',
         action='store'
     )
-    parser.add_argument(
-        '--name',
-        type=str,
-        default='20230912_Clara_phantom_ReBphP_0p001/',
-        action='store'
-    )
     parser.add_argument('--npulses', type=int, default=16, action='store')
     parser.add_argument('--crop_size', type=int, default=256, action='store')
     parser.add_argument('--sim_git_hash', type=str, default=None, action='store')
@@ -90,15 +84,12 @@ if __name__ == '__main__':
     if len(args.save_dir) != 0:
         if list(args.save_dir)[-1] != '/':
             args.save_dir += '/'
-    if len(args.name) != 0:
-        if list(args.name)[-1] != '/':
-            args.name += '/'
     
     # check for a checkpointed simulation of the same name
-    if (os.path.exists(args.save_dir+args.name+'config.json') 
-        and os.path.exists(args.save_dir+args.name+'data.h5')):
+    if (os.path.exists(args.save_dir+'config.json') 
+        and os.path.exists(args.save_dir+'data.h5')):
         
-        with open(args.save_dir+args.name+'config.json', 'r') as f:
+        with open(args.save_dir+'config.json', 'r') as f:
             cfg = json.load(f)
         logging.info(f'checkpoint config found {cfg}')
         
@@ -142,7 +133,7 @@ if __name__ == '__main__':
         
         # configure simulation
         cfg = {
-            'name' : args.save_dir+args.name,
+            'save_dir' : args.save_dir,
             'sim_git_hash' : args.sim_git_hash, # git hash of simulation code
             'seed' : None,
             'nsensors' : 256,
@@ -190,8 +181,8 @@ if __name__ == '__main__':
         cfg['LaserEnergy'] = cfg['LaserEnergy'].tolist()
         
         # save configuration to JSON file
-        uf.create_dir(cfg['name'])
-        with open(cfg['name']+'config.json', 'w') as f:
+        uf.create_dir(cfg['save_dir'])
+        with open(cfg['save_dir']+'config.json', 'w') as f:
             json.dump(cfg, f, indent='\t')
         
         '''
@@ -207,7 +198,7 @@ if __name__ == '__main__':
         (cfg, volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg)
             
         # save 2D slice of the volume to HDF5 file
-        with h5py.File(cfg['name']+'data.h5', 'w') as f:
+        with h5py.File(cfg['save_dir']+'data.h5', 'w') as f:
             f.create_dataset(
                 'background_mua_mus', 
                 data=uf.square_centre_crop(volume[:,:,:,(cfg['mcx_grid_size'][1]//2)-1,:],
@@ -245,7 +236,7 @@ if __name__ == '__main__':
                         dtype=np.float32
                 )
                         
-        with h5py.File(cfg['name']+'temp.h5', 'w') as f:
+        with h5py.File(cfg['save_dir']+'temp.h5', 'w') as f:
             # p0 will be saved in 3D for the acoustic simulation before finally
             # being deleted
             # 1 cycle * 2 wavelengths * 16 pulses * 512 * (1024**2) * 32 bits = 64 GB
@@ -279,7 +270,7 @@ if __name__ == '__main__':
                 cfg['wavelength_index'] = wavelength_index
                 for pulse in range(cfg['pulse'], cfg['npulses']):
                     cfg['pulse'] = pulse
-                    with open(cfg['name']+'config.json', 'w') as f:
+                    with open(cfg['save_dir']+'config.json', 'w') as f:
                         json.dump(cfg, f, indent='\t')
         
                     logging.info(f'mcx, cycle: {cycle+1}, wavelength_index: {wavelength_index+1}, pulse: {pulse+1}')
@@ -303,7 +294,7 @@ if __name__ == '__main__':
                     out *= cfg['LaserEnergy'][cycle][wavelength_index][pulse] * 1e6
                     
                     # save fluence, Pr and Pfr concentrations (additional ground truth) to data HDF5 file
-                    with h5py.File(cfg['name']+'data.h5', 'r+') as f:
+                    with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
                         f['Phi'][cycle,wavelength_index,pulse] = uf.square_centre_crop(
                             out[:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size'])
                         f['ReBphP_PCM_Pr_c'][cycle,wavelength_index,pulse] = uf.square_centre_crop(
@@ -319,12 +310,12 @@ if __name__ == '__main__':
                             ReBphP_PCM_Pfr_c * ReBphP_PCM['Pfr']['epsilon_a'][wavelength_index])
                     
                     # save 3D p0 to temp.h5
-                    with h5py.File(cfg['name']+'temp.h5', 'r+') as f:
+                    with h5py.File(cfg['save_dir']+'temp.h5', 'r+') as f:
                         f['p0_3D'][cycle,wavelength_index,pulse] =  uf.crop_p0_3D(
                             out,
                             [cfg['crop_size'], cfg['kwave_grid_size'][1], cfg['crop_size']]
                         )
-                    with h5py.File(cfg['name']+'data.h5', 'r+') as f:
+                    with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
                         f['p0'][cycle,wavelength_index,pulse] =  uf.square_centre_crop(
                             out[:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size']
                         )
@@ -378,13 +369,13 @@ if __name__ == '__main__':
         logging.info('optical stage complete')
         cfg['stage'] = 'acoustic'
         # save updated cfg to JSON file
-        with open(cfg['name']+'config.json', 'w') as f:
+        with open(cfg['save_dir']+'config.json', 'w') as f:
             json.dump(cfg, f, indent='\t')
         start = timeit.default_timer()
         # create dataset for sensor data based on k-wave Nt
         # float16 is used for two reasons: 1. sensor data is massive
         # and 2. the MSOT data acquisition system uses 12 bits
-        with h5py.File(cfg['name']+'data.h5', 'r+') as f:
+        with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
             f.create_dataset(
                 'sensor_data',
                 shape=(   
@@ -408,13 +399,13 @@ if __name__ == '__main__':
                 cfg['wavelength_index'] = wavelength_index
                 for pulse in range(cfg['pulse'], cfg['npulses']):
                     cfg['pulse'] = pulse
-                    with open(cfg['name']+'config.json', 'w') as f:
+                    with open(cfg['save_dir']+'config.json', 'w') as f:
                        json.dump(cfg, f, indent='\t')
                     
                     logging.info(f'k-wave forward, cycle: {cycle+1}, wavelength_index: {wavelength_index+1}, pulse: {pulse+1}')
                     
                     start = timeit.default_timer()
-                    with h5py.File(cfg['name']+'temp.h5', 'r') as f:
+                    with h5py.File(cfg['save_dir']+'temp.h5', 'r') as f:
                         out = uf.pad_p0_3D(
                             f['p0_3D'][cycle,wavelength_index,pulse],
                             cfg['kwave_grid_size'][0]
@@ -431,7 +422,7 @@ if __name__ == '__main__':
                         exit(1)                        
                     
                     start = timeit.default_timer()
-                    with h5py.File(cfg['name']+'data.h5', 'r+') as f:
+                    with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
                         f['sensor_data'][cycle,wavelength_index,pulse] = out.astype(np.float16)
                     logging.info(f'sensor data saved in {timeit.default_timer() - start} seconds')
 
@@ -442,12 +433,12 @@ if __name__ == '__main__':
     if cfg['stage'] == 'acoustic':
         logging.info('acoustic stage complete')
         cfg['stage'] = 'inverse'
-        with open(cfg['name']+'config.json', 'w') as f:
+        with open(cfg['save_dir']+'config.json', 'w') as f:
             json.dump(cfg, f, indent='\t')
     
     # delete temp p0_3D dataset
     #start = timeit.default_timer()
-    #os.remove(cfg['name']+'temp.h5')
+    #os.remove(cfg['save_dir']+'temp.h5')
     #logging.info(f'temp.h5 (p0_3D) deleted in {timeit.default_timer() - start} seconds')
     
     start = timeit.default_timer()
@@ -466,13 +457,13 @@ if __name__ == '__main__':
                 cfg['wavelength_index'] = wavelength_index
                 for pulse in range(cfg['pulse'], cfg['npulses']):
                     cfg['pulse'] = pulse
-                    with open(cfg['name']+'/config.json', 'w') as f:
+                    with open(cfg['save_dir']+'/config.json', 'w') as f:
                         json.dump(cfg, f, indent='\t')
                     
                     logging.info(f'time reversal, cycle: {cycle+1}, wavelength_index: {wavelength_index+1}, pulse: {pulse+1}')
                     
                     start = timeit.default_timer()
-                    with h5py.File(cfg['name']+'data.h5', 'r') as f:
+                    with h5py.File(cfg['save_dir']+'data.h5', 'r') as f:
                         out = f['sensor_data'][cycle,wavelength_index,pulse].astype(np.float32)
                     logging.info(f'sensor data loaded in {timeit.default_timer() - start} seconds')
                     
@@ -481,7 +472,7 @@ if __name__ == '__main__':
                     logging.info(f'time reversal run in {timeit.default_timer() - start} seconds')
 
                     start = timeit.default_timer()
-                    with h5py.File(cfg['name']+'data.h5', 'r+') as f:
+                    with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
                         f['p0_recon'][cycle,wavelength_index,pulse] = uf.square_centre_crop(out, cfg['crop_size'])
                     logging.info(f'p0_recon saved in {timeit.default_timer() - start} seconds')
                     

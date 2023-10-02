@@ -190,19 +190,4 @@ class kwave_forward_adapter():
             )
             print(f'sensor data combined in {timeit.default_timer() - start} seconds')
                 
-        return sensor_data#.astype(np.float16)
-    
-    
-# test script
-if __name__ == '__main__':
-    cfg = {
-        'kwave_grid_size': [108, 108, 108],
-        'dx': 0.001,
-        'c_0': 1500,
-        'pml_size': 10
-    }
-    p0 = np.zeros(cfg['kwave_grid_size'], dtype=np.float32)
-    p0[48:81, 48:81, 48:81] = 1.0
-    forawrd_simulation = kwave_forward_adapter(cfg)
-    forawrd_simulation.create_transducer_array()
-    forawrd_simulation.run_kwave_forward(p0)
+        return sensor_data
