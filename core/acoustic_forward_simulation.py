@@ -33,19 +33,11 @@ class kwave_forward_adapter():
 
     ============================================================================
     '''
-    def __init__(self, cfg, transducer_model='point'):
+    def __init__(self, cfg, transducer_model='invision'):
         self.kgrid = kWaveGrid(
             cfg['kwave_grid_size'],
             [cfg['dx'], cfg['dx'], cfg['dx']],
         )
-        if transducer_model== 'array':
-            self.combine_data = True
-            self.create_transducer_array()
-        else:
-            if transducer_model != 'point':
-                print('transducer model not recognised, using point sensor array')
-            self.combine_data = False
-            self.create_point_sensor_array()
             
         self.kgrid.makeTime(cfg['c_0'])
         cfg['dt'] = self.kgrid.dt
@@ -62,6 +54,15 @@ class kwave_forward_adapter():
             sound_speed=cfg['c_0'],
             absorbing=False
         )
+        
+        if transducer_model == 'invision':
+            self.combine_data = True
+            self.create_transducer_array()
+        else:
+            if transducer_model != 'point':
+                print('transducer model not recognised, using point sensor array')
+            self.combine_data = False
+            self.create_point_sensor_array()
         
         
     def create_point_sensor_array(self):

@@ -86,6 +86,35 @@ class kwave_inverse_adapter():
         )
         
         
+    def interpolate_sensor_data(self, sensor_data):
+        
+        radius_mm = 40.5
+        interp_source_xz = np.matmul(
+            uf.Ry2D(225 * np.pi / 180),
+            make_cart_circle(
+                radius_mm * 1e-3, 
+                2 * self.cfg['nsensors'], # from 256 to 512 sensors
+                np.array([0.0, 0.0]),
+                3 * np.pi / 2,
+                plot_circle=False
+            )
+        )
+        
+        [interp_mask, interp_mask_order_index, interp_mask_reorder_index] = cart2grid(
+            self.kgrid, interp_source_xz
+        )
+        
+        interp_sensor_data = interp_cart_data(
+            self.kgrid, sensor_data, self.source_mask, self.interp_mask
+        )
+        
+        [self.source_mask, self.mask_order_index, self.mask_reorder_index] = [
+            interp_mask, interp_mask_order_index, interp_mask_reorder_index
+        ]
+        
+        return interp_sensor_data
+    
+        
     def run_time_reversal(self, sensor_data0):
         # for iterative time reversal reconstruction with positivity contraint
         # see k-wave example Matlab script (http://www.k-wave.org)
@@ -98,6 +127,11 @@ class kwave_inverse_adapter():
         pml = self.cfg['pml_size']
         # reverse time axis for sensor data at first iteration
         sensor_data0 = np.flip(sensor_data0, axis=1)
+        
+        # interpolate sensor data to 512 sensors
+        if self.cfg['interp_data']:
+            sensor_data0 = self.interpolate_sensor_data(sensor_data0)
+        
         # use sensor data as source with dirichlet boundary condition
         sensor = kSensor(self.source_mask)
         sensor.record = ['p_final']
@@ -203,13 +237,8 @@ class kwave_inverse_adapter():
         source_grid_pos = np.asarray(source_grid_pos).astype(np.float32)
         source_grid_pos -= self.cfg['crop_size']
         self.bp_source_xz = source_grid_pos.T * self.cfg['dx']
-    '''
-    def interpolate_sensor_data(self, sensor_data):
         
-        sensor_data_interp = interp_cart_data(
-            self.kgrid, sensor_data, 
-        )
-    '''
+    
     def run_backprojection(self, sensor_data):
         # TODO: FIX THIS
         # I THINK I AM INDEXING THE SENSOR DATA IN THE WRONG ORDER

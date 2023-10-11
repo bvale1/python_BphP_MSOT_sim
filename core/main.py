@@ -165,6 +165,7 @@ if __name__ == '__main__':
             'alpha_coeff' : 0.01,
             'alpha_power' : 1.1,
             'recon_iterations' : args.recon_iterations, # time reversal iterations
+            'interp_data' : False, # interpolate sensor data from 256 to 512 sensors
             'recon_alpha' : args.recon_alpha, # time reversal alpha
             'crop_size' : args.crop_size, # pixel with of output images and ground truth
             'cycle' : 0, # for checkpointing
@@ -382,7 +383,7 @@ if __name__ == '__main__':
         # deleted mcx input and out files, they are not needed anymore
         #simulation.delete_temporary_files()
         # overwrite mcx simulation to save memory
-        simulation = acoustic_forward_simulation.kwave_forward_adapter(cfg)
+        simulation = acoustic_forward_simulation.kwave_forward_adapter(cfg, transducer_model='invision')
         # k-wave automatically determines dt and Nt, update cfg
         cfg = simulation.cfg    
         
