@@ -77,7 +77,8 @@ if __name__ == '__main__':
     parser.add_argument('--sim_git_hash', type=str, default=None, action='store')
     parser.add_argument('--recon_iterations', type=int, default=1, action='store')
     parser.add_argument('--recon_alpha', type=float, default=1.0, action='store')
-    parser.add_argument('--ppw', type=int, default=2, action='store')
+    # points per wavelength, only lower to 1 to test code if enough RAM is not available
+    parser.add_argument('--ppw', type=int, default=1, action='store')
     args = parser.parse_args()
     
     # path to MCX binary
@@ -97,6 +98,7 @@ if __name__ == '__main__':
             cfg = json.load(f)
         logging.info(f'checkpoint config found {cfg}')
         
+        # Uncomment disired phantom geometry
         '''
         phantom = Clara_experiment_phantom()
         #H2O = phantom.define_water()
@@ -117,11 +119,13 @@ if __name__ == '__main__':
         ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
         (cfg, volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg)
         '''
+        
     else:
         # It is imperative that dx is small enough to support high enough 
         # frequencies and that [nx, ny, nz] have low prime factors i.e. 2, 3, 5
         c_0 = 1500.0 # speed of sound [m s^-1]
-        mcx_domain_size = [0.082, 0.0205, 0.082] # [m]
+        # light source pairs are separted by 0.02474m in the y direction
+        mcx_domain_size = [0.082, 0.025, 0.082] # [m]
         kwave_domain_size = [0.082, mcx_domain_size[1], 0.082] # [m]
         pml_size = 10 # perfectly matched layer size in grid points
         [mcx_grid_size, dx] = gf.get_optical_grid_size(

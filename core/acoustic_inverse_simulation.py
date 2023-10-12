@@ -105,7 +105,7 @@ class kwave_inverse_adapter():
         )
         
         interp_sensor_data = interp_cart_data(
-            self.kgrid, sensor_data, self.source_mask, self.interp_mask
+            self.kgrid, sensor_data, self.reconstruction_source_xz, interp_mask, 
         )
         
         [self.source_mask, self.mask_order_index, self.mask_reorder_index] = [

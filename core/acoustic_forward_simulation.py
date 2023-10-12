@@ -39,7 +39,8 @@ class kwave_forward_adapter():
             [cfg['dx'], cfg['dx'], cfg['dx']],
         )
             
-        self.kgrid.makeTime(cfg['c_0'])
+        #self.kgrid.makeTime(cfg['c_0'])
+        self.kgrid.setTime(2030, 25e-9) # sampling rate used by the MSOT DAS
         cfg['dt'] = self.kgrid.dt
         cfg['Nt'] = self.kgrid.Nt
         self.cfg = cfg

@@ -52,21 +52,21 @@ def quadratic_profile_tumor(dx, grid_size, radius, origin):
     
     return absoption_profile
 
-def get_optical_grid_size(domain_size=[0.082, 0.0205, 0.082],
+def get_optical_grid_size(domain_size=[0.082, 0.025, 0.082],
                           c0_min=1500,
                           points_per_wavelength=2,
                           f_max=6e6,
                           pml_size=10):
     
-    # calculate grid size from powers of 2
+    # calculate grid size from powers of 2 and 3
     dx_min = c0_min / (points_per_wavelength * f_max)
-    nx = 2**(np.ceil(np.log2(domain_size[0] / dx_min)))# * 0.75
+    nx = 2**(np.ceil(np.log2(domain_size[0] / dx_min))-2) * 3
     
     # subtract pml from each edge
     nx = int(nx - 2 * pml_size)
     dx = domain_size[0] / nx
     ny = int(2**np.round(np.log2(domain_size[1] / dx))) - 2 * pml_size
-    nz = int(2**np.round(np.log2(domain_size[2] / dx))) - 2 * pml_size
+    nz = int(2**np.round(np.log2(domain_size[2] / dx)-2) * 3) - 2 * pml_size
     
     return [nx, ny, nz], dx
     
