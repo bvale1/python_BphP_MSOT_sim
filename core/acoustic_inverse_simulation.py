@@ -9,6 +9,7 @@ from kwave.ksource import kSource
 from kwave.utils.mapgen import make_cart_circle
 from kwave.utils.interp import interp_cart_data
 from kwave.utils.conversion import cart2grid
+from kwave.utils.kwave_array import kWaveArray
 import utility_func as uf
 import numpy as np
 import h5py
@@ -84,6 +85,31 @@ class kwave_inverse_adapter():
         [self.source_mask, self.mask_order_index, self.mask_reorder_index] = cart2grid(
             self.kgrid, self.reconstruction_source_xz
         )
+        
+        
+    def create_arc_source_array(self):
+        # TODO: test this and see if it yields better reconstructions than point source array
+        r = 0.0405 # [m]
+        n = 256 # number of elements
+        # dimensions of each element
+        arc_angle = 270*np.pi/(n*180) # [rad]
+        cord = 2*r*np.sin(arc_angle/2) # [m]
+        # center of each element
+        theta = np.linspace((np.pi/8)+(arc_angle/2), (7*np.pi/8)-(arc_angle/2), n) # [rad]
+        x = r*np.sin(theta) # [m]
+        z = r*np.cos(theta) # [m]
+        
+        # initializse transducer array object
+        karray = kWaveArray(bli_tolerance=0.05, upsampling_rate=10, single_precision=True)
+        
+        for i in range(n):
+            karray.add_arc_element([x[i], z[i]], r, cord, [0.0, 0.0])
+        
+        self.source_mask = karray.get_array_binary_mask(self.kgrid)
+        self.karray = karray
+        # records pressure by default
+        self.sensor = kSensor(self.sensor_mask)#, record=['p'])
+        self.combine_data = True
         
         
     def interpolate_sensor_data(self, sensor_data, nsensors=512):
