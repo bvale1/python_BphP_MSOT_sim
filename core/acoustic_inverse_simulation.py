@@ -86,14 +86,14 @@ class kwave_inverse_adapter():
         )
         
         
-    def interpolate_sensor_data(self, sensor_data):
+    def interpolate_sensor_data(self, sensor_data, nsensors=512):
         
         radius_mm = 40.5
         interp_source_xz = np.matmul(
             uf.Ry2D(225 * np.pi / 180),
             make_cart_circle(
                 radius_mm * 1e-3, 
-                2 * self.cfg['nsensors'], # from 256 to 512 sensors
+                nsensors, # from 256 to 512 sensors
                 np.array([0.0, 0.0]),
                 3 * np.pi / 2,
                 plot_circle=False
@@ -130,7 +130,9 @@ class kwave_inverse_adapter():
         
         # interpolate sensor data to 512 sensors
         if self.cfg['interp_data']:
-            sensor_data0 = self.interpolate_sensor_data(sensor_data0)
+            sensor_data0 = self.interpolate_sensor_data(
+                sensor_data0, nsensors=self.cfg['interp_data']
+            )
         
         # use sensor data as source with dirichlet boundary condition
         sensor = kSensor(self.source_mask)

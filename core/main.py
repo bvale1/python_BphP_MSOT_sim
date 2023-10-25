@@ -57,7 +57,7 @@ if __name__ == '__main__':
 
     ============================================================================
     '''
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
     # TODO: use argparse to set mcx_bin_path and other arguements for cfg
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -79,6 +79,8 @@ if __name__ == '__main__':
     parser.add_argument('--recon_alpha', type=float, default=1.0, action='store')
     # points per wavelength, only lower to 1 to test code if enough RAM is not available
     parser.add_argument('--ppw', type=int, default=1, action='store')
+    parser.add_argument('--weights_dir', type=str, default='/home/wv00017/python_BphP_MSOT_sim/invision_weights/', action='store')
+    parser.add_argument('--interp_data', type=int, default=None, action='store')
     args = parser.parse_args()
     
     # path to MCX binary
@@ -169,14 +171,15 @@ if __name__ == '__main__':
             'alpha_coeff' : 0.01,
             'alpha_power' : 1.1,
             'recon_iterations' : args.recon_iterations, # time reversal iterations
-            'interp_data' : False, # interpolate sensor data from 256 to 512 sensors
+            'interp_data' : args.interp_data, # interpolate sensor data from 256 to 512 sensors
             'recon_alpha' : args.recon_alpha, # time reversal alpha
             'crop_size' : args.crop_size, # pixel with of output images and ground truth
             'cycle' : 0, # for checkpointing
             'wavelength_index' : 0, # for checkpointing
             'pulse' : 0, # for checkpointing
             'stage' : 'optical', # for checkpointing (optical, acoustic, inverse)
-            'backprojection' : False # also include backprojection in reconstruction
+            'backprojection' : False, # TODO: fix sensor data indexing for backprojection
+            'weights_dir' : args.weights_dir, # directory containing weights for combining sensor data
         }
         
         logging.info(f'no checkpoint, creating config {cfg}')
@@ -382,19 +385,18 @@ if __name__ == '__main__':
     
     if cfg['stage'] == 'optical':
         logging.info('optical stage complete')
+        cfg['stage'] = 'acoustic'
         
         start = timeit.default_timer()
-        # deleted mcx input and out files, they are not needed anymore
-        #simulation.delete_temporary_files()
+        # delete mcx input and out files, they are not needed anymore
+        simulation.delete_temporary_files()
         # overwrite mcx simulation to save memory
         simulation = acoustic_forward_simulation.kwave_forward_adapter(cfg, transducer_model='invision')
         # k-wave automatically determines dt and Nt, update cfg
         cfg = simulation.cfg    
-        
         simulation.configure_simulation()
         logging.info(f'kwave forward initialised in {timeit.default_timer() - start} seconds')
         
-        cfg['stage'] = 'acoustic'
         # save updated cfg to JSON file
         with open(cfg['save_dir']+'config.json', 'w') as f:
             json.dump(cfg, f, indent='\t')
@@ -416,10 +418,21 @@ if __name__ == '__main__':
             )
         logging.info(f'sensor data dataset created in {timeit.default_timer() - start} seconds')
         
+        
+    elif cfg['stage'] == 'acoustic': # sensor_data dataset already exists
+        # only initialise kwave forward adapter
+        start = timeit.default_timer()
+        # overwrite mcx simulation to save memory
+        simulation = acoustic_forward_simulation.kwave_forward_adapter(cfg, transducer_model='invision')
+        # k-wave automatically determines dt and Nt, update cfg
+        cfg = simulation.cfg    
+        simulation.configure_simulation()
+        logging.info(f'kwave forward initialised in {timeit.default_timer() - start} seconds')
+        
     gc.collect()
     
     # acoustic forward simulation
-    if cfg['stage'] == 'acoustic':
+    if cfg['stage'] == 'acoustic':        
         for cycle in range(cfg['cycle'], cfg['ncycles']):
             cfg['cycle'] = cycle
             for wavelength_index in range(cfg['wavelength_index'], len(cfg['wavelengths'])):

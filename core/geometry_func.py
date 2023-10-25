@@ -71,11 +71,11 @@ def get_optical_grid_size(domain_size=[0.082, 0.025, 0.082],
     return [nx, ny, nz], dx
     
     
-def get_acoustic_grid_size(dx, domain_size=[0.082, 0.01025, 0.082], pml_size=10):
+def get_acoustic_grid_size(dx, domain_size=[0.082, 0.025, 0.082], pml_size=10):
         
-        nx = int(2**np.round(np.log2(domain_size[0] / dx))) - 2 * pml_size
-        ny = int(2**np.round(np.log2(domain_size[1] / dx))) - 2 * pml_size
-        nz = int(2**np.round(np.log2(domain_size[2] / dx))) - 2 * pml_size
+        nx = int(2**(np.round(np.log2(domain_size[0] / dx))-2) * 3) - 2 * pml_size
+        ny = int(2**(np.round(np.log2(domain_size[1] / dx)))) - 2 * pml_size
+        nz = int(2**(np.round(np.log2(domain_size[2] / dx))-2) * 3) - 2 * pml_size
         
         return [nx, ny, nz], dx
                            
