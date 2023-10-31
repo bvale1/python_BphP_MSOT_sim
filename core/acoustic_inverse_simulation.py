@@ -13,6 +13,12 @@ from kwave.utils.kwave_array import kWaveArray
 import utility_func as uf
 import numpy as np
 import h5py
+import os
+import json
+import logging
+import datetime
+
+logger = logging.getLogger(__name__)
 
 class kwave_inverse_adapter():
     '''
@@ -34,13 +40,25 @@ class kwave_inverse_adapter():
 
     ============================================================================
     '''
-    def __init__(self, cfg):
+    def __init__(self, cfg : dict, transducer_model='invision'):
         self.kgrid = kWaveGrid(
             [cfg['kwave_grid_size'][0], cfg['kwave_grid_size'][2]],
             [cfg['dx'], cfg['dx']],
         )
         self.kgrid.setTime(cfg['Nt'], cfg['dt'])
+        if cfg['interp_data'] and transducer_model=='invsion':
+            logger.info('WARNING: cannot interpolated sensor data with invision transducer model')
+            cfg['interp_data'] = None
         self.cfg = cfg
+        
+        if transducer_model == 'invision':
+            self.create_arc_source_array()
+            self.combine_data = True
+        else:
+            if transducer_model != 'point':
+                logger.info(f'WARNING: transducer model {transducer_model} not recognised, using point source array')
+            self.combine_data = False
+            self.create_point_source_array()
         
         # Acoustical Characteristics of Biological Media, Jeffrey C. Bamber, 1997
         # k-wave uses Neper radian units (Np rad s^-1 m^-1)
@@ -68,6 +86,8 @@ class kwave_inverse_adapter():
         
         
     def create_point_source_array(self):
+        # TODO: fix sensor data indexing order
+        # k-wave indexes the binary sensor mask in column wise linear order
         number_detector_elements = 256
         radius_mm = 40.5
         
@@ -85,6 +105,7 @@ class kwave_inverse_adapter():
         [self.source_mask, self.mask_order_index, self.mask_reorder_index] = cart2grid(
             self.kgrid, self.reconstruction_source_xz
         )
+        self.combine_data = False
         
         
     def create_arc_source_array(self):
@@ -95,7 +116,7 @@ class kwave_inverse_adapter():
         arc_angle = 270*np.pi/(n*180) # [rad]
         cord = 2*r*np.sin(arc_angle/2) # [m]
         # center of each element
-        theta = np.linspace((np.pi/8)+(arc_angle/2), (7*np.pi/8)-(arc_angle/2), n) # [rad]
+        theta = np.linspace((5*np.pi/4)-(arc_angle/2), (-np.pi/4)+(arc_angle/2), n) # [rad]
         x = r*np.sin(theta) # [m]
         z = r*np.cos(theta) # [m]
         
@@ -105,7 +126,17 @@ class kwave_inverse_adapter():
         for i in range(n):
             karray.add_arc_element([x[i], z[i]], r, cord, [0.0, 0.0])
         
-        self.source_mask = karray.get_array_binary_mask(self.kgrid)
+        self.source_x = x
+        self.source_z = z
+        (self.sensor_mask, self.sensor_weights, self.sensor_local_ind, self.save_path) = self.check_for_grid_weights()
+        if self.sensor_mask is None:
+            logger.info('no viable binary sensor mask found, computing...')
+            self.save_weights = True
+            self.sensor_mask = karray.get_array_binary_mask(self.kgrid)
+        elif self.sensor_weights and self.sensor_local_ind:
+            self.save_weights = False
+            logger.info('binary mask and grid weights found')
+            
         self.karray = karray
         # records pressure by default
         self.sensor = kSensor(self.sensor_mask)#, record=['p'])
@@ -161,13 +192,22 @@ class kwave_inverse_adapter():
             )
         
         # use sensor data as source with dirichlet boundary condition
-        sensor = kSensor(self.source_mask)
+        sensor = kSensor(self.sensor_mask)
         sensor.record = ['p_final']
         
         source = kSource()
-        source.p_mask = self.source_mask
+        source.p_mask = self.sensor_mask
         source.p_mode = 'dirichlet'
-        source.p = sensor_data0
+        if self.combine_data: # arc source array
+            (source.p, self.sensor_weights, self.sensor_local_ind) = self.karray.get_distributed_source_signal(
+                self.kgrid, 
+                sensor_data0, 
+                mask=self.sensor_mask,
+                sensor_weights=self.sensor_weights,
+                sensor_local_ind=self.sensor_local_ind
+            )
+        else: # point source array
+            source.p = sensor_data0
         
         # run time reversal reconstruction
         p0_recon = kspaceFirstOrder2DG(
@@ -179,10 +219,17 @@ class kwave_inverse_adapter():
             self.execution_options
         )['p_final'][pml:-pml, pml:-pml]# crop pml from reconstruction
         
+        if self.combine_data and self.save_weights:
+            self.save_sensor_weights(
+                self.sensor_mask,
+                self.sensor_weights, 
+                self.sensor_local_ind
+            )
+        
         # apply positivity constraint
         p0_recon *= (p0_recon > 0.0)
         
-        # comment out later
+        # uncomment to save first iteration when ['recon_iterations'] > 1
         with h5py.File(self.cfg['save_dir']+'data.h5', 'r+') as f:
             try:
                 print(f'creating p0_tr_{1} dataset')
@@ -193,13 +240,16 @@ class kwave_inverse_adapter():
                 )
             except:
                 print(f'p0_tr_{1} already exists')
+                f[f'p0_tr_{1}'] = uf.square_centre_crop(
+                    p0_recon, self.cfg['crop_size']
+                )
         
         if self.cfg['recon_iterations'] > 1:
             for i in range(2, self.cfg['recon_iterations']+1):
-                print(f'time reversal iteration {i} of {self.cfg["recon_iterations"]}')
+                logger.info(f'time reversal iteration {i} of {self.cfg["recon_iterations"]}')
                 
                 # run 2D simulation forward
-                sensor = kSensor(self.source_mask)
+                sensor = kSensor(self.sensor_mask)
                 sensor.record = ['p']
                 source = kSource()
                 source.p0 = p0_recon
@@ -214,13 +264,32 @@ class kwave_inverse_adapter():
                     self.execution_options
                 )['p'].T
                 
+                if self.combine_data: # arc source array
+                    (sensor_datai, _, _) = self.karray.combine_sensor_data(
+                        self.kgrid,
+                        sensor_datai,
+                        mask=self.sensor_mask,
+                        sensor_weights=self.sensor_weights,
+                        sensor_local_ind=self.sensor_local_ind
+                    )
+                
                 # redefine sensor and source for time reversal
-                sensor = kSensor(self.source_mask)
+                sensor = kSensor(self.sensor_mask)
                 sensor.record = ['p_final']
                 source = kSource()
-                source.p_mask = self.source_mask
+                source.p_mask = self.sensor_mask
                 source.p_mode = 'dirichlet'
-                source.p =  np.flip(sensor_datai, axis=1) - sensor_data0
+                
+                if self.combine_data: # arc source array
+                    (source.p, _, _) = self.karray.get_distributed_source_signal(
+                        self.kgrid, 
+                        np.flip(sensor_datai, axis=1) - sensor_data0,
+                        mask=self.sensor_mask,
+                        sensor_weights=self.sensor_weights,
+                        sensor_local_ind=self.sensor_local_ind
+                    )
+                else: # point source array
+                    source.p = source.p =  np.flip(sensor_datai, axis=1) - sensor_data0
                 
                 # run time reversal reconstruction
                 p0_recon -= self.cfg['recon_alpha'] * kspaceFirstOrder2DG(
@@ -235,6 +304,7 @@ class kwave_inverse_adapter():
                 # apply positivity constraint
                 p0_recon *= (p0_recon > 0.0)
         
+                # uncomment to save each iteration
                 with h5py.File(self.cfg['save_dir']+'data.h5', 'r+') as f:
                     try:
                         print(f'creating p0_tr_{i} dataset')
@@ -245,21 +315,23 @@ class kwave_inverse_adapter():
                         )
                     except:
                         print(f'p0_tr_{i} already exists')
+                        f[f'p0_tr_{i}'] = uf.square_centre_crop(
+                            p0_recon, self.cfg['crop_size']
+                        )
         
         return p0_recon
     
     
     def reorder_sensor_xz(self):
-        # this function should only be needed before running backprojection
         # k-wave indexes the binary sensor mask in column wise linear order
         # so senor_data[sensor_idx] is also in this order
         
         # inefficient sorting algorithm but it works for now
         source_grid_pos = []
         # index binary mask in column wise linear order
-        for x in range(self.source_mask.shape[0]):
-            for z in range(self.source_mask.shape[1]):
-                if self.source_mask[x, z] == 1:
+        for x in range(self.sensor_mask.shape[0]):
+            for z in range(self.sensor_mask.shape[1]):
+                if self.sensor_mask[x, z] == 1:
                     source_grid_pos.append([x, z])
         # convert to cartesian coordinates
         source_grid_pos = np.asarray(source_grid_pos).astype(np.float32)
@@ -271,6 +343,9 @@ class kwave_inverse_adapter():
         # TODO: FIX THIS
         # I THINK I AM INDEXING THE SENSOR DATA IN THE WRONG ORDER
         
+        # define point source array for backprojection
+        theta = np.linspace(0, 2*np.pi, 256, endpoint=False)
+        
         # minus one since MATLAB indexes from 1
         print('self.mask_order_index.shape')
         print(self.mask_order_index.shape)
@@ -279,9 +354,9 @@ class kwave_inverse_adapter():
         print(self.mask_reorder_index.shape)
         #print(self.mask_reorder_index)
         
-        print('sensor_data.shape')
-        print(sensor_data.shape)
-        sensor_data = sensor_data[self.mask_order_index-1,:][:,0,:]
+        #print('sensor_data.shape')
+        #print(sensor_data.shape)
+        #sensor_data = sensor_data[self.mask_order_index-1,:][:,0,:]
         print('sensor_data.shape')
         print(sensor_data.shape)
         # reconstruct only region within 'crop_size'
@@ -319,8 +394,8 @@ class kwave_inverse_adapter():
         #print(self.bp_source_xz.shape)
         # reconstruction_source_xz should be shape (2, 256)
         delay = np.sqrt(
-            (X - self.reconstruction_source_xz[0, :])**2 + 
-            (Z - self.reconstruction_source_xz[1, :])**2
+            (X - self.source_xz[:])**2 + 
+            (Z - self.source_xz[:])**2
         ) / self.cfg['c_0']
         #delay = np.sort(delay, axis=0)
         print('delay.shape')
@@ -355,3 +430,71 @@ class kwave_inverse_adapter():
         bp_recon *= (bp_recon > 0.0)
         
         return np.reshape(bp_recon, (self.cfg['crop_size'], self.cfg['crop_size']))
+    
+    def check_for_grid_weights(self) -> tuple:
+        # checks if the source grid weights have been computed and saved by a
+        # previous simulation of the same geometry 
+        sensor_mask = None 
+        sensor_weights = None
+        sensor_local_ind = None
+        save_path = None
+        
+        if not os.path.exists(self.cfg["weights_dir"]):
+            logger.debug(f'directory not found: {self.cfg["weights_dir"]}')
+            return (sensor_mask, sensor_weights, sensor_local_ind)
+        
+        for folder in os.listdir(self.cfg['weights_dir']):
+            cfg_path = os.path.join(self.cfg['weights_dir'], folder, 'weights_config.json')
+            logger.debug(f'checking for grid weights in {folder}')
+            
+            if os.path.exists(cfg_path) and os.path.isfile(cfg_path):
+                with open(cfg_path, 'r') as f:
+                    cfg = json.load(f)
+                logger.debug(f'found config file: {cfg}')
+        
+                if (cfg['dx'] == self.cfg['dx'] 
+                    and cfg['kwave_grid_size'] == self.cfg['kwave_grid_size'] 
+                    and cfg['kwave_domain_size'] == self.cfg['kwave_domain_size']
+                    and cfg['transducer_model'] == 'invision'):
+                    if os.path.exists(os.path.join(self.cfg['weights_dir'], folder, 'weights2d.h5')):
+                        logger.debug(f'viable simulation found in {cfg_path}, 2d weights found, loading...')
+                        sensor_weights = []
+                        sensor_local_ind = []
+                        with h5py.File(os.path.join(self.cfg['weights_dir'], folder, 'weights2d.h5'), 'r') as f:
+                            sensor_mask = f['sensor_mask'][()].astype(bool)
+                            for i in range(self.cfg['nsensors']):
+                                sensor_weights.append(f[f'sensor_weights_{i}'][()].astype(np.float32))
+                                sensor_local_ind.append(f[f'sensor_local_ind_{i}'][()].astype(bool))
+                        break
+                    else: # only the 3d simulation was run
+                        logger.debug(f'viable simulation found in {cfg_path}, 2d weights not found')
+                        save_path = os.path.join(self.cfg['weights_dir'], folder)                  
+                    
+            else:
+                logger.debug(f'config file not found: {cfg_path}')
+                
+        return (sensor_mask, sensor_weights, sensor_local_ind, save_path)
+    
+    def save_sensor_weights(self, sensor_mask : np.ndarray, sensor_weights : list, sensor_local_ind : list):
+        uf.create_dir(self.cfg['weights_dir'])
+        if self.save_path: # create new directory for weights
+            self.save_path = self.cfg['weights_dir'] + datetime.utcnow().strftime('%Y%m%d_%H_%M_%S')
+            with open(self.save_path + '/weights_config.json', 'w') as f:
+                json.dump(weights_cfg, f, indent='\t')
+        uf.create_dir(self.save_path)
+
+        weights_cfg = {
+            'dx' : self.cfg['dx'],
+            'kwave_grid_size' : self.cfg['kwave_grid_size'],
+            'kwave_domain_size' : self.cfg['kwave_domain_size'],
+            'sim_git_hash' : self.cfg['sim_git_hash'],
+            'save_dir' : self.cfg['save_dir'],
+            'transducer_model' : 'invision'
+        }
+        with h5py.File(self.save_path + '/weights2d.h5', 'w') as f:
+            f.create_dataset('sensor_mask', data=sensor_mask, dtype=bool)
+            for i in range(self.cfg['nsensors']):
+                f.create_dataset(f'sensor_weights_{i}', data=sensor_weights[i], dtype=np.float32)
+                f.create_dataset(f'sensor_local_ind_{i}', data=sensor_local_ind[i], dtype=bool)
+            
+        

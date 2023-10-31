@@ -75,12 +75,13 @@ if __name__ == '__main__':
     parser.add_argument('--npulses', type=int, default=16, action='store')
     parser.add_argument('--crop_size', type=int, default=256, action='store')
     parser.add_argument('--sim_git_hash', type=str, default=None, action='store')
-    parser.add_argument('--recon_iterations', type=int, default=1, action='store')
+    parser.add_argument('--recon_iterations', type=int, default=5, action='store')
     parser.add_argument('--recon_alpha', type=float, default=1.0, action='store')
     # points per wavelength, only lower to 1 to test code if enough RAM is not available
     parser.add_argument('--ppw', type=int, default=1, action='store')
     parser.add_argument('--weights_dir', type=str, default='/home/wv00017/python_BphP_MSOT_sim/invision_weights/', action='store')
     parser.add_argument('--interp_data', type=int, default=None, action='store')
+    parser.add_argument('--run_backprojection', type=bool, default=False, action='store')
     args = parser.parse_args()
     
     # path to MCX binary
@@ -178,7 +179,7 @@ if __name__ == '__main__':
             'wavelength_index' : 0, # for checkpointing
             'pulse' : 0, # for checkpointing
             'stage' : 'optical', # for checkpointing (optical, acoustic, inverse)
-            'backprojection' : False, # TODO: fix sensor data indexing for backprojection
+            'backprojection' : args.run_backprojection, # TODO: fix sensor data indexing for backprojection
             'weights_dir' : args.weights_dir, # directory containing weights for combining sensor data
         }
         
@@ -482,14 +483,11 @@ if __name__ == '__main__':
         os.remove(cfg['save_dir']+'temp.h5')
         logging.info(f'temp.h5 (p0_3D) deleted in {timeit.default_timer() - start} seconds')
     except:
-        logging.error('temp.h5 (p0_3D) not found')
+        logging.debug('temp.h5 (p0_3D) not found')
     
     start = timeit.default_timer()
-    simulation = acoustic_inverse_simulation.kwave_inverse_adapter(cfg)
+    simulation = acoustic_inverse_simulation.kwave_inverse_adapter(cfg, transducer_model='invision')
     simulation.configure_simulation()
-    simulation.create_point_source_array()
-    if cfg['backprojection'] is True:
-        simulation.reorder_sensor_xz()
     logging.info(f'kwave inverse initialised in {timeit.default_timer() - start} seconds')
     
     gc.collect()

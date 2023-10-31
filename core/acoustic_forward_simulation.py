@@ -43,9 +43,9 @@ class kwave_forward_adapter():
             [cfg['dx'], cfg['dx'], cfg['dx']],
         )
             
-        #self.kgrid.makeTime(cfg['c_0'])
-        #self.kgrid.setTime(2030, 25e-9) # sampling rate used by the MSOT DAS
-        self.kgrid.setTime(2, 25e-9)
+        #self.kgrid.makeTime(cfg['c_0']) # k-wave automatically determines Nt and dt
+        self.kgrid.setTime(2030, 25e-9) # sampling rate used by the MSOT DAS
+        #self.kgrid.setTime(2, 25e-9) # for testing
         cfg['dt'] = self.kgrid.dt
         cfg['Nt'] = self.kgrid.Nt
         self.cfg = cfg
@@ -66,7 +66,7 @@ class kwave_forward_adapter():
             self.create_transducer_array()
         else:
             if transducer_model != 'point':
-                print('transducer model not recognised, using point sensor array')
+                logger.info(f'WARNING: transducer model {transducer_model} not recognised, using point source array')
             self.combine_data = False
             self.create_point_sensor_array()
         
@@ -153,12 +153,22 @@ class kwave_forward_adapter():
                 2, # 2D surface in 3D space
                 str(det_idx)
             )
-        
-        self.sensor_mask = karray.get_array_binary_mask(self.kgrid)
+            
+        self.combine_data = True
+        start = timeit.default_timer()
+        (self.sensor_mask, self.sensor_weights, self.sensor_local_ind) = self.check_for_grid_weights()
+        logger.info(f'grid weights checked in {timeit.default_timer() - start} seconds')
+        if self.sensor_mask == None:
+            logger.info('no viable binary sensor mask found, computing...')
+            self.sensor_mask = karray.get_array_binary_mask(self.kgrid)
+            self.save_weights = True
+        elif self.sensor_weights and self.sensor_local_ind:
+            logger.info('binary mask and grid weights found')
+            self.save_weights = False
+            
         self.karray = karray
         # records pressure by default
         self.sensor = kSensor(self.sensor_mask)#, record=['p'])
-        self.combine_data = True
         
     
     def configure_simulation(self):
@@ -194,29 +204,30 @@ class kwave_forward_adapter():
         )['p'].T
         
         if self.combine_data:
-            start = timeit.default_timer()
-            (sensor_weights, sensor_local_ind) = self.check_for_grid_weights()
-            logger.info(f'grid weights checked in {timeit.default_timer() - start} seconds')
-            if sensor_weights is None or sensor_local_ind is None:
-                save_weights = True
+            if self.sensor_weights is None or self.sensor_local_ind is None:
+                self.save_weights = True
                 logger.info('no viable grid weights found, computing...')
             else:
-                save_weights = False
+                self.save_weights = False
             
             start = timeit.default_timer()
             logger.info("combining sensor data...")
-            (sensor_data, sensor_weights, sensor_local_ind) = self.karray.combine_sensor_data(
+            (sensor_data, self.sensor_weights, self.sensor_local_ind) = self.karray.combine_sensor_data(
                 self.kgrid, 
                 sensor_data,
                 mask=self.sensor_mask,
-                sensor_weights=sensor_weights, 
-                sensor_local_ind=sensor_local_ind
+                sensor_weights=self.sensor_weights, 
+                sensor_local_ind=self.sensor_local_ind
             )
             logger.info(f'sensor data combined in {timeit.default_timer() - start} seconds')
                 
-            if save_weights:
+            if self.save_weights:
                 start = timeit.default_timer()
-                self.save_sensor_weights(sensor_weights, sensor_local_ind)
+                self.save_sensor_weights(
+                    self.sensor_mask,
+                    self.sensor_weights, 
+                    self.sensor_local_ind
+                )
                 logger.info(f'sensor weights saved in {timeit.default_timer() - start} seconds')
                 
         return sensor_data
@@ -224,14 +235,16 @@ class kwave_forward_adapter():
     def check_for_grid_weights(self) -> tuple:
         # checks if the source grid weights have been computed and saved by a
         # previous simulation of the same geometry 
-        sensor_weights = None; sensor_local_ind = None
+        sensor_mask = None 
+        sensor_weights = None
+        sensor_local_ind = None
         
         if not os.path.exists(self.cfg["weights_dir"]):
             logger.debug(f'directory not found: {self.cfg["weights_dir"]}')
-            return (sensor_weights, sensor_local_ind)
+            return (sensor_mask, sensor_weights, sensor_local_ind)
         
         for folder in os.listdir(self.cfg['weights_dir']):
-            cfg_path = os.path.join(self.cfg['weights_dir'], folder, 'weights3d_config.json')
+            cfg_path = os.path.join(self.cfg['weights_dir'], folder, 'weights_config.json')
             logger.debug(f'checking for grid weights in {folder}')
             
             if os.path.exists(cfg_path) and os.path.isfile(cfg_path):
@@ -248,6 +261,7 @@ class kwave_forward_adapter():
                     sensor_local_ind = []
                     
                     with h5py.File(os.path.join(self.cfg['weights_dir'], folder, 'weights3d.h5'), 'r') as f:
+                        sensor_mask = f['sensor_mask'][()].astype(bool)
                         for i in range(self.cfg['nsensors']):
                             sensor_weights.append(f[f'sensor_weights_{i}'][()].astype(np.float32))
                             sensor_local_ind.append(f[f'sensor_local_ind_{i}'][()].astype(bool))
@@ -255,11 +269,10 @@ class kwave_forward_adapter():
             else:
                 logger.debug(f'config file not found: {cfg_path}')
                 
-        return (sensor_weights, sensor_local_ind)
+        return (sensor_mask, sensor_weights, sensor_local_ind)
     
     
-    def save_sensor_weights(self, sensor_weights : list, sensor_local_ind : list):
-        # possible way to increase performance is to also save the binary sensor mask
+    def save_sensor_weights(self, sensor_mask : np.ndarray, sensor_weights : list, sensor_local_ind : list):
         uf.create_dir(self.cfg['weights_dir'])
         save_path = self.cfg['weights_dir'] + datetime.utcnow().strftime('%Y%m%d_%H_%M_%S')
         uf.create_dir(save_path)
@@ -273,9 +286,10 @@ class kwave_forward_adapter():
             'transducer_model' : 'invision'
         }
         with h5py.File(save_path + '/weights3d.h5', 'w') as f:
+            f.create_dataset('sensor_mask', data=self.sensor_mask, dtype=bool)
             for i in range(self.cfg['nsensors']):
                 f.create_dataset(f'sensor_weights_{i}', data=sensor_weights[i], dtype=np.float32)
                 f.create_dataset(f'sensor_local_ind_{i}', data=sensor_local_ind[i], dtype=bool)
             
-        with open(save_path + '/weights3d_config.json', 'w') as f:
+        with open(save_path + '/weights_config.json', 'w') as f:
             json.dump(weights_cfg, f, indent='\t')
