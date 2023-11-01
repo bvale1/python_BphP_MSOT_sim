@@ -16,7 +16,7 @@ import h5py
 import os
 import json
 import logging
-import datetime
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -240,7 +240,7 @@ class kwave_inverse_adapter():
                 )
             except:
                 print(f'p0_tr_{1} already exists')
-                f[f'p0_tr_{1}'] = uf.square_centre_crop(
+                f[f'p0_tr_{1}'][()] = uf.square_centre_crop(
                     p0_recon, self.cfg['crop_size']
                 )
         
@@ -315,7 +315,7 @@ class kwave_inverse_adapter():
                         )
                     except:
                         print(f'p0_tr_{i} already exists')
-                        f[f'p0_tr_{i}'] = uf.square_centre_crop(
+                        f[f'p0_tr_{i}'][()] = uf.square_centre_crop(
                             p0_recon, self.cfg['crop_size']
                         )
         
@@ -347,18 +347,18 @@ class kwave_inverse_adapter():
         theta = np.linspace(0, 2*np.pi, 256, endpoint=False)
         
         # minus one since MATLAB indexes from 1
-        print('self.mask_order_index.shape')
-        print(self.mask_order_index.shape)
+        #logger.debug('self.mask_order_index.shape')
+        #logger.debug(self.mask_order_index.shape)
         #print(self.mask_order_index)
-        print('self.mask_reorder_index.shape')
-        print(self.mask_reorder_index.shape)
+        #logger.debug('self.mask_reorder_index.shape')
+        #logger.debug(self.mask_reorder_index.shape)
         #print(self.mask_reorder_index)
         
         #print('sensor_data.shape')
         #print(sensor_data.shape)
         #sensor_data = sensor_data[self.mask_order_index-1,:][:,0,:]
-        print('sensor_data.shape')
-        print(sensor_data.shape)
+        logger.debug('sensor_data.shape')
+        logger.debug(sensor_data.shape)
         # reconstruct only region within 'crop_size'
         crop_size = self.cfg['crop_size']
         [X, Z] = np.meshgrid(
@@ -369,7 +369,7 @@ class kwave_inverse_adapter():
         
         with h5py.File(self.cfg['save_dir']+'data.h5', 'r+') as f:
             try:
-                print('creating p0_bp_sensors dataset')
+                logger.info('creating p0_bp_sensors dataset')
                 f.create_dataset(
                     'p0_bp_sensors',
                     data=np.zeros(
@@ -378,39 +378,39 @@ class kwave_inverse_adapter():
                     )
                 )
             except:
-                print('p0_bp_sensors already exists')
+                logger.info('p0_bp_sensors already exists')
         
         # X and Z can be flat
         X = X.ravel(); Z = Z.ravel()
         # compute euclidian distance from each sensor position to each grid point
         X = np.repeat(X[:, np.newaxis], sensor_data.shape[0], axis=1)
         Z = np.repeat(Z[:, np.newaxis], sensor_data.shape[0], axis=1)
-        print('X.shape')
-        print(X.shape)
+        logger.debug('X.shape')
+        logger.debug(X.shape)
         # time for wave to travel from each sensor to each grid point
-        print('self.reconstruction_source_xz.shape')
-        print(self.reconstruction_source_xz.shape)
+        #logger.debug('self.reconstruction_source_xz.shape')
+        #logger.debug(self.reconstruction_source_xz.shape)
         #print('self.bp_source_xz.shape')
         #print(self.bp_source_xz.shape)
         # reconstruction_source_xz should be shape (2, 256)
         delay = np.sqrt(
-            (X - self.source_xz[:])**2 + 
-            (Z - self.source_xz[:])**2
+            (X - self.source_x)**2 + 
+            (Z - self.source_z)**2
         ) / self.cfg['c_0']
         #delay = np.sort(delay, axis=0)
-        print('delay.shape')
-        print(type(delay))
-        print(delay.shape)
+        logger.debug('delay.shape')
+        logger.debug(type(delay))
+        logger.debug(delay.shape)
         signal_amplitude = np.zeros_like(delay, dtype=np.float32)
         t_array = np.arange(self.cfg['Nt'], dtype=np.float32) * self.cfg['dt']
         for i, sensor in enumerate(sensor_data):
-            print(f'backprojection sensor {i+1}/{sensor_data.shape[0]}')
-            print('sensor.shape')
-            print(sensor.shape)
-            print('delay[:,i].shape')
-            print(delay[:,i].shape)
-            print('t_array')
-            print(t_array.shape)
+            logger.debug(f'backprojection sensor {i+1}/{sensor_data.shape[0]}')
+            logger.debug('sensor.shape')
+            logger.debug(sensor.shape)
+            logger.debug('delay[:,i].shape')
+            logger.debug(delay[:,i].shape)
+            logger.debug('t_array')
+            logger.debug(t_array.shape)
             signal_amplitude[:,i] = np.interp(
                 delay[:,i], t_array, sensor
             )
@@ -419,12 +419,12 @@ class kwave_inverse_adapter():
                     signal_amplitude[:,i], (crop_size, crop_size)
                 )
         
-        print('signal_amplitude.shape')
-        print(signal_amplitude.shape)
+        logger.debug('signal_amplitude.shape')
+        logger.debug(signal_amplitude.shape)
         
         bp_recon = np.sum(signal_amplitude, axis=1)
-        print('bp_recon.shape')
-        print(bp_recon.shape)
+        logger.debug('bp_recon.shape')
+        logger.debug(bp_recon.shape)
         
         # apply positivity constraint
         bp_recon *= (bp_recon > 0.0)
@@ -477,11 +477,11 @@ class kwave_inverse_adapter():
     
     def save_sensor_weights(self, sensor_mask : np.ndarray, sensor_weights : list, sensor_local_ind : list):
         uf.create_dir(self.cfg['weights_dir'])
-        if self.save_path: # create new directory for weights
+        if self.save_path is None: # create new directory for weights
             self.save_path = self.cfg['weights_dir'] + datetime.utcnow().strftime('%Y%m%d_%H_%M_%S')
+            uf.create_dir(self.save_path)
             with open(self.save_path + '/weights_config.json', 'w') as f:
                 json.dump(weights_cfg, f, indent='\t')
-        uf.create_dir(self.save_path)
 
         weights_cfg = {
             'dx' : self.cfg['dx'],
