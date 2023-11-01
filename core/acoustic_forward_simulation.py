@@ -158,7 +158,7 @@ class kwave_forward_adapter():
         start = timeit.default_timer()
         (self.sensor_mask, self.sensor_weights, self.sensor_local_ind) = self.check_for_grid_weights()
         logger.info(f'grid weights checked in {timeit.default_timer() - start} seconds')
-        if self.sensor_mask == None:
+        if self.sensor_mask is None:
             logger.info('no viable binary sensor mask found, computing...')
             self.sensor_mask = karray.get_array_binary_mask(self.kgrid)
             self.save_weights = True
