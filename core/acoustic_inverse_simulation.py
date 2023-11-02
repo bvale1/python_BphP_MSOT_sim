@@ -176,6 +176,7 @@ class kwave_inverse_adapter():
         # for iterative time reversal reconstruction with positivity contraint
         # see k-wave example Matlab script (http://www.k-wave.org)
         # example_pr_2D_TR_iterative.m
+        # also example_at_array_as_source.m for using an off grid arc as a source
         # along with S. R. Arridge et al. On the adjoint operator in
         # photoacoustic tomography. 2016. equation 28.
         # https://iopscience.iop.org/article/10.1088/0266-5611/32/11/115012/pdf
@@ -229,7 +230,7 @@ class kwave_inverse_adapter():
         # apply positivity constraint
         p0_recon *= (p0_recon > 0.0)
         
-        # uncomment to save first iteration when ['recon_iterations'] > 1
+        # uncomment for debugging to save first iteration when ['recon_iterations'] > 1
         with h5py.File(self.cfg['save_dir']+'data.h5', 'r+') as f:
             try:
                 print(f'creating p0_tr_{1} dataset')
@@ -289,7 +290,7 @@ class kwave_inverse_adapter():
                         sensor_local_ind=self.sensor_local_ind
                     )
                 else: # point source array
-                    source.p = source.p =  np.flip(sensor_datai, axis=1) - sensor_data0
+                    source.p = np.flip(sensor_datai, axis=1) - sensor_data0
                 
                 # run time reversal reconstruction
                 p0_recon -= self.cfg['recon_alpha'] * kspaceFirstOrder2DG(
