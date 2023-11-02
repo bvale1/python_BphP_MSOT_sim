@@ -110,13 +110,13 @@ class kwave_inverse_adapter():
         
     def create_arc_source_array(self):
         # TODO: test this and see if it yields better reconstructions than point source array
-        r = 0.0405 # [m]
+        r = 0.0402 # [m]
         n = 256 # number of elements
         # dimensions of each element
         arc_angle = 270*np.pi/(n*180) # [rad]
         cord = 2*r*np.sin(arc_angle/2) # [m]
         # center of each element
-        theta = np.linspace((5*np.pi/4)-(arc_angle/2), (-np.pi/4)+(arc_angle/2), n) # [rad]
+        theta = np.linspace((5*np.pi/4)-(arc_angle), (-np.pi/4)+(arc_angle), n) # [rad]
         x = r*np.sin(theta) # [m]
         z = r*np.cos(theta) # [m]
         
