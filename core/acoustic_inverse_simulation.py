@@ -115,12 +115,15 @@ class kwave_inverse_adapter():
         theta = np.linspace((5*np.pi/4)-(arc_angle), (-np.pi/4)+(arc_angle), n) # [rad]
         x = r*np.sin(theta) # [m]
         z = r*np.cos(theta) # [m]
-        
+               
         # initializse transducer array object
         karray = kWaveArray(bli_tolerance=0.05, upsampling_rate=10, single_precision=True)
         
+        Ry = uf.Ry2D(90 * np.pi / 180) # euclidian rotation matrix
+        
         for i in range(n):
-            karray.add_arc_element([x[i], z[i]], r, cord, [0.0, 0.0])
+            position = np.matmul(Ry, np.array([x[i], z[i]])).tolist()
+            karray.add_arc_element(position, r, cord, [0.0, 0.0])
         
         self.source_x = x
         self.source_z = z
@@ -337,8 +340,6 @@ class kwave_inverse_adapter():
         
     
     def run_backprojection(self, sensor_data):
-        # TODO: FIX THIS
-        # I THINK I AM INDEXING THE SENSOR DATA IN THE WRONG ORDER
         
         # define point source array for backprojection
         theta = np.linspace(0, 2*np.pi, 256, endpoint=False)
@@ -411,10 +412,11 @@ class kwave_inverse_adapter():
             signal_amplitude[:,i] = np.interp(
                 delay[:,i], t_array, sensor
             )
-            with h5py.File(self.cfg['save_dir']+'data.h5', 'r+') as f:
-                f['p0_bp_sensors'][i] = np.reshape(
-                    signal_amplitude[:,i], (crop_size, crop_size)
-                )
+            # save each sensor data to file for debugging
+            # with h5py.File(self.cfg['save_dir']+'data.h5', 'r+') as f:
+            #    f['p0_bp_sensors'][i] = np.reshape(
+            #        signal_amplitude[:,i], (crop_size, crop_size)
+            #    )
         
         logger.debug('signal_amplitude.shape')
         logger.debug(signal_amplitude.shape)
