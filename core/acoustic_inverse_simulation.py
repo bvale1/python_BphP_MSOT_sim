@@ -95,13 +95,15 @@ class kwave_inverse_adapter():
         x = r*np.sin(theta) # [m]
         z = r*np.cos(theta) # [m]
         
+        detector_positions = np.matmul(uf.Ry2D(90 * np.pi / 180), np.array([x, z]))
    
-        [self.source_mask, self.mask_order_index, self.mask_reorder_index] = cart2grid(
-            self.kgrid, np.array([x, z])
+        [self.sensor_mask, self.mask_order_index, self.mask_reorder_index] = cart2grid(
+            self.kgrid, detector_positions
         )
         self.combine_data = False
-        self.source_x = x
-        self.source_z = z
+        # these two fields are used for backprojection
+        self.source_x = detector_positions[0, :]
+        self.source_z = detector_positions[1, :]
         
         
     def create_arc_source_array(self):
@@ -137,13 +139,11 @@ class kwave_inverse_adapter():
             logger.info('binary mask and grid weights found')
             
         self.karray = karray
-        # records pressure by default
-        self.sensor = kSensor(self.sensor_mask)#, record=['p'])
         self.combine_data = True
         
         
     def interpolate_sensor_data(self, sensor_data, nsensors=512):
-        
+        # Currently sensors are in the wrong position
         radius_mm = 40.5
         interp_source_xz = np.matmul(
             uf.Ry2D(225 * np.pi / 180),
@@ -164,7 +164,7 @@ class kwave_inverse_adapter():
             self.kgrid, sensor_data, self.reconstruction_source_xz, interp_mask, 
         )
         
-        [self.source_mask, self.mask_order_index, self.mask_reorder_index] = [
+        [self.sensor_mask, self.mask_order_index, self.mask_reorder_index] = [
             interp_mask, interp_mask_order_index, interp_mask_reorder_index
         ]
         
