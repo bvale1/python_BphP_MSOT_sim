@@ -82,6 +82,8 @@ if __name__ == '__main__':
     parser.add_argument('--weights_dir', type=str, default='/home/wv00017/python_BphP_MSOT_sim/invision_weights/', action='store')
     parser.add_argument('--interp_data', type=int, default=None, action='store')
     parser.add_argument('--run_backprojection', type=bool, default=False, action='store')
+    parser.add_argument('--forward_model', type=str, default='invision', action='store')
+    parser.add_argument('--inverse_model', type=str, default='invision', action='store')
     args = parser.parse_args()
     
     # path to MCX binary
@@ -181,6 +183,8 @@ if __name__ == '__main__':
             'stage' : 'optical', # for checkpointing (optical, acoustic, inverse)
             'backprojection' : args.run_backprojection, # TODO: fix sensor data indexing for backprojection
             'weights_dir' : args.weights_dir, # directory containing weights for combining sensor data
+            'forward_model' : args.forward_model, # forward model to use (invision, point)
+            'inverse_model' : args.inverse_model # inverse model to use (invision, point)
         }
         
         logging.info(f'no checkpoint, creating config {cfg}')
@@ -424,7 +428,10 @@ if __name__ == '__main__':
         # only initialise kwave forward adapter
         start = timeit.default_timer()
         # overwrite mcx simulation to save memory
-        simulation = acoustic_forward_simulation.kwave_forward_adapter(cfg, transducer_model='invision')
+        simulation = acoustic_forward_simulation.kwave_forward_adapter(
+            cfg, 
+            transducer_model=cfg['forward_model']
+        )
         # k-wave automatically determines dt and Nt, update cfg
         cfg = simulation.cfg    
         simulation.configure_simulation()
@@ -486,7 +493,10 @@ if __name__ == '__main__':
         logging.debug('temp.h5 (p0_3D) not found')
     
     start = timeit.default_timer()
-    simulation = acoustic_inverse_simulation.kwave_inverse_adapter(cfg, transducer_model='invision')
+    simulation = acoustic_inverse_simulation.kwave_inverse_adapter(
+        cfg,
+        transducer_model=cfg['inverse_model']
+    )
     simulation.configure_simulation()
     logging.info(f'kwave inverse initialised in {timeit.default_timer() - start} seconds')
     

@@ -88,24 +88,20 @@ class kwave_inverse_adapter():
     def create_point_source_array(self):
         # TODO: fix sensor data indexing order
         # k-wave indexes the binary sensor mask in column wise linear order
-        number_detector_elements = 256
-        radius_mm = 40.5
+        n = 256 # number of elements
+        r  = 0.0402 # [m]
+        arc_angle = 270*np.pi/(n*180) # [rad]
+        theta = np.linspace((5*np.pi/4)-(arc_angle), (-np.pi/4)+(arc_angle), n) # [rad]
+        x = r*np.sin(theta) # [m]
+        z = r*np.cos(theta) # [m]
         
-        self.reconstruction_source_xz = np.matmul(
-            uf.Ry2D(225 * np.pi / 180),
-            make_cart_circle(
-                radius_mm * 1e-3, 
-                number_detector_elements,
-                np.array([0.0, 0.0]),
-                3 * np.pi / 2,
-                plot_circle=False
-            )
-        )
-        
+   
         [self.source_mask, self.mask_order_index, self.mask_reorder_index] = cart2grid(
-            self.kgrid, self.reconstruction_source_xz
+            self.kgrid, np.array([x, z])
         )
         self.combine_data = False
+        self.source_x = x
+        self.source_z = z
         
         
     def create_arc_source_array(self):
@@ -198,7 +194,7 @@ class kwave_inverse_adapter():
         
         source = kSource()
         source.p_mask = self.sensor_mask
-        source.p_mode = 'dirichlet'
+        source.p_mode = 'additive'
         if self.combine_data: # arc source array
             (source.p, self.sensor_weights, self.sensor_local_ind) = self.karray.get_distributed_source_signal(
                 self.kgrid, 
@@ -208,7 +204,7 @@ class kwave_inverse_adapter():
                 sensor_local_ind=self.sensor_local_ind
             )
         else: # point source array
-            source.p = sensor_data0
+            source.p = sensor_data0[self.mask_reorder_index,:]
         
         # run time reversal reconstruction
         p0_recon = kspaceFirstOrder2DG(
@@ -228,7 +224,7 @@ class kwave_inverse_adapter():
             )
         
         # apply positivity constraint
-        p0_recon *= (p0_recon > 0.0)
+        #p0_recon *= (p0_recon > 0.0)
         
         # uncomment for debugging to save first iteration when ['recon_iterations'] > 1
         with h5py.File(self.cfg['save_dir']+'data.h5', 'r+') as f:
@@ -279,7 +275,7 @@ class kwave_inverse_adapter():
                 sensor.record = ['p_final']
                 source = kSource()
                 source.p_mask = self.sensor_mask
-                source.p_mode = 'dirichlet'
+                source.p_mode = 'additive'
                 
                 if self.combine_data: # arc source array
                     (source.p, _, _) = self.karray.get_distributed_source_signal(
@@ -290,7 +286,7 @@ class kwave_inverse_adapter():
                         sensor_local_ind=self.sensor_local_ind
                     )
                 else: # point source array
-                    source.p = np.flip(sensor_datai, axis=1) - sensor_data0
+                    source.p = (np.flip(sensor_datai, axis=1) - sensor_data0)[self.mask_reorder_index]
                 
                 # run time reversal reconstruction
                 p0_recon -= self.cfg['recon_alpha'] * kspaceFirstOrder2DG(
@@ -303,7 +299,7 @@ class kwave_inverse_adapter():
                 )['p_final'][pml:-pml, pml:-pml]
 
                 # apply positivity constraint
-                p0_recon *= (p0_recon > 0.0)
+                #p0_recon *= (p0_recon > 0.0)
         
                 # uncomment to save each iteration
                 with h5py.File(self.cfg['save_dir']+'data.h5', 'r+') as f:
@@ -428,7 +424,7 @@ class kwave_inverse_adapter():
         logger.debug(bp_recon.shape)
         
         # apply positivity constraint
-        bp_recon *= (bp_recon > 0.0)
+        #bp_recon *= (bp_recon > 0.0)
         
         return np.reshape(bp_recon, (self.cfg['crop_size'], self.cfg['crop_size']))
     
