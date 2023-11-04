@@ -46,7 +46,7 @@ class kwave_inverse_adapter():
             [cfg['dx'], cfg['dx']],
         )
         self.kgrid.setTime(cfg['Nt'], cfg['dt'])
-        if cfg['interp_data'] and transducer_model=='invsion':
+        if cfg['interp_data'] and transducer_model=='invision':
             logger.info('WARNING: cannot interpolated sensor data with invision transducer model')
             cfg['interp_data'] = None
         self.cfg = cfg
@@ -70,6 +70,8 @@ class kwave_inverse_adapter():
             sound_speed=cfg['c_0'],
             absorbing=False
         )
+        #logger.info(f'cfg[c_0] = {cfg["c_0"]}')
+        #logger.info(f'medium.c_0 = {self.medium.sound_speed}')
         
         
     def configure_simulation(self):
@@ -81,7 +83,8 @@ class kwave_inverse_adapter():
         )
         
         self.execution_options = SimulationExecutionOptions(
-            is_gpu_simulation=True
+            is_gpu_simulation=True,
+            verbose_level=2,
         )
         
         
@@ -95,8 +98,8 @@ class kwave_inverse_adapter():
         x = r*np.sin(theta) # [m]
         z = r*np.cos(theta) # [m]
         
-        detector_positions = np.matmul(uf.Ry2D(90 * np.pi / 180), np.array([x, z]))
-   
+        detector_positions = np.matmul(uf.Ry2D(-np.pi / 2), np.array([x, z]))
+    
         [self.sensor_mask, self.mask_order_index, self.mask_reorder_index] = cart2grid(
             self.kgrid, detector_positions
         )
@@ -107,7 +110,6 @@ class kwave_inverse_adapter():
         
         
     def create_arc_source_array(self):
-        # TODO: test this and see if it yields better reconstructions than point source array
         r = 0.0402 # [m]
         n = 256 # number of elements
         # dimensions of each element
@@ -121,10 +123,12 @@ class kwave_inverse_adapter():
         # initializse transducer array object
         karray = kWaveArray(bli_tolerance=0.05, upsampling_rate=10, single_precision=True)
         
-        Ry = uf.Ry2D(90 * np.pi / 180) # euclidian rotation matrix
+        Ry = uf.Ry2D(-np.pi / 2) # euclidian rotation matrix
         
         for i in range(n):
-            position = np.matmul(Ry, np.array([x[i], z[i]])).tolist()
+            #position = np.matmul(Ry, np.array([x[i], z[i]])).tolist()
+            # swap x and z to match C++ and MATLAB row major order
+            position = [x[i], z[i]]
             karray.add_arc_element(position, r, cord, [0.0, 0.0])
         
         self.source_x = x
@@ -217,7 +221,7 @@ class kwave_inverse_adapter():
             self.medium,
             self.simulation_options,
             self.execution_options
-        )['p_final'][pml:-pml, pml:-pml]# crop pml from reconstruction
+        )['p_final'][pml:-pml, pml:-pml].T # crop pml from reconstruction
         
         if self.combine_data and self.save_weights:
             self.save_sensor_weights(
@@ -299,7 +303,7 @@ class kwave_inverse_adapter():
                     self.medium,
                     self.simulation_options,
                     self.execution_options
-                )['p_final'][pml:-pml, pml:-pml]
+                )['p_final'][pml:-pml, pml:-pml].T
 
                 # apply positivity constraint
                 #p0_recon *= (p0_recon > 0.0)

@@ -134,7 +134,7 @@ class kwave_forward_adapter():
         # initializse transducer array object
         karray = kWaveArray(bli_tolerance=0.05, upsampling_rate=10, single_precision=True)
         
-        Ry = uf.Ry3D(90 * np.pi / 180) # euclidian rotation matrix
+        #Ry = uf.Ry3D(-np.pi / 2) # euclidian rotation matrix
         
         theta = np.pi/2
         for det_idx in range(len(det_elements)):
@@ -149,7 +149,7 @@ class kwave_forward_adapter():
                     detector_positions[0, idx] = np.sin(np.pi/2 + pitch_angle * det_elements[det_idx] + x_inc) * np.sin(theta + y_inc) * (radius_mm - 0.5 * element_size)
                     detector_positions[1, idx] = np.cos(theta + y_inc) * (radius_mm - 0.5 * element_size)
                     detector_positions[2, idx] = np.cos(np.pi/2 + pitch_angle * det_elements[det_idx] + x_inc) * np.sin(theta + y_inc) * (radius_mm - 0.5 * element_size)
-            detector_positions = np.matmul(Ry, detector_positions)
+            #detector_positions = np.matmul(Ry, detector_positions)
             karray.add_custom_element(
                 detector_positions * 1e-3, 
                 element_size * element_length * 1e-3, 

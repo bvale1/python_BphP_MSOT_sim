@@ -18,7 +18,7 @@ class BphP_cylindrical_phantom(phantom):
         # define background phantom scattering and absorption coefficients
         # Corrigendum: Optical properties of biological tissues: a review
         # Steven L Jacques, 2013
-        background_mu_a = rng.normal(0.8, 0.3, size=n_wavelengths)
+        background_mu_a = rng.normal(0.9, 0.3, size=n_wavelengths)
         background_mu_s = rng.normal(1500, 300, size=n_wavelengths)
         # index as [1, ..., lambda]->[mu_a, mu_s]->[x]->[y]->[z]
         volume = np.zeros(
@@ -77,7 +77,7 @@ class BphP_cylindrical_phantom(phantom):
                 else:
                     hotspots.append(origin + [radius])
 
-            c_tot = rng.normal(0.005, 0.002)
+            c_tot = rng.normal(3e-4, 1.2e-4) # [mols/m^3] = [10^3 M]
             if c_tot > 0.001: # arbitrary minimum concentration
                 c_tot = c_tot * gf.cylinder_mask(
                     cfg['dx'],

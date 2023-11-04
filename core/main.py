@@ -57,7 +57,7 @@ if __name__ == '__main__':
 
     ============================================================================
     '''
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     # TODO: use argparse to set mcx_bin_path and other arguements for cfg
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -139,6 +139,7 @@ if __name__ == '__main__':
             pml_size=pml_size,
             points_per_wavelength=args.ppw
         )
+        logging.info(f'maximum supported acoustic frequency: {1e-6 * c_0 / (dx * args.ppw)} MHz')
         mcx_domain_size = [mcx_grid_size[0]*dx,
                            mcx_grid_size[1]*dx,
                            mcx_grid_size[2]*dx]# [m], modify grid size for chosen dx
