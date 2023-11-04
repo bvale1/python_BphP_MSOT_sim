@@ -231,7 +231,7 @@ class kwave_inverse_adapter():
             )
         
         # apply positivity constraint
-        #p0_recon *= (p0_recon > 0.0)
+        p0_recon *= (p0_recon > 0.0)
         
         # uncomment for debugging to save first iteration when ['recon_iterations'] > 1
         with h5py.File(self.cfg['save_dir']+'data.h5', 'r+') as f:
@@ -306,7 +306,7 @@ class kwave_inverse_adapter():
                 )['p_final'][pml:-pml, pml:-pml].T
 
                 # apply positivity constraint
-                #p0_recon *= (p0_recon > 0.0)
+                p0_recon *= (p0_recon > 0.0)
         
                 # uncomment to save each iteration
                 with h5py.File(self.cfg['save_dir']+'data.h5', 'r+') as f:
