@@ -210,7 +210,7 @@ class kwave_inverse_adapter():
                 sensor_weights=self.sensor_weights,
                 sensor_local_ind=self.sensor_local_ind
             )
-        else: # point source array
+        elif self.cfg['forward_model'] == 'invision': # point source array with invision forward model
             source.p = sensor_data0[self.mask_reorder_index,:]
         
         # run time reversal reconstruction
@@ -292,7 +292,7 @@ class kwave_inverse_adapter():
                         sensor_weights=self.sensor_weights,
                         sensor_local_ind=self.sensor_local_ind
                     )
-                else: # point source array
+                elif self.cfg['forward'] == 'invision': # point source array with invision forward model
                     source.p = (np.flip(sensor_datai, axis=1) - sensor_data0)[self.mask_reorder_index]
                 
                 # run time reversal reconstruction
@@ -345,20 +345,9 @@ class kwave_inverse_adapter():
     
     def run_backprojection(self, sensor_data):
         
-        # define point source array for backprojection
-        theta = np.linspace(0, 2*np.pi, 256, endpoint=False)
+        if self.combine_data == False and self.cfg['forward_model'] == 'point':
+            sensor_data = sensor_data[self.mask_reorder_index]
         
-        # minus one since MATLAB indexes from 1
-        #logger.debug('self.mask_order_index.shape')
-        #logger.debug(self.mask_order_index.shape)
-        #print(self.mask_order_index)
-        #logger.debug('self.mask_reorder_index.shape')
-        #logger.debug(self.mask_reorder_index.shape)
-        #print(self.mask_reorder_index)
-        
-        #print('sensor_data.shape')
-        #print(sensor_data.shape)
-        #sensor_data = sensor_data[self.mask_order_index-1,:][:,0,:]
         logger.debug('sensor_data.shape')
         logger.debug(sensor_data.shape)
         # reconstruct only region within 'crop_size'
