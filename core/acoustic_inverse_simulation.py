@@ -298,7 +298,7 @@ class kwave_inverse_adapter():
                 elif self.cfg['forward_model'] == 'invision': # point source array with invision forward model
                     source.p = (np.flip(sensor_datai, axis=1) - sensor_data0)[self.mask_reorder_index]
                 else: # point source array with point source forward model
-                    source.p = sensor_data0
+                    source.p = (np.flip(sensor_datai, axis=1) - sensor_data0)
                 
                 # run time reversal reconstruction
                 p0_recon -= self.cfg['recon_alpha'] * kspaceFirstOrder2DG(
