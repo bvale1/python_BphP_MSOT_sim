@@ -349,7 +349,7 @@ if __name__ == '__main__':
                     with h5py.File(cfg['save_dir']+'temp.h5', 'r+') as f:
                         f['p0_3D'][cycle,wavelength_index,pulse] =  uf.crop_p0_3D(
                             out,
-                            [cfg['crop_size'], cfg['kwave_grid_size'][1], cfg['crop_size']]
+                            [cfg['crop_size'], cfg['kwave_grid_size'][1], 512]
                         )
                     with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
                         f['p0'][cycle,wavelength_index,pulse] =  uf.square_centre_crop(
