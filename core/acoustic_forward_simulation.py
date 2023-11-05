@@ -75,29 +75,24 @@ class kwave_forward_adapter():
         
         
     def create_point_sensor_array(self):
-        number_detector_elements = 256
-        radius_mm = 40.5
-        sensor_xz = np.matmul(
-            uf.Ry2D(225 * np.pi / 180),
-            make_cart_circle(
-                radius_mm * 1e-3, 
-                number_detector_elements,
-                np.array([0.0, 0.0]),
-                3 * np.pi / 2,
-                plot_circle=False
-            )
-        )
+        # k-wave indexes the binary sensor mask in column wise linear order
+        n = 256 # number of elements
+        r  = 0.0402 # [m]
+        arc_angle = 270*np.pi/(n*180) # [rad]
+        theta = np.linspace((5*np.pi/4)-(arc_angle), (-np.pi/4)+(arc_angle), n) # [rad]
+        x = r*np.sin(theta) # [m]
+        z = r*np.cos(theta) # [m]
         
-        sensor_xyz = np.concatenate(
-            (
-                np.expand_dims(sensor_xz[0], axis=0),
-                np.zeros((1, self.cfg['nsensors']), dtype=np.float32),
-                np.expand_dims(sensor_xz[1], axis=0)
-            ), axis=0
+        detector_positions = np.array([x, z])
+        #detector_positions = np.matmul(uf.Ry2D(-np.pi / 2), np.array([x, z]))
+    
+        [self.sensor_mask, self.mask_order_index, self.mask_reorder_index] = cart2grid(
+            self.kgrid, detector_positions
         )
-        
-        self.sensor_mask = cart2grid(self.kgrid, sensor_xyz)[0]
         self.combine_data = False
+        # these two fields are used for backprojection
+        self.source_x = detector_positions[0, :]
+        self.source_z = detector_positions[1, :]
         
         
     def create_transducer_array(self):
