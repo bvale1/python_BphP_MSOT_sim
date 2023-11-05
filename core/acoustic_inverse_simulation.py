@@ -98,7 +98,8 @@ class kwave_inverse_adapter():
         x = r*np.sin(theta) # [m]
         z = r*np.cos(theta) # [m]
         
-        detector_positions = np.matmul(uf.Ry2D(-np.pi / 2), np.array([x, z]))
+        detector_positions = np.array([x, z])
+        #detector_positions = np.matmul(uf.Ry2D(-np.pi / 2), np.array([x, z]))
     
         [self.sensor_mask, self.mask_order_index, self.mask_reorder_index] = cart2grid(
             self.kgrid, detector_positions
