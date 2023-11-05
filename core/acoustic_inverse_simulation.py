@@ -345,8 +345,15 @@ class kwave_inverse_adapter():
     
     def run_backprojection(self, sensor_data):
         
-        if self.combine_data == False and self.cfg['forward_model'] == 'point':
-            sensor_data = sensor_data[self.mask_reorder_index]
+        # known bug
+        #Traceback (most recent call last):
+        #  File "/scratch/condor/dir_2955140/python_BphP_MSOT_sim/core/main.py", line 532, in <module>
+            # bp = simulation.run_backprojection(out)
+        #  File "/scratch/condor/dir_2955140/python_BphP_MSOT_sim/core/acoustic_inverse_simulation.py", line 3$    sensor_data = sensor_data[self.mask_reorder_index]
+        # IndexError: arrays used as indices must be of integer (or boolean) type
+        #if self.combine_data == False and self.cfg['forward_model'] == 'point':
+        #    print(f'self.mask_reorder_index: {self.mask_reorder_index.shape}, {self.mask_reorder_index.dtype}')
+        #    sensor_data = sensor_data[self.mask_reorder_index]
         
         logger.debug('sensor_data.shape')
         logger.debug(sensor_data.shape)
