@@ -364,7 +364,7 @@ class kwave_inverse_adapter():
             (np.arange(crop_size) - crop_size/2) * self.cfg['dx'],
             indexing='ij'
         )
-        
+        ''' # uncomment to save each sensor data to file for debugging
         with h5py.File(self.cfg['save_dir']+'data.h5', 'r+') as f:
             try:
                 logger.info('creating p0_bp_sensors dataset')
@@ -377,7 +377,7 @@ class kwave_inverse_adapter():
                 )
             except:
                 logger.info('p0_bp_sensors already exists')
-        
+        '''
         # X and Z can be flat
         X = X.ravel(); Z = Z.ravel()
         # compute euclidian distance from each sensor position to each grid point
