@@ -237,6 +237,7 @@ class kwave_inverse_adapter():
         p0_recon *= (p0_recon > 0.0)
         
         # uncomment for debugging to save first iteration when ['recon_iterations'] > 1
+        '''
         with h5py.File(self.cfg['save_dir']+'data.h5', 'r+') as f:
             try:
                 print(f'creating p0_tr_{1} dataset')
@@ -250,7 +251,7 @@ class kwave_inverse_adapter():
                 f[f'p0_tr_{1}'][()] = uf.square_centre_crop(
                     p0_recon, self.cfg['crop_size']
                 )
-        
+        '''
         if self.cfg['recon_iterations'] > 1:
             for i in range(2, self.cfg['recon_iterations']+1):
                 logger.info(f'time reversal iteration {i} of {self.cfg["recon_iterations"]}')
@@ -314,6 +315,7 @@ class kwave_inverse_adapter():
                 p0_recon *= (p0_recon > 0.0)
         
                 # uncomment to save each iteration
+                '''
                 with h5py.File(self.cfg['save_dir']+'data.h5', 'r+') as f:
                     try:
                         print(f'creating p0_tr_{i} dataset')
@@ -327,6 +329,7 @@ class kwave_inverse_adapter():
                         f[f'p0_tr_{i}'][()] = uf.square_centre_crop(
                             p0_recon, self.cfg['crop_size']
                         )
+                '''
         
         return p0_recon
     

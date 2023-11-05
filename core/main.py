@@ -1,7 +1,7 @@
 import numpy as np
-#from phantoms.Clara_experiment_phantom import Clara_experiment_phantom
+from phantoms.Clara_experiment_phantom import Clara_experiment_phantom
 #from phantoms.BphP_cylindrical_phantom import BphP_cylindrical_phantom
-from phantoms.plane_cylinder_tumour import plane_cyclinder_tumour
+#from phantoms.plane_cylinder_tumour import plane_cyclinder_tumour
 import json
 import h5py
 import os
@@ -104,7 +104,7 @@ if __name__ == '__main__':
         logging.info(f'checkpoint config found {cfg}')
         
         # Uncomment disired phantom geometry
-        '''
+        
         phantom = Clara_experiment_phantom()
         #H2O = phantom.define_water()
         ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
@@ -119,7 +119,7 @@ if __name__ == '__main__':
         (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(
             cfg, mu_a_background=1, r_tumour=0.002
         )
-        '''
+        
         phantom = BphP_cylindrical_phantom()
         ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
         (cfg, volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg)
@@ -162,7 +162,7 @@ if __name__ == '__main__':
             'npulses' : args.npulses,
             'nphotons' : 1e8,
             'nsources' : 10,
-            'wavelengths' : [680e-9],#, 770e-9],
+            'wavelengths' : [680e-9, 770e-9],
             'mcx_domain_size' : mcx_domain_size,
             'kwave_domain_size' : kwave_domain_size,
             'mcx_grid_size': mcx_grid_size,
@@ -213,7 +213,7 @@ if __name__ == '__main__':
         with open(cfg['save_dir']+'config.json', 'w') as f:
             json.dump(cfg, f, indent='\t')
         
-        '''
+        
         phantom = Clara_experiment_phantom()
         water89_gelatin1_intralipid10 = phantom.define_water89_gelatin1_intralipid10(cfg['wavelengths'])
         ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
@@ -227,7 +227,7 @@ if __name__ == '__main__':
         (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(
             cfg, mu_a_background=1, r_tumour=0.002
         )
-        '''
+        
         phantom = BphP_cylindrical_phantom()
         ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
         (cfg, volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg)
