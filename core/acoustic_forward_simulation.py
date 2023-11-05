@@ -63,10 +63,13 @@ class kwave_forward_adapter():
         
         if transducer_model == 'invision':
             self.combine_data = True
+            logger.info('initialising invision transducer array')
             self.create_transducer_array()
         else:
             if transducer_model != 'point':
                 logger.info(f'WARNING: transducer model {transducer_model} not recognised, using point source array')
+            else:
+                logger.info('initialising point source array')
             self.combine_data = False
             self.create_point_sensor_array()
         

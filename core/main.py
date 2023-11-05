@@ -397,7 +397,10 @@ if __name__ == '__main__':
         # delete mcx input and out files, they are not needed anymore
         simulation.delete_temporary_files()
         # overwrite mcx simulation to save memory
-        simulation = acoustic_forward_simulation.kwave_forward_adapter(cfg, transducer_model='invision')
+        simulation = acoustic_forward_simulation.kwave_forward_adapter(
+            cfg,
+            transducer_model=cfg['forward_model']
+        )
         # k-wave automatically determines dt and Nt, update cfg
         cfg = simulation.cfg    
         simulation.configure_simulation()
