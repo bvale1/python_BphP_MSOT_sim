@@ -99,7 +99,7 @@ class kwave_inverse_adapter():
         z = r*np.cos(theta) # [m]
         
         #detector_positions = np.array([x, z])
-        detector_positions = np.matmul(uf.Ry2D(-np.pi / 2), np.array([x, z]))
+        detector_positions = np.matmul(uf.Ry2D(np.pi / 2), np.array([x, z]))
     
         [self.sensor_mask, self.mask_order_index, self.mask_reorder_index] = cart2grid(
             self.kgrid, detector_positions
@@ -124,7 +124,7 @@ class kwave_inverse_adapter():
         # initializse transducer array object
         karray = kWaveArray(bli_tolerance=0.05, upsampling_rate=10, single_precision=True)
         
-        Ry = uf.Ry2D(-np.pi / 2) # euclidian rotation matrix
+        Ry = uf.Ry2D(np.pi / 2) # euclidian rotation matrix
         
         for i in range(n):
             position = np.matmul(Ry, np.array([x[i], z[i]])).tolist()

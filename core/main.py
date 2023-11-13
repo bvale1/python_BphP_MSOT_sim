@@ -84,6 +84,7 @@ if __name__ == '__main__':
     parser.add_argument('--run_backprojection', type=bool, default=False, action='store')
     parser.add_argument('--forward_model', type=str, default='invision', action='store')
     parser.add_argument('--inverse_model', type=str, default='invision', action='store')
+    parser.add_argument('--crop_p0_3d_size', type=int, default=256, action='store')
     args = parser.parse_args()
     
     # path to MCX binary
@@ -185,7 +186,8 @@ if __name__ == '__main__':
             'backprojection' : args.run_backprojection, # TODO: fix sensor data indexing for backprojection
             'weights_dir' : args.weights_dir, # directory containing weights for combining sensor data
             'forward_model' : args.forward_model, # forward model to use (invision, point)
-            'inverse_model' : args.inverse_model # inverse model to use (invision, point)
+            'inverse_model' : args.inverse_model, # inverse model to use (invision, point)
+            'crop_p0_3d_size' : args.crop_p0_3d_size # size of 3D p0 to crop to
         }
         
         logging.info(f'no checkpoint, creating config {cfg}')
@@ -288,9 +290,9 @@ if __name__ == '__main__':
                     cfg['ncycles'],
                     len(cfg['wavelengths']),
                     cfg['npulses'],
-                    512,
+                    cfg['crop_p0_3d_size'],
                     cfg['kwave_grid_size'][1],
-                    512
+                    cfg['crop_p0_3d_size']
                 ), dtype=np.float32
             )
  
@@ -349,7 +351,7 @@ if __name__ == '__main__':
                     with h5py.File(cfg['save_dir']+'temp.h5', 'r+') as f:
                         f['p0_3D'][cycle,wavelength_index,pulse] =  uf.crop_p0_3D(
                             out,
-                            [512, cfg['kwave_grid_size'][1], 512]
+                            [cfg['crop_p0_3d_size'], cfg['kwave_grid_size'][1], cfg['crop_p0_3d_size']]
                         )
                     with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
                         f['p0'][cycle,wavelength_index,pulse] =  uf.square_centre_crop(

@@ -85,7 +85,7 @@ class kwave_forward_adapter():
         
         #detector_positions = np.array([x, np.zeros(n), z])
         detector_positions = np.matmul(
-            uf.Ry3D(-np.pi / 2), np.array([x, np.zeros(n), z])
+            uf.Ry3D(np.pi / 2), np.array([x, np.zeros(n), z])
         )
     
         [self.sensor_mask, self.mask_order_index, self.mask_reorder_index] = cart2grid(
@@ -134,7 +134,7 @@ class kwave_forward_adapter():
         # initializse transducer array object
         karray = kWaveArray(bli_tolerance=0.05, upsampling_rate=10, single_precision=True)
         
-        Ry = uf.Ry3D(-np.pi / 2) # euclidian rotation matrix
+        Ry = uf.Ry3D(np.pi / 2) # euclidian rotation matrix
         
         theta = np.pi/2
         for det_idx in range(len(det_elements)):
