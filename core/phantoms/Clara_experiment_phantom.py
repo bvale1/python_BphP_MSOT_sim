@@ -19,7 +19,7 @@ class Clara_experiment_phantom(phantom):
             cfg['dx'],
             cfg['mcx_grid_size'],
             1.5e-3,
-            [(cfg['mcx_domain_size'][0]/2)-4e-3, 0.0, (cfg['mcx_domain_size'][2]/2)-2e-3]
+            [(cfg['mcx_domain_size'][0]/2)-2e-3, 0.0, (cfg['mcx_domain_size'][2]/2)-4e-3]
         )
         ReBphP_PCM_Pfr_c = c_tot * Pfr_frac
         ReBphP_PCM_Pr_c = c_tot * Pr_frac
