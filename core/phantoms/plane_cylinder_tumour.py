@@ -83,4 +83,4 @@ class plane_cyclinder_tumour(phantom):
         ReBphP_PCM_Pr_c = np.zeros((cfg['mcx_grid_size']), dtype=np.float32)
         ReBphP_PCM_Pfr_c = ReBphP_PCM_Pr_c.copy()
         
-        return (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c)
+        return (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, background_mask)

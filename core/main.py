@@ -105,25 +105,24 @@ if __name__ == '__main__':
         logging.info(f'checkpoint config found {cfg}')
         
         # Uncomment disired phantom geometry
-        
         phantom = Clara_experiment_phantom()
         #H2O = phantom.define_water()
         ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
         water89_gelatin1_intralipid10 = phantom.define_water89_gelatin1_intralipid10(cfg['wavelengths'])
         # NOTE: ensure sample is contained within crop_size*crop_size of the centre
         # of the xz plane, all other voxels are background
-        (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg)
+        (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(cfg)
         '''
         phantom = plane_cyclinder_tumour()
         ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
         H2O = phantom.define_water()
-        (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(
+        (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(
             cfg, mu_a_background=1, r_tumour=0.002
         )
         
         phantom = BphP_cylindrical_phantom()
         ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
-        (cfg, volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg)
+        (cfg, volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(cfg)
         '''
         
     else:
@@ -221,18 +220,18 @@ if __name__ == '__main__':
         ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
         # NOTE: ensure sample is contained within crop_size*crop_size of the centre
         # of the xz plane, all other voxels are background
-        (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg)
+        (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(cfg)
         '''
         phantom = plane_cyclinder_tumour()
         H2O = phantom.define_water()
         ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
-        (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(
+        (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(
             cfg, mu_a_background=1, r_tumour=0.002
         )
         
         phantom = BphP_cylindrical_phantom()
         ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
-        (cfg, volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c) = phantom.create_volume(cfg)
+        (cfg, volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(cfg)
         '''
         # save 2D slice of the volume to HDF5 file
         with h5py.File(cfg['save_dir']+'data.h5', 'w') as f:
@@ -240,6 +239,10 @@ if __name__ == '__main__':
                 'background_mua_mus', 
                 data=uf.square_centre_crop(volume[:,:,:,(cfg['mcx_grid_size'][1]//2)-1,:],
                                         cfg['crop_size'])
+            )
+            f.create_dataset(
+                'bg_mask',
+                data=uf.square_centre_crop(bg_mask, cfg['crop_size'])
             )
             # protein concentration ground truth is the most important besides the
             # reconstructed images of the pressure
