@@ -62,13 +62,13 @@ class phantom:
                 'epsilon_a': self.interp_property(
                     epsilon_a_Pr, wavelengths_Pr, wavelengths_interp
                 ), # molar absorption coefficient [M^-1 cm^-1]=[m^2 mol^-1]
-                'eta' : [0.0045, 0.0] # photoisomerisation quantum yield (dimensionless)
+                'eta' : [0.0025, 0.0] # photoisomerisation quantum yield (dimensionless)
                 },
             'Pfr' : { # Far-red absorbing form
                 'epsilon_a': self.interp_property(
                     epsilon_a_Pfr, wavelengths_Pfr, wavelengths_interp
                 ), # molar absorption coefficient [M^-1 cm^-1]=[m^2 mol^-1]
-                'eta' : [0.0, 0.00195] # photoisomerisation quantum yield (dimensionless)
+                'eta' : [0.0, 0.00191] # photoisomerisation quantum yield (dimensionless)
             }   
         }
         return self.ReBphP_PCM
