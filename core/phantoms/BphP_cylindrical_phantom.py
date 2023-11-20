@@ -9,6 +9,8 @@ logging.basicConfig(level=logging.DEBUG)
 class BphP_cylindrical_phantom(phantom):
     
     def create_volume(self, cfg : dict, n_wavelengths=2, phantom_r=0.013) -> tuple:
+        
+        
         seed = cfg['seed']
         # instantiate random number generator
         if seed is None:
@@ -57,6 +59,7 @@ class BphP_cylindrical_phantom(phantom):
             self.ReBphP_PCM['Pfr'],
             wavelength_idx=1
         )
+        logging.debug(f'Pr_frac: {Pr_frac}, Pfr_frac: {Pfr_frac}')
         ReBphP_PCM_Pr_c = np.zeros((cfg['mcx_grid_size']), dtype=np.float32)
         ReBphP_PCM_Pfr_c = np.zeros((cfg['mcx_grid_size']), dtype=np.float32)
 
@@ -90,20 +93,18 @@ class BphP_cylindrical_phantom(phantom):
                     logging.debug(f'no intersection for {origin}, {radius}')
                     hotspots.append(origin + [radius])
 
-            # add proteins to the hotspot
-            for hotspot in hotspots:
-                c_tot = rng.normal(5e-4, 1e-4) # [mols/m^3] = [10^3 M]
-                if c_tot < 1e-4: # arbitrary minimum concentration
-                    c_tot = 1e-4
-                logging.debug(f'hotspot: {hotspot}, c_tot: {c_tot}')
-                c_tot = c_tot * gf.cylinder_mask(
-                    cfg['dx'],
-                    cfg['mcx_grid_size'],
-                    radius,
-                    origin
-                )
-                ReBphP_PCM_Pfr_c += c_tot * Pfr_frac
-                ReBphP_PCM_Pr_c += c_tot * Pr_frac
+            c_tot = rng.normal(5e-4, 1e-4) # [mols/m^3] = [10^3 M]
+            if c_tot < 1e-4: # arbitrary minimum concentration
+                c_tot = 1e-4
+            logging.debug(f'hotspot: {origin}, c_tot: {c_tot}')
+            c_tot = c_tot * gf.cylinder_mask(
+                cfg['dx'],
+                cfg['mcx_grid_size'],
+                radius,
+                origin
+            )
+            ReBphP_PCM_Pfr_c += c_tot * Pfr_frac
+            ReBphP_PCM_Pr_c += c_tot * Pr_frac
         
         # some of these hotspots will include tumours
         inc_tumour = rng.binomial(1, 0.6, size=n_hotspots[0])
