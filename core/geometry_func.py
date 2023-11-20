@@ -13,9 +13,9 @@ def sphere_mask(dx, grid_size, radius, origin):
     [X,Y,Z] = grid_xyz(dx, grid_size)
     
     distances = np.sqrt(
-        (X - origin[1])**2 + 
+        (X - origin[0])**2 + 
         (Y - origin[1])**2 +
-        (Z - origin[0])**2
+        (Z - origin[2])**2
     )
     
     return distances <= radius

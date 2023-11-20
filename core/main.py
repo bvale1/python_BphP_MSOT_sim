@@ -1,7 +1,7 @@
 import numpy as np
 from phantoms.Clara_experiment_phantom import Clara_experiment_phantom
-#from phantoms.BphP_cylindrical_phantom import BphP_cylindrical_phantom
-#from phantoms.plane_cylinder_tumour import plane_cyclinder_tumour
+from phantoms.BphP_cylindrical_phantom import BphP_cylindrical_phantom
+from phantoms.plane_cylinder_tumour import plane_cyclinder_tumour
 import json
 import h5py
 import os
@@ -85,6 +85,7 @@ if __name__ == '__main__':
     parser.add_argument('--forward_model', type=str, default='invision', action='store')
     parser.add_argument('--inverse_model', type=str, default='invision', action='store')
     parser.add_argument('--crop_p0_3d_size', type=int, default=256, action='store')
+    parser.add_argument('--phantom', type=str, default='BphP_cylindrical_phantom', action='store')
     args = parser.parse_args()
     
     # path to MCX binary
@@ -104,26 +105,25 @@ if __name__ == '__main__':
             cfg = json.load(f)
         logging.info(f'checkpoint config found {cfg}')
         
-        # Uncomment disired phantom geometry
-        phantom = Clara_experiment_phantom()
-        #H2O = phantom.define_water()
-        ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
-        water89_gelatin1_intralipid10 = phantom.define_water89_gelatin1_intralipid10(cfg['wavelengths'])
-        # NOTE: ensure sample is contained within crop_size*crop_size of the centre
-        # of the xz plane, all other voxels are background
-        (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(cfg)
-        '''
-        phantom = plane_cyclinder_tumour()
-        ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
-        H2O = phantom.define_water()
-        (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(
-            cfg, mu_a_background=1, r_tumour=0.002
-        )
-        
-        phantom = BphP_cylindrical_phantom()
-        ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
-        (cfg, volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(cfg)
-        '''
+        if cfg['phantom'] == 'Clara_experiment_phantom':
+            phantom = Clara_experiment_phantom()
+            water89_gelatin1_intralipid10 = phantom.define_water89_gelatin1_intralipid10(cfg['wavelengths'])
+            ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
+            # NOTE: ensure sample is contained within crop_size*crop_size of the centre
+            # of the xz plane, all other voxels are background
+            (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(cfg)
+        elif cfg['phantom'] == 'plane_cylinder_tumour':
+            phantom = plane_cyclinder_tumour()
+            H2O = phantom.define_water()
+            ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
+            (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(
+                cfg, mu_a_background=1, r_tumour=0.002
+            )
+        elif cfg['phantom'] == 'BphP_cylindrical_phantom':
+            phantom = BphP_cylindrical_phantom()
+            H2O = phantom.define_water()
+            ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
+            (cfg, volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(cfg)
         
     else:
         # It is imperative that dx is small enough to support high enough 
@@ -186,7 +186,8 @@ if __name__ == '__main__':
             'weights_dir' : args.weights_dir, # directory containing weights for combining sensor data
             'forward_model' : args.forward_model, # forward model to use (invision, point)
             'inverse_model' : args.inverse_model, # inverse model to use (invision, point)
-            'crop_p0_3d_size' : args.crop_p0_3d_size # size of 3D p0 to crop to
+            'crop_p0_3d_size' : args.crop_p0_3d_size, # size of 3D p0 to crop to
+            'phantom' : args.phantom # currently supported (Clara_experiment_phantom, plane_cylinder_tumour, BphP_cylindrical_phantom)
         }
         
         logging.info(f'no checkpoint, creating config {cfg}')
@@ -214,25 +215,26 @@ if __name__ == '__main__':
         with open(cfg['save_dir']+'config.json', 'w') as f:
             json.dump(cfg, f, indent='\t')
         
-        
-        phantom = Clara_experiment_phantom()
-        water89_gelatin1_intralipid10 = phantom.define_water89_gelatin1_intralipid10(cfg['wavelengths'])
-        ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
-        # NOTE: ensure sample is contained within crop_size*crop_size of the centre
-        # of the xz plane, all other voxels are background
-        (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(cfg)
-        '''
-        phantom = plane_cyclinder_tumour()
-        H2O = phantom.define_water()
-        ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
-        (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(
-            cfg, mu_a_background=1, r_tumour=0.002
-        )
-        
-        phantom = BphP_cylindrical_phantom()
-        ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
-        (cfg, volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(cfg)
-        '''
+        if cfg['phantom'] == 'Clara_experiment_phantom':
+            phantom = Clara_experiment_phantom()
+            water89_gelatin1_intralipid10 = phantom.define_water89_gelatin1_intralipid10(cfg['wavelengths'])
+            ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
+            # NOTE: ensure sample is contained within crop_size*crop_size of the centre
+            # of the xz plane, all other voxels are background
+            (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(cfg)
+        elif cfg['phantom'] == 'plane_cylinder_tumour':
+            phantom = plane_cyclinder_tumour()
+            H2O = phantom.define_water()
+            ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
+            (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(
+                cfg, mu_a_background=1, r_tumour=0.002
+            )
+        elif cfg['phantom'] == 'BphP_cylindrical_phantom':
+            phantom = BphP_cylindrical_phantom()
+            H2O = phantom.define_water()
+            ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
+            (cfg, volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(cfg)
+        logging.basicConfig(level=logging.INFO)
         # save 2D slice of the volume to HDF5 file
         with h5py.File(cfg['save_dir']+'data.h5', 'w') as f:
             f.create_dataset(
