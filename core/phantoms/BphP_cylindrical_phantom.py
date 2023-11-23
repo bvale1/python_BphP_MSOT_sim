@@ -80,6 +80,8 @@ class BphP_cylindrical_phantom(phantom):
         for j in range(len(cfg['wavelengths'])):
             volume[j,0] += tumor_mu_a[j] * tumor_profile
             volume[j,1][tumor_mask] = tumor_mu_s[j]
+            
+        return volume
         
             
     def create_volume(self, cfg : dict, n_wavelengths=2, phantom_r=0.013) -> tuple:
@@ -144,21 +146,29 @@ class BphP_cylindrical_phantom(phantom):
         n_tumor_proteins = rng.integers(0, 4)
         n_tumors = rng.integers(0, 2)
         logging.debug(f'n_proteins: {n_proteins}, n_tumor_proteins: {n_tumor_proteins}, n_tumors: {n_tumors}')
-        proteins = self.gen_regions(cfg, rng, n_proteins, phantom_r)
-        tumor_proteins = self.gen_regions(
-            cfg, rng, n_tumor_proteins, phantom_r, regions=proteins
-        )[-n_tumor_proteins:]
-        tumors = self.gen_regions(
-            cfg, rng, n_tumors, phantom_r, regions=proteins+tumor_proteins
-        )
-        print(f'proteins: {proteins}, tumor_proteins: {tumor_proteins}, tumors: {tumors}')
-        tumors = tumors[-n_tumors:]
-        
+        if n_proteins > 0:
+            proteins = self.gen_regions(cfg, rng, n_proteins, phantom_r)
+        else:
+            proteins = []
+        if n_tumor_proteins > 0:
+            tumor_proteins = self.gen_regions(
+                cfg, rng, n_tumor_proteins, phantom_r, regions=proteins
+            )[-n_tumor_proteins:]
+        else:
+            tumor_proteins = []
+        if n_tumors > 0:
+            tumors = self.gen_regions(
+                cfg, rng, n_tumors, phantom_r, regions=proteins+tumor_proteins
+            )[-n_tumors:]
+        else:
+            tumors = []
+        logging.debug(f'proteins: {proteins}, tumor_proteins: {tumor_proteins}, tumors: {tumors}')
+                
         # place photoswitching proteins 
         for region in proteins+tumor_proteins:
-            c_tot = rng.normal(5e-4, 1e-4) # [mols/m^3] = [10^3 M]
-            if c_tot < 1e-4: # arbitrary minimum concentration
-                c_tot = 1e-4
+            c_tot = rng.normal(2e-4, 5e-5) # [mols/m^3] = [10^3 M]
+            if c_tot < 5e-5: # arbitrary minimum concentration
+                c_tot = 5e-5
             logging.debug(f'region: {region}, c_tot: {c_tot}')
             c_tot = c_tot * gf.sphere_mask(
                 cfg['dx'],
@@ -169,7 +179,8 @@ class BphP_cylindrical_phantom(phantom):
             ReBphP_PCM_Pfr_c += c_tot * Pfr_frac
             ReBphP_PCM_Pr_c += c_tot * Pr_frac
         
-        for tumor in tumors:
+        for tumor in tumors+tumor_proteins:
+            logging.debug(f'generating tumor: {tumor}')
             volume = self.gen_tumour(cfg, rng, tumor, volume)
         
         return (cfg, volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask)

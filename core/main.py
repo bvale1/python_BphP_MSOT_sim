@@ -182,7 +182,7 @@ if __name__ == '__main__':
             'wavelength_index' : 0, # for checkpointing
             'pulse' : 0, # for checkpointing
             'stage' : 'optical', # for checkpointing (optical, acoustic, inverse)
-            'backprojection' : args.run_backprojection, # TODO: fix sensor data indexing for backprojection
+            'backprojection' : args.run_backprojection, # backprojection
             'weights_dir' : args.weights_dir, # directory containing weights for combining sensor data
             'forward_model' : args.forward_model, # forward model to use (invision, point)
             'inverse_model' : args.inverse_model, # inverse model to use (invision, point)
