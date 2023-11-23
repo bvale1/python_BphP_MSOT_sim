@@ -4,7 +4,7 @@ import geometry_func as gf
 import BphP_func as bf
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
 
 class BphP_cylindrical_phantom(phantom):
     
