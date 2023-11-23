@@ -166,9 +166,9 @@ class BphP_cylindrical_phantom(phantom):
                 
         # place photoswitching proteins 
         for region in proteins+tumor_proteins:
-            c_tot = rng.normal(2e-4, 5e-5) # [mols/m^3] = [10^3 M]
-            if c_tot < 5e-5: # arbitrary minimum concentration
-                c_tot = 5e-5
+            c_tot = rng.normal(4e-5, 2e-5) # [mols/m^3] = [10^3 M]
+            if c_tot < 1e-5: # arbitrary minimum concentration
+                c_tot = 1e-5
             logging.debug(f'region: {region}, c_tot: {c_tot}')
             c_tot = c_tot * gf.sphere_mask(
                 cfg['dx'],
