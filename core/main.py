@@ -87,6 +87,7 @@ if __name__ == '__main__':
     parser.add_argument('--inverse_model', type=str, default='invision', action='store')
     parser.add_argument('--crop_p0_3d_size', type=int, default=256, action='store')
     parser.add_argument('--phantom', type=str, default='BphP_cylindrical_phantom', action='store')
+    parser.add_argument('--delete_p0_3d', type=bool, default=True, action='store')
     args = parser.parse_args()
     
     # path to MCX binary
@@ -513,7 +514,7 @@ if __name__ == '__main__':
             os.remove(cfg['save_dir']+'temp.h5')
             logging.info(f'temp.h5 (p0_3D) deleted in {timeit.default_timer() - start} seconds')
         except:
-            logging.debug('temp.h5 (p0_3D) not found')
+            logging.debug('unable to delete temp.h5, (p0_3D) not found')
     
     start = timeit.default_timer()
     simulation = acoustic_inverse_simulation.kwave_inverse_adapter(
