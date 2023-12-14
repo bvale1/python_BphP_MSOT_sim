@@ -2,6 +2,7 @@ import numpy as np
 from phantoms.Clara_experiment_phantom import Clara_experiment_phantom
 from phantoms.BphP_cylindrical_phantom import BphP_cylindrical_phantom
 from phantoms.plane_cylinder_tumour import plane_cyclinder_tumour
+from phantoms.water_phantom import water_phantom
 import json
 import h5py
 import os
@@ -124,6 +125,10 @@ if __name__ == '__main__':
             H2O = phantom.define_water()
             ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
             (cfg, volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(cfg)
+        elif cfg['phantom'] == 'water_phantom':
+            phantom = water_phantom()
+            H2O = phantom.define_water()
+            (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(cfg)
         
     else:
         # It is imperative that dx is small enough to support high enough 
@@ -156,7 +161,7 @@ if __name__ == '__main__':
         cfg = {
             'save_dir' : args.save_dir,
             'sim_git_hash' : args.sim_git_hash, # git hash of simulation code
-            'seed' : None,
+            'seed' : None, # used in procedurally generated phantoms
             'nsensors' : 256,
             'ncycles' : 1,
             'npulses' : args.npulses,
@@ -187,7 +192,8 @@ if __name__ == '__main__':
             'forward_model' : args.forward_model, # forward model to use (invision, point)
             'inverse_model' : args.inverse_model, # inverse model to use (invision, point)
             'crop_p0_3d_size' : args.crop_p0_3d_size, # size of 3D p0 to crop to
-            'phantom' : args.phantom # currently supported (Clara_experiment_phantom, plane_cylinder_tumour, BphP_cylindrical_phantom)
+            'phantom' : args.phantom, # currently supported (Clara_experiment_phantom, plane_cylinder_tumour, BphP_cylindrical_phantom)
+            'delete_p0_3d' : True # delete p0_3d after each pulse to save memory
         }
         
         logging.info(f'no checkpoint, creating config {cfg}')
@@ -234,6 +240,11 @@ if __name__ == '__main__':
             H2O = phantom.define_water()
             ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
             (cfg, volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(cfg)
+        elif cfg['phantom'] == 'water_phantom':
+            phantom = water_phantom()
+            H2O = phantom.define_water()
+            (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(cfg)
+            
         logging.basicConfig(level=logging.INFO)
         # save 2D slice of the volume to HDF5 file
         with h5py.File(cfg['save_dir']+'data.h5', 'w') as f:
@@ -496,12 +507,13 @@ if __name__ == '__main__':
             json.dump(cfg, f, indent='\t')
     
     # delete temp p0_3D dataset
-    try:
-        start = timeit.default_timer()
-        os.remove(cfg['save_dir']+'temp.h5')
-        logging.info(f'temp.h5 (p0_3D) deleted in {timeit.default_timer() - start} seconds')
-    except:
-        logging.debug('temp.h5 (p0_3D) not found')
+    if cfg['delete_p0_3d'] is True:
+        try:
+            start = timeit.default_timer()
+            os.remove(cfg['save_dir']+'temp.h5')
+            logging.info(f'temp.h5 (p0_3D) deleted in {timeit.default_timer() - start} seconds')
+        except:
+            logging.debug('temp.h5 (p0_3D) not found')
     
     start = timeit.default_timer()
     simulation = acoustic_inverse_simulation.kwave_inverse_adapter(

@@ -21,4 +21,15 @@ class water_phantom(phantom):
             volume[i,0,:,:,:] = self.water['mu_a'][i]
             volume[i,1,:,:,:] = self.water['mu_s'][i]
 
-        return volume
+        # no proteins are in this experiment
+        ReBphP_PCM_Pr_c = np.zeros((cfg['mcx_grid_size']), dtype=np.float32)
+        ReBphP_PCM_Pfr_c = ReBphP_PCM_Pr_c.copy()
+        
+        # no background mask
+        bg_mask = np.ones(
+            (cfg['mcx_grid_size'][0],
+             cfg['mcx_grid_size'][2]),
+            dtype=np.bool
+        )
+
+        return (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask)
