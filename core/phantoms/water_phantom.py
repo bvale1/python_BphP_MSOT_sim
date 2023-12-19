@@ -29,7 +29,7 @@ class water_phantom(phantom):
         bg_mask = np.ones(
             (cfg['mcx_grid_size'][0],
              cfg['mcx_grid_size'][2]),
-            dtype=np.bool
+            dtype=bool
         )
 
         return (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask)
