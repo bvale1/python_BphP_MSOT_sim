@@ -18,8 +18,8 @@ class water_phantom(phantom):
             ), dtype=np.float32
         )
         for i in range(len(cfg['wavelengths'])):
-            volume[i,0,:,:,:] = self.water['mu_a'][i]
-            volume[i,1,:,:,:] = self.water['mu_s'][i]
+            volume[i,0,:,:,:] = self.H2O['mu_a'][i]
+            volume[i,1,:,:,:] = self.H2O['mu_s'][i]
 
         # no proteins are in this experiment
         ReBphP_PCM_Pr_c = np.zeros((cfg['mcx_grid_size']), dtype=np.float32)
