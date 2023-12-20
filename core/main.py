@@ -129,6 +129,7 @@ if __name__ == '__main__':
         elif cfg['phantom'] == 'water_phantom':
             phantom = water_phantom()
             H2O = phantom.define_water()
+            ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
             (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(cfg)
         
     else:
@@ -194,7 +195,7 @@ if __name__ == '__main__':
             'inverse_model' : args.inverse_model, # inverse model to use (invision, point)
             'crop_p0_3d_size' : args.crop_p0_3d_size, # size of 3D p0 to crop to
             'phantom' : args.phantom, # currently supported (Clara_experiment_phantom, plane_cylinder_tumour, BphP_cylindrical_phantom)
-            'delete_p0_3d' : True # delete p0_3d after each pulse to save memory
+            'delete_p0_3d' : args.delete_p0_3d # delete p0_3d after each pulse to save memory
         }
         
         logging.info(f'no checkpoint, creating config {cfg}')
@@ -244,6 +245,7 @@ if __name__ == '__main__':
         elif cfg['phantom'] == 'water_phantom':
             phantom = water_phantom()
             H2O = phantom.define_water()
+            ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
             (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(cfg)
             
         logging.basicConfig(level=logging.INFO)
