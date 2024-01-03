@@ -87,7 +87,7 @@ if __name__ == '__main__':
     parser.add_argument('--inverse_model', type=str, default='invision', action='store')
     parser.add_argument('--crop_p0_3d_size', type=int, default=256, action='store')
     parser.add_argument('--phantom', type=str, default='BphP_cylindrical_phantom', action='store')
-    parser.add_argument('--delete_p0_3d', type=bool, default=True, action='store')
+    parser.add_argument('--delete_p0_3d', action=argparse.BooleanOptionalAction, default=False)
     args = parser.parse_args()
     
     # path to MCX binary
