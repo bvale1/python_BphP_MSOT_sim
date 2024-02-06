@@ -14,7 +14,8 @@ if __name__ == '__main__':
     
     2. apply convolution with the impulse response of the sensor to the signals
     
-    3. apply transformation to simulated signals (calibrated from real data)
+    3. apply transformation to simulated signals (calibrated from real data),
+       i.e. sytematic noise
     
     4. add appropriate white noise to the signals
     
@@ -99,13 +100,29 @@ if __name__ == '__main__':
     for cycle in range(sensor_data.shape[0]):
         for wavelength_index in range(sensor_data.shape[1]):
             for pulse in range(sensor_data.shape[2]):
-                noisy_sensor_data[cycle, wavelength_index, pulse] = fftconvolve(
-                    sensor_data[cycle, wavelength_index, pulse],
-                    'irf',
-                    mode='same'
-                )
+                for sensor in range(sensor_data.shape[3]):
+                    noisy_sensor_data[cycle, wavelength_index, pulse, sensor] =  \
+                        fftconvolve(
+                            noisy_sensor_data[cycle, wavelength_index, pulse, sensor],
+                            irf, mode='same'
+                        )
     
-    # 3. apply transformation to simulated signals (calibrated from real data)
+    # 3. apply transformation to simulated signals (calibrated from real data),
+    #    i.e. sytematic noise
+    # These were fitted for Janek's particular data using an optimisation script
+    sim_factor = 0.065576
+    noise_factor = 1.640936
+    INTERCEPT = -0.100539
+    
+    # systematic noise measured for 21 wavelengths (700-900 nm)
+    noise = np.load(f"P.N.3.npz")["raw_data"]
+    noise_wavelengths = np.arange(700, 901, 10)
+    for cycle in range(sensor_data.shape[0]):
+        for wavelength_index in range(sensor_data.shape[1]):
+            wavelength = cfg['wavelengths'][wavelength_index]*1e9
+            noise_ts = noise[np.argwhere(noise_wavelengths == wavelength).item(), :, :]
+            noise_ts = (noise_ts - np.mean(noise_ts[:, 600:1700], axis=1)[:, np.newaxis]) * noise_factor
+            
     
     # 4. add appropriate white noise to the signals
     
