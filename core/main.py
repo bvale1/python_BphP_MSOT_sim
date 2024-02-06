@@ -296,7 +296,8 @@ if __name__ == '__main__':
                         
         with h5py.File(cfg['save_dir']+'temp.h5', 'w') as f:
             # p0 will be saved in 3D for the acoustic simulation before finally
-            # being deleted
+            # being deleted, this is faster than initialising the optical and
+            # acoustic simulations each pulse
             # 1 cycle * 2 wavelengths * 16 pulses * 512 * (1024**2) * 32 bits = 64 GB
             # the entire sample should be contained within crop_size*crop_size in 
             # the centre of the xz plane, all other voxels are background equal zero
