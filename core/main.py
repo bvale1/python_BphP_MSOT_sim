@@ -58,8 +58,10 @@ if __name__ == '__main__':
 
     ============================================================================
     '''
-    logging.basicConfig(level=logging.INFO)
-    # TODO: use argparse to set mcx_bin_path and other arguements for cfg
+    
+    # If the configuration file and data file already exist, most of these
+    # parsed arguments will be ignored and the simulation will continue from the
+    # last checkpoint
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--mcx_bin_path',
@@ -88,8 +90,18 @@ if __name__ == '__main__':
     parser.add_argument('--crop_p0_3d_size', type=int, default=256, action='store')
     parser.add_argument('--phantom', type=str, default='BphP_cylindrical_phantom', action='store')
     parser.add_argument('--delete_p0_3d', action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument('-v', type=str, help='verbose level', default='INFO')
+    parser.add_argument('--Gamma', type=float, default=1.0, action='store')
     args = parser.parse_args()
     
+    if args.v == 'INFO':
+        logging.basicConfig(level=logging.INFO)
+    elif args.v == 'DEBUG':
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
+        logging.info(f'{args.v} not a recognised verbose level, using INFO instead')
+        
     # path to MCX binary
     mcx_bin_path = args.mcx_bin_path   
     #mcx_bin_path = '/mcx/bin/mcx' # billy_docker
