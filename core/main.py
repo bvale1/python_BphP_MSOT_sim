@@ -189,7 +189,7 @@ if __name__ == '__main__':
             'points_per_wavelength' : args.ppw, # only lower to 1 to test if enough RAM is not available
             'dx' : dx,
             'pml_size' : pml_size,
-            'gruneisen' : 1.0,
+            'gruneisen' : args.Gamma, # gruneisen parameter
             'c_0' : c_0,
             'alpha_coeff' : 0.01,
             'alpha_power' : 1.1,
