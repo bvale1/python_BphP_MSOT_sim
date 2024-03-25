@@ -34,7 +34,7 @@ class kwave_inverse_adapter():
     
     5. run time reversal simulation on GPU with CUDA binaries (KWaveFirstOrder2DG)
             
-    6. TODO: implement iterative time reversal reconstruction (ITR)
+    6. perform iterative time reversal reconstruction (ITR)
 
     7. Return inital pressure reconstruction
 

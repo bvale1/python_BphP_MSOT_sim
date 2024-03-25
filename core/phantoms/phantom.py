@@ -1,6 +1,7 @@
 import numpy as np
 from abc import ABC, abstractmethod
-import os
+import os, logging
+from typing import Union
 
 
 class phantom:
@@ -42,7 +43,7 @@ class phantom:
         return np.interp(wavelengths_interp, wavelengths, property).tolist()
 
 
-    def define_ReBphP_PCM(self, wavelengths_interp: (list, np.ndarray)) -> dict:
+    def define_ReBphP_PCM(self, wavelengths_interp: Union[list, np.ndarray]) -> dict:
         # (m^2 mol^-1) = (mm^-1 M^-1) = (mm^-1 mol^-1 dm^3) = (mm^-1 mol^-1 L^3)
         wavelengths_interp = np.asarray(wavelengths_interp) * 1e9 # [m] -> [nm]
         
@@ -74,7 +75,9 @@ class phantom:
         return self.ReBphP_PCM
     
     
-    def define_water89_gelatin1_intralipid10(self, wavelengths_interp : (list, np.ndarray)) -> dict:
+    def define_water89_gelatin1_intralipid10(self, 
+                                             wavelengths_interp : Union[list, np.ndarray]
+                                             ) -> dict:
         # Hanna Jonasson et al. 2022. Water and hemoglobin modulated gelatin-based
         # phantoms to spectrally mimic inflamed tissue in the
         # validation of biomedical techniques and the modeling
@@ -101,10 +104,13 @@ class phantom:
             'n' : [1.33, 1.33], # refractive index
             'g' : [0.9, 0.9] # anisotropy
         }
+        logging.info(f'water89_gelatin1_intralipid10 optical properties: {self.water89_gelatin1_intralipid10}')
         return self.water89_gelatin1_intralipid10
 
-
-    def define_agarose_gel(self, wavelengths : (list, np.ndarray)) -> dict:
+    # not finished
+    def define_agarose_gel(self, 
+                           wavelengths : Union[list, np.ndarray]
+                           ) -> dict:
         # TODO: find optical properties of agarose gel
         # Afrina Mustari et al. 2018. Agarose-based Tissue Mimicking Optical
         # Phantoms for Diffuse Reflectance Spectroscopy
@@ -116,8 +122,10 @@ class phantom:
         }
         return self.agarose_gel    
     
-    
-    def define_intralipid_10(self, wavelengths : (list, np.ndarray)) -> dict:
+    # not finished
+    def define_intralipid_10(self, 
+                             wavelengths : Union[list, np.ndarray]
+                             ) -> dict:
         # Light scattering in Intralipid-10% in the wavelength range of 400-1100 nm
         # Hugo J. van Staveren. 1991
         # https://opg.optica.org/ao/fulltext.cfm?uri=ao-30-31-4507&id=39328

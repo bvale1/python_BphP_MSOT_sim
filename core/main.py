@@ -92,6 +92,7 @@ if __name__ == '__main__':
     parser.add_argument('--delete_p0_3d', action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument('-v', type=str, help='verbose level', default='INFO')
     parser.add_argument('--Gamma', type=float, default=1.0, action='store')
+    parser.add_argument('--bg_mu_s', type=float, default=0.0) # coupling medium scattering coefficient, currently for Clara_experiment_phantom only
     args = parser.parse_args()
     
     if args.v == 'INFO':
@@ -136,7 +137,7 @@ if __name__ == '__main__':
         elif cfg['phantom'] == 'BphP_cylindrical_phantom':
             phantom = BphP_cylindrical_phantom()
             H2O = phantom.define_water()
-            ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
+            ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'], bg_mu_s=cfg['bg_mu_s'])
             (cfg, volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(cfg)
         elif cfg['phantom'] == 'water_phantom':
             phantom = water_phantom()
@@ -207,7 +208,8 @@ if __name__ == '__main__':
             'inverse_model' : args.inverse_model, # inverse model to use (invision, point)
             'crop_p0_3d_size' : args.crop_p0_3d_size, # size of 3D p0 to crop to
             'phantom' : args.phantom, # currently supported (Clara_experiment_phantom, plane_cylinder_tumour, BphP_cylindrical_phantom)
-            'delete_p0_3d' : args.delete_p0_3d # delete p0_3d after each pulse to save memory
+            'delete_p0_3d' : args.delete_p0_3d, # delete p0_3d after each pulse to save memory
+            'bg_mu_s' : args.bg_mu_s # coupling medium scattering coefficient, currently for Clara_experiment_phantom only
         }
         
         logging.info(f'no checkpoint, creating config {cfg}')
@@ -252,7 +254,7 @@ if __name__ == '__main__':
         elif cfg['phantom'] == 'BphP_cylindrical_phantom':
             phantom = BphP_cylindrical_phantom()
             H2O = phantom.define_water()
-            ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
+            ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'], bg_mu_s=cfg['bg_mu_s'])
             (cfg, volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(cfg)
         elif cfg['phantom'] == 'water_phantom':
             phantom = water_phantom()

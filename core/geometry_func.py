@@ -1,4 +1,6 @@
 import numpy as np
+from typing import Union
+
 
 def grid_xyz(dx, grid_size):
     return np.meshgrid(
@@ -20,14 +22,14 @@ def sphere_mask(dx, grid_size, radius, origin):
     
     return distances <= radius
 
-def cylinder_mask(dx : (int, float),
-                  grid_size : (list, tuple, np.ndarray),
-                  radius : (int, float), 
-                  origin : (list, tuple, np.ndarray)) -> np.ndarray:
+def cylinder_mask(dx: Union[int, float],
+                  grid_size: Union[list, tuple, np.ndarray],
+                  radius: Union[int, float], 
+                  origin: Union[list, tuple, np.ndarray]) -> np.ndarray:
     # Note origin and radius are in mm
     # Note origin is in the form [x, y, z]
     # Note the cylinder is aligned along the y-axis
-    [X,Y,Z] = grid_xyz(dx, grid_size)
+    [X,Y,Z] = grid_xyz(dx, np.asarray(grid_size))
     
     distances = np.sqrt(
         (X - origin[0])**2 + 
@@ -36,9 +38,12 @@ def cylinder_mask(dx : (int, float),
     
     return distances <= radius
 
-def quadratic_profile_tumor(dx, grid_size, radius, origin):
+def quadratic_profile_tumor(dx : Union[int, float],
+                            grid_size : Union[list, tuple, np.ndarray],
+                            radius : Union[int, float], 
+                            origin : Union[list, tuple, np.ndarray]) -> np.ndarray:
     
-    [X,Y,Z] = grid_xyz(dx, grid_size)
+    [X,Y,Z] = grid_xyz(dx, np.asarray(grid_size))
     
     distances = np.sqrt(
         (X - origin[0])**2 + 

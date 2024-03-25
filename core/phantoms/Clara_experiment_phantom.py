@@ -6,7 +6,7 @@ import BphP_func as bf
 
 class Clara_experiment_phantom(phantom):
     
-    def create_volume(self, cfg : dict) -> tuple:
+    def create_volume(self, cfg : dict, bg_mu_s=0.0) -> tuple:
         # phantom is made from 1.5% agarose 3.5% intralipid emulsion
         
         # initialise proteins, Pr to Pfr ratio is the steady state
@@ -15,6 +15,7 @@ class Clara_experiment_phantom(phantom):
             self.ReBphP_PCM['Pfr'],
             wavelength_idx=1
         )
+        # [M] = [mol L^-3] = [mol/mm^3]
         c_tot = 0.0005 * gf.cylinder_mask(
             cfg['dx'],
             cfg['mcx_grid_size'],
@@ -36,6 +37,7 @@ class Clara_experiment_phantom(phantom):
                 cfg['mcx_grid_size'][2]            
             ), dtype=np.float32
         )
+        volume[:,1,:,:,:] = bg_mu_s
         mask = gf.cylinder_mask(
             cfg['dx'],
             cfg['mcx_grid_size'],
