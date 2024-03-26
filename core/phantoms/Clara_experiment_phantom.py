@@ -45,8 +45,8 @@ class Clara_experiment_phantom(phantom):
             [(cfg['mcx_domain_size'][0]/2), 0.0, (cfg['mcx_domain_size'][2]/2)]
         )
         for i in range(len(cfg['wavelengths'])):
-            volume[i,0,:,:,:] = self.water89_gelatin1_intralipid10['mu_a'][i] * mask
-            volume[i,1,:,:,:] = self.water89_gelatin1_intralipid10['mu_s'][i] * mask
+            volume[i,0,:,:,:] = 1 * mask #self.water89_gelatin1_intralipid10['mu_a'][i] * mask
+            volume[i,1,:,:,:] = 1000 * mask #self.water89_gelatin1_intralipid10['mu_s'][i] * mask
         bg_mask = mask[:,0,:]
         
         return (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask)
