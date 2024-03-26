@@ -16,7 +16,7 @@ class Clara_experiment_phantom(phantom):
             wavelength_idx=1
         )
         # [M] = [mol L^-3] = [mol/mm^3]
-        c_tot = 0.0005 * gf.cylinder_mask(
+        c_tot = 0.0001 * gf.cylinder_mask(
             cfg['dx'],
             cfg['mcx_grid_size'],
             1.5e-3,
