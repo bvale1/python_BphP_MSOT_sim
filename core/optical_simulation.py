@@ -3,13 +3,12 @@ import subprocess
 import os
 import json
 import struct
-import utility_func as uf
+import func.utility_func as uf
 
 
 class MCX_adapter():
     '''
-    This class is a rip off of the SIMPA class
-    optical_forward_model_mcx_adapter.py
+    invision source:
     https://github.com/IMSY-DKFZ/simpa
     
     ==================================Workflow==================================

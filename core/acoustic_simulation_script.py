@@ -9,7 +9,7 @@ from kwave.options.simulation_options import SimulationOptions
 from kwave.ksource import kSource
 from kwave.utils.mapgen import make_cart_circle
 from kwave.utils.conversion import cart2grid
-import utility_func as uf
+import func.utility_func as uf
 import numpy as np
 import h5py
 import timeit

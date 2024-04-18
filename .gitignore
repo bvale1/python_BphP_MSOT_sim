@@ -15,3 +15,5 @@ __pycache__
 *.png
 
 2023*
+
+*.npy

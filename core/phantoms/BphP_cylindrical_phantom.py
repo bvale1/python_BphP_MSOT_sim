@@ -1,7 +1,7 @@
 import numpy as np
 from phantoms.phantom import phantom
-import geometry_func as gf
-import BphP_func as bf
+import func.geometry_func as gf
+import func.BphP_func as bf
 import logging
 
 #logging.basicConfig(level=logging.DEBUG)

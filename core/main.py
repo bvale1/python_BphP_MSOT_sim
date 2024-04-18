@@ -6,13 +6,13 @@ from phantoms.water_phantom import water_phantom
 import json
 import h5py
 import os
-import geometry_func as gf
-import BphP_func as bf
-import utility_func as uf
+import func.geometry_func as gf
+import func.BphP_func as bf
+import func.utility_func as uf
 import optical_simulation
 import acoustic_forward_simulation
 import acoustic_inverse_simulation
-#import plot_func as pf
+#import func.plot_func as pf
 import timeit
 import logging
 import argparse

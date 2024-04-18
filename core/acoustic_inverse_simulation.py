@@ -10,7 +10,7 @@ from kwave.utils.mapgen import make_cart_circle
 from kwave.utils.interp import interp_cart_data
 from kwave.utils.conversion import cart2grid
 from kwave.utils.kwave_array import kWaveArray
-import utility_func as uf
+import func.utility_func as uf
 import numpy as np
 import h5py
 import os
@@ -47,7 +47,7 @@ class kwave_inverse_adapter():
         )
         self.kgrid.setTime(cfg['Nt'], cfg['dt'])
         if cfg['interp_data'] and transducer_model=='invision':
-            logger.info('WARNING: cannot interpolated sensor data with invision transducer model')
+            logger.info('WARNING: cannot interpolate sensor data with invision transducer model')
             cfg['interp_data'] = None
         self.cfg = cfg
         
@@ -447,7 +447,7 @@ class kwave_inverse_adapter():
         
         if not os.path.exists(self.cfg["weights_dir"]):
             logger.debug(f'directory not found: {self.cfg["weights_dir"]}')
-            return (sensor_mask, sensor_weights, sensor_local_ind)
+            return (sensor_mask, sensor_weights, sensor_local_ind, save_path)
         
         for folder in os.listdir(self.cfg['weights_dir']):
             cfg_path = os.path.join(self.cfg['weights_dir'], folder, 'weights_config.json')
