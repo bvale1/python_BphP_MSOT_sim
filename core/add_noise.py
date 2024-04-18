@@ -221,7 +221,7 @@ if __name__ == '__main__':
     # 4. add appropriate white noise to the signals
     # same seed as simulation configuration is used to ensure reproducibility
     # instantiate random number generator
-    (noisy_sensor_data, cfg) = add_gaussian_noise(deepcopy(sensor_data), cfg, cfg['noise_std'])
+    (noisy_sensor_data, cfg) = add_gaussian_noise(deepcopy(sensor_data), cfg, args.noise_std)
     logging.info(f'white noise added to sensor data with std: {cfg["noise_std"]}')
     
     # add the white noise standard deviation to the configuration then save it
