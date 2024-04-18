@@ -259,7 +259,7 @@ if __name__ == '__main__':
     
     # 5. (optional) save the new signals
     if args.save_signals is not None:
-        with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
+        with h5py.File(os.path.join(args.save_dir, 'data.h5'), 'r+') as f:
             f[args.save_signals] = noisy_sensor_data
         logging.info(f'sensor_data saved to {cfg["save_dir"]+"data.h5"}')
     
@@ -293,7 +293,7 @@ if __name__ == '__main__':
                 # 7. (optional) save the reconstructed images
                 if args.save_images is not None:
                     start = timeit.default_timer()
-                    with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
+                    with h5py.File(os.path.join(args.save_dir, 'data.h5'), 'r+') as f:
                         f[args.save_images][cycle, wavelength_index, pulse] = noisy_tr
                     logging.info(f'reconstruction saved in {timeit.default_timer() - start} seconds')
 
@@ -342,7 +342,7 @@ if __name__ == '__main__':
         ax[0, 1].legend()
         
         # load the original and noise added reconstructions
-        with h5py.File(cfg['save_dir']+'data.h5', 'r') as f:
+        with h5py.File(os.path.join(args.save_dir, 'data.h5'), 'r') as f:
             p0_tr = f['p0_tr'][0, 1, 0]
             noisy_tr = f[args.save_images][0, 1, 0]
         extent = [-1e3*cfg['dx']*cfg['crop_size']/2,
