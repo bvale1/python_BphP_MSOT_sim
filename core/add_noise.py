@@ -229,7 +229,7 @@ if __name__ == '__main__':
         json.dump(cfg, f)
     
     # 2. apply convolution with the impulse response of the sensor to the signals    
-    irf = np.load("invision_irf.npy")
+    irf = np.load(args.irf_path)
     noisy_sensor_data = convolve1d(noisy_sensor_data, irf, mode='nearest', axis=-1)
     logging.info('sensor data convolved with impulse response function')
     
