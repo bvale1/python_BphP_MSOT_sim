@@ -140,6 +140,17 @@ if __name__ == '__main__':
             ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'], bg_mu_s=cfg['bg_mu_s'])
             (cfg, volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(cfg)
         elif cfg['phantom'] == 'water_phantom':
+            cfg['gruneisen'] = 0.12
+            #@article{yao2014photoacoustic,
+            #title={Photoacoustic measurement of the Gr{\"u}neisen parameter of tissue},
+            #author={Yao, Da-Kang and Zhang, Chi and Maslov, Konstantin and Wang, Lihong V},
+            #journal={Journal of biomedical optics},
+            #volume={19},
+            #number={1},
+            #pages={017007--017007},
+            #year={2014},
+            #publisher={Society of Photo-Optical Instrumentation Engineers}
+            #}
             phantom = water_phantom()
             H2O = phantom.define_water()
             ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])

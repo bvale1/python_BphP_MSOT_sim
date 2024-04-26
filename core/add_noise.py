@@ -254,7 +254,7 @@ if __name__ == '__main__':
     plt.savefig('filter_amplitude_response.png')    
     '''
     # apply the filter to the noisy sensor data
-    noisy_sensor_data = np.fft.ifft(np.fft.fft(noisy_sensor_data) * filter)
+    noisy_sensor_data = np.fft.ifft(np.fft.fft(noisy_sensor_data, axis=-1) * filter, axis=-1)
     #noisy_sensor_data = convolve1d(noisy_sensor_data, np.fft.ifft(filter), mode='nearest', axis=-1)
     
     # 5. (optional) save the new signals
@@ -301,6 +301,9 @@ if __name__ == '__main__':
     # for testing purposes save a comparison of the original and noise added 
     # signal and reconstruction for the first cycle, wavelength and pulse only
     if args.plot_comparison:
+        
+        if not args.save_images:
+            raise ValueError('key save_images must be provided to plot comparison')
         
         t_array = np.arange(cfg['Nt']) * cfg['dt'] * 1e6
         # 1 + dx//2 includes the dc component, positive and Nyquist frequencies
