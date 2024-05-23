@@ -4,10 +4,74 @@ import acoustic_inverse_simulation
 import func.utility_func as uf
 from scipy.ndimage import convolve1d
 from scipy.fft import fft, ifft, fftshift, fftfreq
+from scipy.linalg import cholesky
 from copy import deepcopy
 import matplotlib.pyplot as plt
+from typing import Sequence
+from tqdm.auto import tqdm
 
 
+# patato backprojection
+def reconstruct(time_series: np.ndarray,
+                fs: float,
+                geometry: np.ndarray, n_pixels: Sequence[int],
+                field_of_view: Sequence[float],
+                speed_of_sound: float,
+                **kwargs) -> np.ndarray:
+    """
+
+    Parameters
+    ----------
+    time_series: array_like
+        Photoacoustic time series data in a numpy array. Shape: (..., n_detectors, n_time_samples)
+    fs: float
+        Time series sampling frequency (Hz).
+    geometry: array_like
+        The detector geometry. Shape: (n_detectors, 3)
+    n_pixels: tuple of int
+        Tuple of length 3, (nx, ny, nz)
+    field_of_view: tuple of float
+        Tuple of length 3, (lx, ly, lz) - the size of the reconstruction volume.
+    speed_of_sound: float
+        Speed of sound (m/s).
+    kwargs
+        Extra parameters (optional), useful for advanced algorithms (e.g. multi speed of sound etc.).
+
+    Returns
+    -------
+    array_like
+        The reconstructed image.
+
+    """
+    print("Running batch of delay and sum reconstruction code.")
+
+    # Get useful parameters:
+    dl = speed_of_sound / fs
+    print(f'time_series {time_series.shape}')
+    # Reshape frames so that we can loop through to reconstruct
+    original_shape = time_series.shape[:-2]
+    frames = int(np.product(original_shape))
+    print(f"Original shape: {original_shape}, frames: {frames}")
+    signal = time_series.reshape((frames,) + time_series.shape[-2:])
+    print(f"Reshaped signal: {signal.shape}")
+
+    xs, ys, zs = [
+        np.linspace(-field_of_view[i] / 2, field_of_view[i] / 2, n_pixels[i]) if n_pixels[i] != 1 else np.array(
+            [0.]) for i in range(3)]
+    Z, Y, X = np.meshgrid(zs, ys, xs, indexing='ij')
+
+    # Note that the reconstructions are stored in memory in the order z, y, x (i.e. the x axis is the fastest
+    # changing in memory)
+    output = np.zeros((frames,) + tuple(n_pixels)[::-1])
+
+    for n_frame in tqdm(range(frames), desc="Looping through frames", position=0):
+        for n_detector in tqdm(range(signal.shape[-2]), desc="Looping through detectors", position=1, leave=False):
+            detx, dety, detz = geometry[n_detector]
+            d = (np.sqrt((detx - X) ** 2 + (dety - Y) ** 2 + (detz - Z) ** 2) / dl).astype(np.int32)
+            output[n_frame] += signal[n_frame, n_detector, d]
+    return output.reshape(original_shape + tuple(n_pixels)[::-1])
+
+# patato filter
 def make_filter(n_samples : int, 
                 fs : float, # sample rate
                 irf : np.ndarray,
@@ -61,9 +125,16 @@ def make_filter(n_samples : int,
     return output
 
 
-def add_gaussian_noise(data : np.array, cfg : dict, std : float = 2.0):
+def add_noise(data : np.array,
+              cfg : dict, 
+              std : float = 2.0,
+              frequency_distribution : np.array = None,
+              cov0 : np.array = None):
     '''
-    Add Gaussian noise to the data with a given standard deviation.
+    Add stochastic noise to the data with a given amplitude spectrum.
+    Guassian noise is generated and convolved with the amplitude spectrum.
+    A covariance matrix can be provided to correlate the noise between certain
+    channels.
     
     Parameters
     ----------
@@ -92,7 +163,50 @@ def add_gaussian_noise(data : np.array, cfg : dict, std : float = 2.0):
         logging.info(f'seed provided by config: {seed}')
     rng = np.random.default_rng(seed)
     
-    noisy_data = data + rng.normal(0, std, size=data.shape)
+    noise = rng.normal(0, std, size=data.shape)
+    
+    #if cov0 is not None:
+    #    C = cholesky(cov0)
+    #    print(f'C {C}')
+    #    print(f'cov {cov0}')
+    #    for cycle in range(data.shape[0]):
+    #        for wavelength in range(data.shape[1]):
+    #            for pulse in range(data.shape[2]):
+    #                noise[cycle, wavelength, pulse] = np.dot(
+    #                    C, noise[cycle, wavelength, pulse], 
+    #                )
+    
+    # check the noise correlation matrix matches cov0
+    #cov = np.zeros((noise.shape[-2], noise.shape[-2]))
+    #for cycle in range(data.shape[0]):
+    #    for wavelength in range(data.shape[1]):
+    #        for pulse in range(data.shape[2]):
+    #            for i in range(noise.shape[-2]):
+    #                for j in range(noise.shape[-2]):
+    #                    x = noise[cycle,wavelength,pulse,i] - np.mean(noise[cycle,wavelength,pulse,i])
+    #                    y = noise[cycle,wavelength,pulse,j] - np.mean(noise[cycle,wavelength,pulse,j])
+    #                    cov[i, j] += np.sum(x * y) / np.sqrt(np.sum(x**2)*np.sum(y**2))  #cfg['Nt']
+    #cov /= (data.shape[0] * data.shape[1] * data.shape[2])
+    
+    #if cov0 is not None:
+    #    fig, ax = plt.subplots(1, 2, figsize=(8, 16))
+    #    im1 = ax[0].imshow(cov0, cmap='viridis', origin='lower')
+    #    ax[0].set_title('Target covariance matrix')
+    #    ax[0].set_xlabel('Channel index')
+    #    ax[0].set_ylabel('Channel index')
+    #    plt.colorbar(im1, ax=ax[0])
+    #    im2 = ax[1].imshow(cov, cmap='viridis', origin='lower')
+    #    ax[1].set_title('Noise covariance matrix')
+    #    ax[1].set_xlabel('Channel index')
+    #    ax[1].set_ylabel('Channel index')
+    #    plt.colorbar(im2, ax=ax[1])
+    #    fig.tight_layout()
+    #    plt.savefig('noise_covariance_matrix.png')
+        
+    if frequency_distribution is not None:
+        noise = np.fft.ifft(np.fft.fft(noise, axis=-1) * frequency_distribution, axis=-1)
+    
+    noisy_data = data + noise
     
     return (noisy_data, cfg)
 
@@ -218,21 +332,31 @@ if __name__ == '__main__':
             # fine as it will be overwritten
             logging.warning(f'{e} {args.save_images}')
         
-    # 4. add appropriate white noise to the signals
+    
+        
+    # 4. add appropriate noise to the signals
     # same seed as simulation configuration is used to ensure reproducibility
     # instantiate random number generator
-    (noisy_sensor_data, cfg) = add_gaussian_noise(deepcopy(sensor_data), cfg, args.noise_std)
+    #(noisy_sensor_data, cfg) = add_gaussian_noise(deepcopy(sensor_data), cfg, args.noise_std)
+    #noise_amplitude_distribution = np.load('mean_noise_amplitude_spectrum.npy')
+    #noise_amplitude_distribution = noise_amplitude_distribution / np.max(noise_amplitude_distribution)
+    #cov0 = np.load('cov0.npy')
+    (noisy_sensor_data, cfg) = add_noise(
+        deepcopy(sensor_data), cfg, std=args.noise_std#, cov0=cov0
+    )
     logging.info(f'white noise added to sensor data with std: {cfg["noise_std"]}')
+    
+    # 2. apply convolution with the impulse response of the sensor to the signals    
+    irf = np.load(args.irf_path)
+    sensor_data = convolve1d(sensor_data, irf, mode='nearest', axis=-1)
+    #sensor_data = np.fft.ifft(np.fft.fft(sensor_data, axis=-1) * np.fft.fft(irf), axis=-1).real.astype(np.float32)
+    print(f'sensor_data {sensor_data}')
+    logging.info('sensor data convolved with impulse response function')
     
     # add the white noise standard deviation to the configuration then save it
     with open(os.path.join(args.save_dir, 'config.json'), 'w') as f:
         json.dump(cfg, f)
-    
-    # 2. apply convolution with the impulse response of the sensor to the signals    
-    irf = np.load(args.irf_path)
-    noisy_sensor_data = convolve1d(noisy_sensor_data, irf, mode='nearest', axis=-1)
-    logging.info('sensor data convolved with impulse response function')
-    
+       
     filter = make_filter(
         n_samples=cfg['Nt'], fs=1/cfg['dt'], irf=irf,
         hilbert=True, lp_filter=6.5e6, hp_filter=50e3, rise=0.2,
@@ -253,8 +377,11 @@ if __name__ == '__main__':
     plt.tight_layout()
     plt.savefig('filter_amplitude_response.png')    
     '''
+    # subtract the mean of each channel
+    noisy_sensor_data -= np.mean(noisy_sensor_data, axis=-1, keepdims=True)
+    
     # apply the filter to the noisy sensor data
-    noisy_sensor_data = np.fft.ifft(np.fft.fft(noisy_sensor_data, axis=-1) * filter, axis=-1)
+    noisy_sensor_data = np.fft.ifft(np.fft.fft(noisy_sensor_data, axis=-1) * filter, axis=-1).real.astype(np.float32)
     #noisy_sensor_data = convolve1d(noisy_sensor_data, np.fft.ifft(filter), mode='nearest', axis=-1)
     
     # 5. (optional) save the new signals
@@ -265,27 +392,41 @@ if __name__ == '__main__':
     
     # 6. run image reconstruction algorithm
     start = timeit.default_timer()
+    cfg['recon_iterations'] = 1
     simulation = acoustic_inverse_simulation.kwave_inverse_adapter(
         cfg,
         transducer_model=cfg['inverse_model']
     )
     simulation.configure_simulation()
+    geometry = np.array([simulation.source_x, np.zeros(256), simulation.source_z]).T
     logging.info(f'kwave inverse initialised in \
                  {timeit.default_timer() - start} seconds')
     
-    # iterate over the cycles, wavelengths and pulses
     
+    # iterate over the cycles, wavelengths and pulses
+    #cycle = 0; wavelength_index = 1; pulse = 0
     for cycle in range(sensor_data.shape[0]):
         for wavelength_index in range(sensor_data.shape[1]):
             for pulse in range(sensor_data.shape[2]):
-    
+       
                 logging.info(f'time reversal, cycle: {cycle+1}, \
                                 wavelength_index: {wavelength_index+1}, \
                                 pulse: {pulse+1}')
                 
                 start = timeit.default_timer()
                 noisy_tr = simulation.run_time_reversal(
-                    noisy_sensor_data[cycle, wavelength_index, pulse])
+                    noisy_sensor_data[cycle, wavelength_index, pulse]
+                )
+                #noisy_tr = reconstruct(
+                #    noisy_sensor_data[cycle, wavelength_index, cycle],
+                #    fs=1/cfg['dt'],
+                #    geometry=geometry, 
+                #    n_pixels=(256, 1, 256),
+                #    field_of_view=cfg['dx']*np.array([256, 0, 256]), 
+                #    speed_of_sound=cfg['c_0']
+                #)[:, 0, :].T
+                noisy_tr[noisy_tr < 0.0] = 0.0
+                print(f'noisy_tr {noisy_tr.shape}')
                 noisy_tr = uf.square_centre_crop(noisy_tr, cfg['crop_size'])
                 logging.info(f'time reversal run in \
                                 {timeit.default_timer() - start} seconds')
@@ -383,18 +524,18 @@ if __name__ == '__main__':
             
             
         # (optional) seporate plot for the impulse response amplitude spectrum
-        fig, ax = plt.subplots(1, 1, figsize=(5, 5))
-        f_mag_impulse_response = np.abs(np.fft.fft(irf))
-        f_mag_impulse_response = 2 * f_mag_impulse_response[0:int(1+cfg['Nt']/2)] / (cfg['Nt'])
-        f_mag_impulse_response[0] /= 2
-        ax.plot(f_array, f_mag_impulse_response)
-        ax.set_title('Impulse response function amplitude spectrum')
-        ax.set_xlabel('Frequency (MHz)')
-        ax.set_ylabel('Amplitude (Pa)')
-        ax.grid(True)
-        ax.set_axisbelow(True)
-        plt.tight_layout()
-        plt.savefig('impulse_response_function_amplitude_spectrum.png')
+        #fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+        #f_mag_impulse_response = np.abs(np.fft.fft(irf))
+        #f_mag_impulse_response = 2 * f_mag_impulse_response[0:int(1+cfg['Nt']/2)] / (cfg['Nt'])
+        #f_mag_impulse_response[0] /= 2
+        #ax.plot(f_array, f_mag_impulse_response)
+        #ax.set_title('Impulse response function amplitude spectrum')
+        #ax.set_xlabel('Frequency (MHz)')
+        #ax.set_ylabel('Amplitude (Pa)')
+        #ax.grid(True)
+        #ax.set_axisbelow(True)
+        #plt.tight_layout()
+        #plt.savefig('impulse_response_function_amplitude_spectrum.png')
         
     
     
