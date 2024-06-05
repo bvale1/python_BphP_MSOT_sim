@@ -1,7 +1,7 @@
 import numpy as np
 from phantoms.phantom import phantom
 import func.geometry_func as gf
-import BphP_func as bf
+import func.BphP_func as bf
 
 
 class plane_cyclinder_tumour(phantom):
