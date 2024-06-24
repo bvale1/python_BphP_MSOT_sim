@@ -297,7 +297,7 @@ if __name__ == '__main__':
         k : v for k, v in ckpt_dict.items() if v['save_dir'] == cfg['save_dir']
     }
     logging.debug(f'checkpointed files: {image_files}')
-    for image_file, i in enumerate(image_files.keys()):
+    for i, image_file in enumerate(image_files.keys()):
         if image_files[image_file]['sim_complete'] is True:
             logging.info(f'{image_file} {i+1}/{len(image_file)} is complete')
             continue
