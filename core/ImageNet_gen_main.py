@@ -274,7 +274,10 @@ if __name__ == '__main__':
             
             fcntl.flock(f.fileno(), fcntl.LOCK_EX)
             # do not use the same image twice
-            ckpt_dict = json.load(f)
+            try:
+                ckpt_dict = json.load(f)
+            except:
+                ckpt_dict = {}
             used_image_files = ckpt_dict.keys()
             for dir in used_image_files:
                 if dir in ImageNet_files:
