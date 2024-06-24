@@ -120,12 +120,7 @@ if __name__ == '__main__':
     mcx_bin_path = args.mcx_bin_path   
     #mcx_bin_path = '/mcx/bin/mcx' # billy_docker
     #mcx_bin_path = '/home/wv00017/mcx/bin/mcx' # Billy's workstation
-    
-    if not os.path.exists(args.in_progress_file):
-        logging.info(f'{args.in_progress_file} does not exist, creating file')
-        with open(args.in_progress_file, 'a+') as f:
-            json.dump({}, f, indent='\t')
-    
+        
     if len(args.save_dir) != 0:
         if list(args.save_dir)[-1] != '/':
             args.save_dir += '/'
@@ -269,7 +264,7 @@ if __name__ == '__main__':
             (volume, bg_mask) = phantom.create_volume(cfg)
               
         ImageNet_files = glob.glob(f'{args.ImageNet_dir}/**/*.JPEG', recursive=True)
-        with open(args.in_progress_file, 'a+') as f:
+        with open(args.in_progress_file, 'r+') as f:
             # select nimages from ImageNet dataset
             
             fcntl.flock(f.fileno(), fcntl.LOCK_EX)
@@ -277,6 +272,7 @@ if __name__ == '__main__':
             try:
                 ckpt_dict = json.load(f)
             except:
+                logging.info('checkpoint file is empty')
                 ckpt_dict = {}
             used_image_files = ckpt_dict.keys()
             for dir in used_image_files:
@@ -289,6 +285,9 @@ if __name__ == '__main__':
                 ckpt_dict[file] = {'save_dir' : cfg['save_dir']}
                 ckpt_dict[file]['seed'] = cfg['seed']
                 ckpt_dict[file]['sim_complete'] = False
+                
+            f.seek(0)  # Go back to the start of the file
+            f.truncate()  # Truncate the file to remove old conten
             json.dump(ckpt_dict, f, indent='\t')
             fcntl.flock(f.fileno(), fcntl.LOCK_UN)  
     
