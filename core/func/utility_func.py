@@ -3,7 +3,7 @@ import numpy as np
 from typing import Union
 
 def save_json(file : str, dictionary : dict):
-    with open(file, 'r') as f:
+    with open(file, 'w') as f:
         fcntl.flock(f.fileno(), fcntl.LOCK_EX)
         json.dump(dictionary, f, indent='\t')
         fcntl.flock(f.fileno(), fcntl.LOCK_UN)

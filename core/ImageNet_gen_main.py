@@ -500,3 +500,7 @@ if __name__ == '__main__':
                     dtype=np.float32
                 )
             logging.info(f'p0_recon saved in {timeit.default_timer() - start} seconds')
+            
+            ckpt_dict[image_file]['sim_complete'] = True
+            uf.save_json(args.in_progress_file, ckpt_dict)
+            logging.info(f'{image_file} complete')
