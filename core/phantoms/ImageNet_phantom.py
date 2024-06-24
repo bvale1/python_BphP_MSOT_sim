@@ -32,6 +32,9 @@ class ImageNet_phantom(phantom):
             2, cfg['mcx_grid_size'][0], cfg['mcx_grid_size'][1], cfg['mcx_grid_size'][2]            
         ), dtype=np.float32)
         
+        volume[0] = 0.1 # [m^-1]
+        volume[1] = 100 # [m^-1]
+        
         image = rotate(
             image, np.random.randint(-180, 180), axes=(1, 2), reshape=False
         )

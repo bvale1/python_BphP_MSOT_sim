@@ -56,8 +56,8 @@ def square_centre_pad(image : np.ndarray, size : int) -> np.ndarray:
             tuple(image.shape[:-2],)+(size, size),
             dtype=image.dtype
         )
-        x = (width - size) // 2
-        y = (height - size) // 2
+        x = (size - width) // 2
+        y = (size - height) // 2
         padded_image[..., x:x+width, y:y+height] = image
         return padded_image
         
