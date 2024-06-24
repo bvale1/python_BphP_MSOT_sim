@@ -242,8 +242,8 @@ if __name__ == '__main__':
         Emean = 70.0727 * 1e-3; # [J]
         Estd = 0.7537 * 1e-3; # [J]
         cfg['LaserEnergy'] = np.random.normal(
-            loc=Emean, scale=Estd, size=(cfg['nimages']), dtype=np.float32
-        )
+            loc=Emean, scale=Estd, size=(cfg['nimages'])
+        ).astype(np.float32)
         cfg['LaserEnergy'] = cfg['LaserEnergy'].tolist()
         
         # save configuration to JSON file
