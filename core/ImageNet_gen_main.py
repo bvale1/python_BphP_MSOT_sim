@@ -310,13 +310,13 @@ if __name__ == '__main__':
         h5_group = image_file.replace('/', '__')
         with h5py.File(cfg['save_dir']+'data.h5', 'w') as f:
             f.create_group(h5_group)
-            f['h5_group'].create_dataset(
+            f[h5_group].create_dataset(
                 'mu_a',
                 data=uf.square_centre_crop(
                     volume[0,:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size']
                 ), dtype=np.float32
             )
-            f['h5_group'].create_dataset(
+            f[h5_group].create_dataset(
                 'mu_s',
                 data=uf.square_centre_crop(
                     volume[1,:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size']
