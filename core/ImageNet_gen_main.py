@@ -286,7 +286,7 @@ if __name__ == '__main__':
             rng = np.random.default_rng(seed)
             image_files = rng.choice(ImageNet_files, cfg['nimages'], replace=False)
             for file in image_files:
-                ckpt_dict[file]['save_dir'] = cfg['save_dir']
+                ckpt_dict[file] = {'save_dir' : cfg['save_dir']}
                 ckpt_dict[file]['seed'] = cfg['seed']
                 ckpt_dict[file]['sim_complete'] = False
             json.dump(ckpt_dict, f, indent='\t')
