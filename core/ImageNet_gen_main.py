@@ -102,6 +102,10 @@ if __name__ == '__main__':
     parser.add_argument('--delete_p0_3d', action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument('-v', type=str, help='verbose level', default='INFO')
     parser.add_argument('--Gamma', type=float, default=1.0, action='store', help='Gruneisen parameter')
+    parser.add_argument(
+        '--interp_data', default=False, action=argparse.BooleanOptionalAction,
+        help='interpolate sensor data from 256 to 512 sensors'
+    )
     args = parser.parse_args()
     
     if args.v == 'INFO':
@@ -220,7 +224,6 @@ if __name__ == '__main__':
             'alpha_coeff' : 0.01,
             'alpha_power' : 1.1,
             'recon_iterations' : args.recon_iterations, # time reversal iterations
-            'interp_data' : args.interp_data, # interpolate sensor data from 256 to 512 sensors
             'recon_alpha' : args.recon_alpha, # time reversal alpha (regularisation hyperparameter)
             'crop_size' : args.crop_size, # pixel with of output images and ground truth
             'image_no' : 0, # for checkpointing
