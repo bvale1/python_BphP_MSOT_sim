@@ -363,7 +363,7 @@ if __name__ == '__main__':
             with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
                 f[h5_group].create_dataset(
                     'Phi',
-                    uf.square_centre_crop(
+                    data=uf.square_centre_crop(
                         out[:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size']
                     ), dtype=np.float32
                 )
@@ -448,7 +448,7 @@ if __name__ == '__main__':
             with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
                 f[h5_group].create_dataset(
                     'sensor_data',
-                    out.astype(np.float16)
+                    data=out.astype(np.float16)
                 )
             logging.info(f'sensor data saved in {timeit.default_timer() - start} seconds')
             
@@ -500,7 +500,7 @@ if __name__ == '__main__':
             with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
                 f[h5_group].create_dataset(
                     'p0_tr',
-                    uf.square_centre_crop(tr, cfg['crop_size']),
+                    data=uf.square_centre_crop(tr, cfg['crop_size']),
                     dtype=np.float32
                 )
             logging.info(f'p0_recon saved in {timeit.default_timer() - start} seconds')
