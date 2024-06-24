@@ -1,7 +1,6 @@
 import numpy as np
 from phantoms.phantom import phantom
 import func.geometry_func as gf
-import func.BphP_func as bf
 
 
 class plane_cyclinder_tumour(phantom):
@@ -79,8 +78,4 @@ class plane_cyclinder_tumour(phantom):
         )
         volume[0, 1][tumour_mask] = mu_s_tumour
         
-        # no proteins are in this experiment
-        ReBphP_PCM_Pr_c = np.zeros((cfg['mcx_grid_size']), dtype=np.float32)
-        ReBphP_PCM_Pfr_c = ReBphP_PCM_Pr_c.copy()
-        
-        return (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, background_mask)
+        return (volume, background_mask)

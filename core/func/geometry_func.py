@@ -1,5 +1,6 @@
 import numpy as np
 from typing import Union
+from scipy import interpolate
 
 
 def grid_xyz(dx, grid_size):
@@ -84,3 +85,26 @@ def get_acoustic_grid_size(dx, domain_size=[0.082, 0.025, 0.082], pml_size=10):
         
         return [nx, ny, nz], dx
                            
+                           
+def random_spline_mask(seed : int, R_min=85, R_max=125, n_min=6, n_max=12):
+    rng = np.random.default_rng(seed)
+    n_points = int(rng.uniform(n_min, n_max))
+    # define the boundary with a coarse set of random points
+    R_coarse = rng.uniform(R_min, R_max, n_points).astype(np.float32)
+    theta_coarse = np.linspace(0, 2*np.pi, n_points, dtype=np.float32)
+    # smooth the boundary with spline interpolation
+    spline = interpolate.splrep(theta_coarse, R_coarse, k=3, per=True)
+    theta = np.linspace(0, 2*np.pi, 1000, np.float32)
+    R = interpolate.splev(theta, spline)
+    R[R>R_max] = R_max
+    # to cartesian coordinates
+    x = R * np.sin(theta)
+    y = R * np.cos(theta)
+    # create the binary mask within the boundary using 2D linear interpolation
+    [X, Y] = np.meshgrid(np.arange(256)-128, np.arange(256)-128)
+    interp = interpolate.LinearNDInterpolator(
+        list(zip(x, y)), np.ones(1000), fill_value=0
+    )
+    mask = interp(X, Y).astype(bool)
+
+    return mask

@@ -107,39 +107,39 @@ class MCX_adapter():
     def set_invision_source(self, source_no) -> None:
 
         dx_mm = self.mcx_cfg['Domain']['LengthUnit'] # [mm]
-        angle = 0.0 # [rad]
+        angle = np.pi # [rad]
         det_sep_half = 24.74 / 2 # [mm]
         detector_iso_distance = 74.05 / 2 # [mm]
         illumination_angle = -0.41608649 # [rad]
 
         if source_no == 0:
-            angle = 0.0
+            angle += 0.0
         elif source_no == 1:
-            angle = 0.0
+            angle += 0.0
             det_sep_half = -det_sep_half
             illumination_angle = -illumination_angle
         elif source_no == 2:
-            angle = 1.25664
+            angle += 1.25664
         elif source_no == 3:
-            angle = 1.25664
+            angle += 1.25664
             det_sep_half = -det_sep_half
             illumination_angle = -illumination_angle
         elif source_no == 4:
-            angle = -1.25664
+            angle += -1.25664
         elif source_no == 5:
-            angle = -1.25664
+            angle += -1.25664
             det_sep_half = -det_sep_half
             illumination_angle = -illumination_angle
         elif source_no == 6:
-            angle = 2.51327
+            angle += 2.51327
         elif source_no == 7:
-            angle = 2.51327
+            angle += 2.51327
             det_sep_half = -det_sep_half
             illumination_angle = -illumination_angle
         elif source_no == 8:
-            angle = -2.51327
+            angle += -2.51327
         elif source_no == 9:
-            angle = -2.51327
+            angle += -2.51327
             det_sep_half = -det_sep_half
             illumination_angle = -illumination_angle
 
@@ -180,12 +180,8 @@ class MCX_adapter():
             
         
     def run_mcx(self, 
-                mcx_bin_path, 
-                volume,
-                ReBphP_PCM_Pr_c,
-                ReBphP_PCM_Pfr_c,
-                ReBphP_PCM,
-                wavelength_index
+                mcx_bin_path : str, 
+                volume : np.array,
                 ) -> np.array:
         """
         runs subprocess calling MCX with the flags built with `self.get_command`.
@@ -194,9 +190,6 @@ class MCX_adapter():
         :param cmd: list defining command to parse to `subprocess.run`
         :return: None
         """        
-        # add the absorption coefficient of BphPs to the volume
-        volume[0] += (ReBphP_PCM_Pr_c * ReBphP_PCM['Pr']['epsilon_a'][wavelength_index] + 
-                      ReBphP_PCM_Pfr_c * ReBphP_PCM['Pfr']['epsilon_a'][wavelength_index])
         volume *= 1e-3 # [m^-1] -> [mm^-1]
         
         self.save_mcx_volume_binary(volume)

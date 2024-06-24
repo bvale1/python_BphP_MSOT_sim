@@ -1,5 +1,19 @@
-import os
+import os, json, fcntl
 import numpy as np
+from typing import Union
+
+def save_json(file : str, dictionary : dict):
+    with open(file, 'r') as f:
+        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+        json.dump(dictionary, f, indent='\t')
+        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+
+def load_json(file : str) -> dict:
+    with open(file, 'r') as f:
+        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+        dictionary = json.load(f)
+        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+    return dictionary
 
 def create_dir(path : str):
     # create directory if it doesn't exist
@@ -47,7 +61,7 @@ def square_centre_pad(image : np.ndarray, size : int) -> np.ndarray:
         padded_image[..., x:x+width, y:y+height] = image
         return padded_image
         
-def crop_p0_3D(p0 : np.ndarray, size : (list, np.ndarray)) -> np.ndarray:
+def crop_p0_3D(p0 : np.ndarray, size : Union[list, np.ndarray]) -> np.ndarray:
     # similar to square_centre_crop but for arrays containing 3D volume data
     # rather than 2D slices
     width, depth, height = p0.shape[-3:]
