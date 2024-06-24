@@ -14,7 +14,7 @@ class ImageNet_phantom(phantom):
         # image must be a path to a JPEG
         with Image.open(image_file) as f:
             print(f.size)
-            image = f.resize(512, 512)
+            image = f.resize((512, 512))
             image = image.convert('RGB')
             image = np.array(image, dtype=np.float32)
             image /= 255.0
