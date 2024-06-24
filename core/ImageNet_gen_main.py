@@ -117,8 +117,8 @@ if __name__ == '__main__':
     #mcx_bin_path = '/mcx/bin/mcx' # billy_docker
     #mcx_bin_path = '/home/wv00017/mcx/bin/mcx' # Billy's workstation
     
-    if not os.path.exists(args.checkpoint_dir):
-        logging.error(f'{args.checkpoint_dir} does not exist, creating file')
+    if not os.path.exists(args.in_progress_file):
+        logging.error(f'{args.in_progress_file} does not exist, creating file')
         with open(args.checkpoint_file, 'a+') as f:
             json.dump({}, f, indent='\t')
     
