@@ -3,6 +3,7 @@ from scipy.ndimage import rotate
 from phantoms.phantom import phantom
 from PIL import Image
 import func.geometry_func as gf
+import func.utility_func as uf
 
 
 class ImageNet_phantom(phantom):
@@ -37,6 +38,8 @@ class ImageNet_phantom(phantom):
         
         (mu_a_channel, mu_s_channel) = np.random.choice([0, 1, 2], 2, replace=False)
         bg_mask = gf.random_spline_mask(cfg['seed'])
+        bg_mask = uf.square_centre_pad(bg_mask, cfg['mcx_grid_size'][0])
+        image = uf.square_centre_pad(image, cfg['mcx_grid_size'][0])
         volume[0] = ((mu_a_min + (mu_a_max - mu_a_min) * image[mu_a_channel]) * bg_mask)[:,np.newaxis,:]
         volume[1] = ((mu_s_min + (mu_s_max - mu_s_min) * image[mu_s_channel]) * bg_mask)[:,np.newaxis,:]
         
