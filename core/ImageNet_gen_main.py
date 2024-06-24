@@ -121,6 +121,10 @@ if __name__ == '__main__':
     #mcx_bin_path = '/mcx/bin/mcx' # billy_docker
     #mcx_bin_path = '/home/wv00017/mcx/bin/mcx' # Billy's workstation
         
+    if not os.path.exists(args.in_progress_file):
+        with open(args.in_progress_file, 'w') as f:
+            json.dump({}, f, indent='\t')
+        
     if len(args.save_dir) != 0:
         if list(args.save_dir)[-1] != '/':
             args.save_dir += '/'
