@@ -296,6 +296,7 @@ if __name__ == '__main__':
     image_files = {
         k : v for k, v in ckpt_dict.items() if v['save_dir'] == cfg['save_dir']
     }
+    logging.debug(f'checkpointed files: {image_files}')
     for image_file, i in enumerate(image_files.keys()):
         if image_files[image_file]['sim_complete'] is True:
             logging.info(f'{image_file} {i+1}/{len(image_file)} is complete')
@@ -425,7 +426,7 @@ if __name__ == '__main__':
             start = timeit.default_timer()
             with h5py.File(cfg['save_dir']+'temp.h5', 'r') as f:
                 out = uf.pad_p0_3D(
-                    f['p0_3D'][i],
+                    f['p0_3D'],
                     cfg['kwave_grid_size'][0]
                 )
             logging.info(f'p0 loaded in {timeit.default_timer() - start} seconds')
