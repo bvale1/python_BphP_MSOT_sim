@@ -2,12 +2,14 @@ import numpy as np
 from phantoms.plane_cylinder_tumour import plane_cyclinder_tumour
 from phantoms.water_phantom import water_phantom
 from phantoms.ImageNet_phantom import ImageNet_phantom
+from add_noise import make_filter, add_noise
 import json, h5py, os, timeit, logging, argparse, gc, glob, fcntl
 import func.geometry_func as gf
 import func.utility_func as uf
 import optical_simulation
 import acoustic_forward_simulation
 import acoustic_inverse_simulation
+
 
 
 if __name__ == '__main__':
@@ -139,7 +141,7 @@ if __name__ == '__main__':
         
         # TODO: implement digimouse phantom
         if cfg['phantom'] == 'ImageNet_phantom':
-            phantom = ImageNet_phantom(seed=cfg['seed'])
+            phantom = ImageNet_phantom()
             H2O = phantom.define_water()
             
         elif cfg['phantom'] == 'plane_cylinder_tumour':
@@ -219,6 +221,7 @@ if __name__ == '__main__':
             'dx' : dx,
             'pml_size' : pml_size,
             'gruneisen' : args.Gamma, # gruneisen parameter
+            'interp_data' : args.interp_data, # interpolate sensor data from 256 to 512 sensors
             'c_0' : c_0,
             'alpha_coeff' : 0.01,
             'alpha_power' : 1.1,
@@ -355,7 +358,7 @@ if __name__ == '__main__':
             )
             logging.info(f'mcx run in {timeit.default_timer() - start} seconds')
             
-            # convert from [mm^-2] -> [J m^-2]
+            # convert from normalised fluence [mm^-2] -> [J m^-2]
             start = timeit.default_timer()
             out *= cfg['LaserEnergy'][i] * 1e6
             
@@ -370,7 +373,7 @@ if __name__ == '__main__':
             logging.info(f'fluence saved in {timeit.default_timer() - start} seconds')
             
             start = timeit.default_timer()
-            # convert fluence to initial pressure [J m^-2] -> [J m^-3]
+            # calculate initial pressure [J m^-2] * [m^-1] -> [J m^-3] = [Pa]
             out *= cfg['gruneisen'] * volume[0]
             
             # save 3D p0 to temp.h5

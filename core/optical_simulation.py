@@ -107,7 +107,7 @@ class MCX_adapter():
     def set_invision_source(self, source_no) -> None:
 
         dx_mm = self.mcx_cfg['Domain']['LengthUnit'] # [mm]
-        angle = np.pi # [rad]
+        angle = 0.0 #np.pi # [rad]
         det_sep_half = 24.74 / 2 # [mm]
         detector_iso_distance = 74.05 / 2 # [mm]
         illumination_angle = -0.41608649 # [rad]
