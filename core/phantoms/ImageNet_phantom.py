@@ -8,24 +8,24 @@ import func.utility_func as uf
 
 class ImageNet_phantom(phantom):
     
-    def __init__(self):
+    def __init__(self, seed : int):
         super().__init__()
+        self.rng = np.random.default_rng(seed=seed)
         
     def create_volume(self, cfg: dict, image_file : str):
+        ppw = cfg['points_per_wavelength']
         # image must be a path to a JPEG
         with Image.open(image_file) as f:
-            image = f.resize(
-                (256*cfg['points_per_wavelength'], 256*cfg['points_per_wavelength'])
-            )
+            image = f.resize((256*ppw, 256*ppw))
             image = image.convert('RGB')
             image = np.array(image, dtype=np.float32)
             image /= 255.0
             image = np.transpose(image, (2, 0, 1))
         
-        mu_s_min = 1000 # [m^-1]
-        mu_s_max = 3000 # [m^-1]
-        mu_a_min = 1 # [m^-1]
-        mu_a_max = 3 # [m^-1]
+        mu_s_min = 500 # [m^-1]
+        mu_s_max = 2500 # [m^-1]
+        mu_a_min = 0.5 # [m^-1]
+        mu_a_max = 2.5 # [m^-1]
         coupling_medium_mu_a = 0.1 # [m^-1]
         coupling_medium_mu_s = 100 # [m^-1]
         
@@ -38,7 +38,7 @@ class ImageNet_phantom(phantom):
         )
         
         (mu_a_channel, mu_s_channel) = np.random.choice([0, 1, 2], 2, replace=False)
-        bg_mask = gf.random_spline_mask(cfg['seed'])
+        bg_mask = gf.random_spline_mask(self.rng, R_min=42.5*ppw, R_max=62.5*ppw)
         bg_mask = uf.square_centre_pad(bg_mask, cfg['mcx_grid_size'][0])
         bg_mask = bg_mask[:,np.newaxis,:]
         image = uf.square_centre_pad(image, cfg['mcx_grid_size'][0])

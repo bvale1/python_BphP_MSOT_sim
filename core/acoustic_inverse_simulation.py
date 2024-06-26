@@ -124,7 +124,8 @@ class kwave_inverse_adapter():
         # initializse transducer array object
         karray = kWaveArray(bli_tolerance=0.05, upsampling_rate=10, single_precision=True)
         
-        Ry = uf.Ry2D(np.pi / 2) # euclidian rotation matrix
+        self.rotation_angle = - np.pi / 2 # [rad]
+        Ry = uf.Ry2D(self.rotation_angle) # euclidian rotation matrix
         
         for i in range(n):
             position = np.matmul(Ry, np.array([x[i], z[i]])).tolist()
@@ -461,20 +462,23 @@ class kwave_inverse_adapter():
                 if (cfg['dx'] == self.cfg['dx'] 
                     and cfg['kwave_grid_size'] == self.cfg['kwave_grid_size'] 
                     and cfg['kwave_domain_size'] == self.cfg['kwave_domain_size']
-                    and cfg['transducer_model'] == 'invision'):
-                    if os.path.exists(os.path.join(self.cfg['weights_dir'], folder, 'weights2d.h5')):
-                        logger.debug(f'viable simulation found in {cfg_path}, 2d weights found, loading...')
-                        sensor_weights = []
-                        sensor_local_ind = []
-                        with h5py.File(os.path.join(self.cfg['weights_dir'], folder, 'weights2d.h5'), 'r') as f:
-                            sensor_mask = f['sensor_mask'][()].astype(bool)
-                            for i in range(self.cfg['nsensors']):
-                                sensor_weights.append(f[f'sensor_weights_{i}'][()].astype(np.float32))
-                                sensor_local_ind.append(f[f'sensor_local_ind_{i}'][()].astype(bool))
-                        break
-                    else: # only the 3d simulation was run
-                        logger.debug(f'viable simulation found in {cfg_path}, 2d weights not found')
-                        save_path = os.path.join(self.cfg['weights_dir'], folder)                  
+                    and cfg['transducer_model'] == 'invision'
+                    and 'rotation_angle' in cfg.keys()):
+                    if (cfg['rotation_angle'] == self.rotation_angle):
+                        
+                        if os.path.exists(os.path.join(self.cfg['weights_dir'], folder, 'weights2d.h5')):
+                            logger.debug(f'viable simulation found in {cfg_path}, 2d weights found, loading...')
+                            sensor_weights = []
+                            sensor_local_ind = []
+                            with h5py.File(os.path.join(self.cfg['weights_dir'], folder, 'weights2d.h5'), 'r') as f:
+                                sensor_mask = f['sensor_mask'][()].astype(bool)
+                                for i in range(self.cfg['nsensors']):
+                                    sensor_weights.append(f[f'sensor_weights_{i}'][()].astype(np.float32))
+                                    sensor_local_ind.append(f[f'sensor_local_ind_{i}'][()].astype(bool))
+                            break
+                        else: # only the 3d simulation was run
+                            logger.debug(f'viable simulation found in {cfg_path}, 2d weights not found')
+                            save_path = os.path.join(self.cfg['weights_dir'], folder)                  
                     
             else:
                 logger.debug(f'config file not found: {cfg_path}')
@@ -495,7 +499,8 @@ class kwave_inverse_adapter():
             'kwave_domain_size' : self.cfg['kwave_domain_size'],
             'sim_git_hash' : self.cfg['sim_git_hash'],
             'save_dir' : self.cfg['save_dir'],
-            'transducer_model' : 'invision'
+            'transducer_model' : 'invision',
+            'rotation_angle' : self.rotation_angle
         }
         with h5py.File(self.save_path + '/weights2d.h5', 'w') as f:
             f.create_dataset('sensor_mask', data=sensor_mask, dtype=bool)

@@ -86,8 +86,11 @@ def get_acoustic_grid_size(dx, domain_size=[0.082, 0.025, 0.082], pml_size=10):
         return [nx, ny, nz], dx
                            
                            
-def random_spline_mask(seed : int, R_min=85, R_max=125, n_min=6, n_max=12):
-    rng = np.random.default_rng(seed)
+def random_spline_mask(rng : np.random.Generator,
+                       R_min=85,
+                       R_max=125,
+                       n_min=6,
+                       n_max=12):
     n_points = int(rng.uniform(n_min, n_max))
     # define the boundary with a coarse set of random points
     R_coarse = rng.uniform(R_min, R_max, n_points).astype(np.float32)

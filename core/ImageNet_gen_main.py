@@ -3,6 +3,7 @@ from phantoms.plane_cylinder_tumour import plane_cyclinder_tumour
 from phantoms.water_phantom import water_phantom
 from phantoms.ImageNet_phantom import ImageNet_phantom
 from add_noise import make_filter, add_noise
+from scipy.ndimage import convolve1d
 import json, h5py, os, timeit, logging, argparse, gc, glob, fcntl
 import func.geometry_func as gf
 import func.utility_func as uf
@@ -108,6 +109,10 @@ if __name__ == '__main__':
         '--interp_data', default=False, action=argparse.BooleanOptionalAction,
         help='interpolate sensor data from 256 to 512 sensors'
     )
+    parser.add_argument(
+        '--noise_std', type=float, default=1.5, action='store',
+        help='standard deviation Guassian noise to add to the sensor data'
+    )
     args = parser.parse_args()
     
     if args.v == 'INFO':
@@ -141,7 +146,7 @@ if __name__ == '__main__':
         
         # TODO: implement digimouse phantom
         if cfg['phantom'] == 'ImageNet_phantom':
-            phantom = ImageNet_phantom()
+            phantom = ImageNet_phantom(cfg['seed'])
             H2O = phantom.define_water()
             
         elif cfg['phantom'] == 'plane_cylinder_tumour':
@@ -236,6 +241,10 @@ if __name__ == '__main__':
             'crop_p0_3d_size' : args.crop_p0_3d_size, # size of 3D p0 to crop to
             'phantom' : args.phantom, # currently supported (Clara_experiment_phantom, plane_cylinder_tumour, BphP_cylindrical_phantom)
             'delete_p0_3d' : args.delete_p0_3d, # delete p0_3d after each pulse to save memory
+            'noise_std' : args.noise_std, # standard deviation of Guassian noise to add to sensor data
+            'irf_path' : args.irf_path, # path to impulse response function
+            'dt' : 25e-9, # time step [s]
+            'Nt' : 2030, # number of time steps
         }
         
         logging.info(f'no checkpoint, creating config {cfg}')
@@ -254,7 +263,7 @@ if __name__ == '__main__':
             json.dump(cfg, f, indent='\t')
         
         if cfg['phantom'] == 'ImageNet_phantom':
-            phantom = ImageNet_phantom()
+            phantom = ImageNet_phantom(seed)
             H2O = phantom.define_water()
         
         elif cfg['phantom'] == 'plane_cylinder_tumour':
@@ -287,8 +296,15 @@ if __name__ == '__main__':
                     ImageNet_files.remove(dir)
             
             rng = np.random.default_rng(seed)
-            image_files = rng.choice(ImageNet_files, cfg['nimages'], replace=False)
-            for file in image_files:
+            if len(ImageNet_files) < cfg['nimages']:
+                cfg['nimages'] = len(ImageNet_files)
+                logging.info(f'{cfg["nimages"]} images in left ImageNet dataset')
+            if cfg['nimages'] == 0:
+                logging.info('no images left in ImageNet dataset')
+                exit(0)
+            ImageNet_files = rng.choice(ImageNet_files, cfg['nimages'], replace=False)
+        
+            for file in ImageNet_files:
                 ckpt_dict[file] = {'save_dir' : cfg['save_dir']}
                 ckpt_dict[file]['seed'] = cfg['seed']
                 ckpt_dict[file]['sim_complete'] = False
@@ -298,24 +314,49 @@ if __name__ == '__main__':
             json.dump(ckpt_dict, f, indent='\t')
             fcntl.flock(f.fileno(), fcntl.LOCK_UN)  
     
+        with h5py.File(cfg['save_dir']+'data.h5', 'w') as f:
+            logging.info('creating data.h5')
+            pass
+    
+    # load impulse response function
+    irf = np.load(args.irf_path)
+    
+    # intialise bandpass filter
+    filter = make_filter(
+        n_samples=cfg['Nt'], fs=1/cfg['dt'], irf=irf,
+        hilbert=True, lp_filter=6.5e6, hp_filter=50e3, rise=0.2,
+        n_filter=512, window='hann'
+    )
+    
+    with h5py.File(cfg['save_dir']+'temp.h5', 'w') as f:
+            logging.info('allocating storage for p0_3d temp.h5')
+            f.create_dataset(
+                'p0_3D',
+                shape=(
+                    cfg['crop_p0_3d_size'],
+                    cfg['kwave_grid_size'][1],
+                    cfg['crop_p0_3d_size']
+                ), dtype=np.float32
+            )
+    
     # get files in use by this simulation but not yet completed
     ckpt_dict = uf.load_json(args.in_progress_file)
-    image_files = {
+    ImageNet_files = {
         k : v for k, v in ckpt_dict.items() if v['save_dir'] == cfg['save_dir']
     }
-    logging.debug(f'checkpointed files: {image_files}')
-    for i, image_file in enumerate(image_files.keys()):
-        if image_files[image_file]['sim_complete'] is True:
-            logging.info(f'{image_file} {i+1}/{len(image_file)} is complete')
+    logging.debug(f'checkpointed files: {ImageNet_files}')
+    for i, image_file in enumerate(ImageNet_files.keys()):
+        if ImageNet_files[image_file]['sim_complete'] is True:
+            logging.info(f'{image_file} {i+1}/{len(ImageNet_files)} is complete')
             continue
         else:
-            logging.info(f'simulation {image_file} {i+1}/{len(image_files)}')
+            logging.info(f'simulation {image_file} {i+1}/{len(ImageNet_files)}')
 
         (volume, bg_mask) = phantom.create_volume(cfg, image_file)
         
         # save 2D slice of the volume to HDF5 file
         h5_group = image_file.replace('/', '__')
-        with h5py.File(cfg['save_dir']+'data.h5', 'w') as f:
+        with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
             f.create_group(h5_group)
             f[h5_group].create_dataset(
                 'mu_a',
@@ -327,17 +368,6 @@ if __name__ == '__main__':
                 'mu_s',
                 data=uf.square_centre_crop(
                     volume[1,:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size']
-                ), dtype=np.float32
-            )
-        
-        with h5py.File(cfg['save_dir']+'temp.h5', 'w') as f:
-            logging.info('allocating storage for p0_3d temp.h5')
-            f.create_dataset(
-                'p0_3D',
-                shape=(
-                    cfg['crop_p0_3d_size'],
-                    cfg['kwave_grid_size'][1],
-                    cfg['crop_p0_3d_size']
                 ), dtype=np.float32
             )
  
@@ -390,43 +420,25 @@ if __name__ == '__main__':
             logging.info('optical stage complete')
             cfg['stage'] = 'acoustic'
             
-            start = timeit.default_timer()
             # delete mcx input and out files, they are not needed anymore
             simulation.delete_temporary_files()
-            # overwrite mcx simulation to save memory
-            simulation = acoustic_forward_simulation.kwave_forward_adapter(
-                cfg,
-                transducer_model=cfg['forward_model']
-            )
-            # k-wave automatically determines dt and Nt, update cfg
-            cfg = simulation.cfg    
-            simulation.configure_simulation()
-            logging.info(f'kwave forward initialised in {timeit.default_timer() - start} seconds')
             
-            # save updated cfg to JSON file
             with open(cfg['save_dir']+'config.json', 'w') as f:
                 json.dump(cfg, f, indent='\t')
             
-            
-        elif cfg['stage'] == 'acoustic': # sensor_data dataset already exists
-            # only initialise kwave forward adapter
+        # acoustic forward simulation
+        if cfg['stage'] == 'acoustic':
+            # initialise kwave forward adapter
             start = timeit.default_timer()
             # overwrite mcx simulation to save memory
             simulation = acoustic_forward_simulation.kwave_forward_adapter(
                 cfg, 
                 transducer_model=cfg['forward_model']
             )
-            # k-wave automatically determines dt and Nt, update cfg
-            cfg = simulation.cfg    
             simulation.configure_simulation()
             logging.info(f'kwave forward initialised in {timeit.default_timer() - start} seconds')
             
-        gc.collect()
-        
-        # acoustic forward simulation
-        if cfg['stage'] == 'acoustic':        
-            with open(cfg['save_dir']+'config.json', 'w') as f:
-                json.dump(cfg, f, indent='\t')
+            gc.collect()
             
             logging.info(f'k-wave forward, image: {image_file}')
             
@@ -493,8 +505,16 @@ if __name__ == '__main__':
                 out = f[h5_group]['sensor_data'][()].astype(np.float32)
             logging.info(f'sensor data loaded in {timeit.default_timer() - start} seconds')
             
-            # TODO: interpolate sensor data from 256 to 512 sensors
-            
+            start = timeit.default_timer()
+            # add noise to sensor data
+            if cfg['noise_std'] > 0.0:
+                (out, cfg) = add_noise(out, cfg, std=cfg['noise_std'])
+            # apply convolution with the impulse response function
+            out = convolve1d(out, irf, mode='nearest', axis=-1)
+            # apply bandpass filter to the noisy sensor data
+            out = np.fft.ifft(np.fft.fft(out, axis=-1) * filter, axis=-1).real.astype(np.float32)
+            logging.info(f'noise added in {timeit.default_timer() - start} seconds')
+    
             start = timeit.default_timer()
             tr = simulation.run_time_reversal(out)
             logging.info(f'time reversal run in {timeit.default_timer() - start} seconds')
@@ -510,4 +530,7 @@ if __name__ == '__main__':
             
             ckpt_dict[image_file]['sim_complete'] = True
             uf.save_json(args.in_progress_file, ckpt_dict)
-            logging.info(f'{image_file} complete')
+            cfg['stage'] = 'optical'
+            with open(cfg['save_dir']+'config.json', 'w') as f:
+                json.dump(cfg, f, indent='\t')
+            logging.info(f'{image_file} {i+1}/{len(ImageNet_files)} complete')
