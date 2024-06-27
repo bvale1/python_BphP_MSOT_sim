@@ -485,14 +485,17 @@ class kwave_inverse_adapter():
                 
         return (sensor_mask, sensor_weights, sensor_local_ind, save_path)
     
-    def save_sensor_weights(self, sensor_mask : np.ndarray, sensor_weights : list, sensor_local_ind : list):
+    def save_sensor_weights(self,
+                            sensor_mask : np.ndarray, 
+                            sensor_weights : list, 
+                            sensor_local_ind : list):
         uf.create_dir(self.cfg['weights_dir'])
         if self.save_path is None: # create new directory for weights
-            self.save_path = self.cfg['weights_dir'] + datetime.utcnow().strftime('%Y%m%d_%H_%M_%S')
+            self.save_path = os.path.join(
+                self.cfg['weights_dir'], datetime.utcnow().strftime('%Y%m%d_%H_%M_%S')
+            )
             uf.create_dir(self.save_path)
-            with open(self.save_path + '/weights_config.json', 'w') as f:
-                json.dump(weights_cfg, f, indent='\t')
-
+        
         weights_cfg = {
             'dx' : self.cfg['dx'],
             'kwave_grid_size' : self.cfg['kwave_grid_size'],
@@ -507,5 +510,6 @@ class kwave_inverse_adapter():
             for i in range(self.cfg['nsensors']):
                 f.create_dataset(f'sensor_weights_{i}', data=sensor_weights[i], dtype=np.float32)
                 f.create_dataset(f'sensor_local_ind_{i}', data=sensor_local_ind[i], dtype=bool)
-            
         
+        with open(self.save_path + '/weights_config.json', 'w') as f:
+            json.dump(weights_cfg, f, indent='\t')

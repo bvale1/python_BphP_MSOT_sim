@@ -275,9 +275,14 @@ class kwave_forward_adapter():
         return (sensor_mask, sensor_weights, sensor_local_ind)
     
     
-    def save_sensor_weights(self, sensor_mask : np.ndarray, sensor_weights : list, sensor_local_ind : list):
+    def save_sensor_weights(self,
+                            sensor_mask : np.ndarray,
+                            sensor_weights : list,
+                            sensor_local_ind : list):
         uf.create_dir(self.cfg['weights_dir'])
-        save_path = self.cfg['weights_dir'] + datetime.utcnow().strftime('%Y%m%d_%H_%M_%S')
+        save_path = os.path.join(
+            self.cfg['weights_dir'], datetime.utcnow().strftime('%Y%m%d_%H_%M_%S')
+        )
         uf.create_dir(save_path)
 
         weights_cfg = {
@@ -290,7 +295,7 @@ class kwave_forward_adapter():
             'rotation_angle' : self.rotation_angle,
         }
         with h5py.File(save_path + '/weights3d.h5', 'w') as f:
-            f.create_dataset('sensor_mask', data=self.sensor_mask, dtype=bool)
+            f.create_dataset('sensor_mask', data=sensor_mask, dtype=bool)
             for i in range(self.cfg['nsensors']):
                 f.create_dataset(f'sensor_weights_{i}', data=sensor_weights[i], dtype=np.float32)
                 f.create_dataset(f'sensor_local_ind_{i}', data=sensor_local_ind[i], dtype=bool)
