@@ -473,15 +473,6 @@ if __name__ == '__main__':
             with open(cfg['save_dir']+'config.json', 'w') as f:
                 json.dump(cfg, f, indent='\t')
         
-        # delete temp p0_3D dataset
-        if cfg['delete_p0_3d'] is True:
-            try:
-                start = timeit.default_timer()
-                os.remove(cfg['save_dir']+'temp.h5')
-                logging.info(f'temp.h5 (p0_3D) deleted in {timeit.default_timer() - start} seconds')
-            except:
-                logging.debug('unable to delete temp.h5, (p0_3D) not found')
-        
         start = timeit.default_timer()
         simulation = acoustic_inverse_simulation.kwave_inverse_adapter(
             cfg,
@@ -534,3 +525,12 @@ if __name__ == '__main__':
             with open(cfg['save_dir']+'config.json', 'w') as f:
                 json.dump(cfg, f, indent='\t')
             logging.info(f'{image_file} {i+1}/{len(ImageNet_files)} complete')
+
+    # delete temp p0_3D dataset
+    if cfg['delete_p0_3d'] is True:
+        try:
+            start = timeit.default_timer()
+            os.remove(cfg['save_dir']+'temp.h5')
+            logging.info(f'temp.h5 (p0_3D) deleted in {timeit.default_timer() - start} seconds')
+        except:
+            logging.debug('unable to delete temp.h5, (p0_3D) not found')

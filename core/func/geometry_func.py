@@ -79,11 +79,11 @@ def get_optical_grid_size(domain_size=[0.082, 0.025, 0.082],
     
 def get_acoustic_grid_size(dx, domain_size=[0.082, 0.025, 0.082], pml_size=10):
         
-        nx = int(2**(np.round(np.log2(domain_size[0] / dx))-2) * 3) - 2 * pml_size
-        ny = int(2**(np.round(np.log2(domain_size[1] / dx)))) - 2 * pml_size
-        nz = int(2**(np.round(np.log2(domain_size[2] / dx))-2) * 3) - 2 * pml_size
-        
-        return [nx, ny, nz], dx
+    nx = int(2**(np.round(np.log2(domain_size[0] / dx))-2) * 3) - 2 * pml_size
+    ny = int(2**(np.round(np.log2(domain_size[1] / dx)))) - 2 * pml_size
+    nz = int(2**(np.round(np.log2(domain_size[2] / dx))-2) * 3) - 2 * pml_size
+    
+    return [nx, ny, nz], dx
                            
                            
 def random_spline_mask(rng : np.random.Generator,
