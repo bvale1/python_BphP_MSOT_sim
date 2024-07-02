@@ -1,5 +1,5 @@
 import numpy as np
-from phantoms.ImageNet_phantom import ImageNet_phantom
+from phantoms.digimouse_phantom import digimouse_phantom
 from add_noise import make_filter, add_noise
 from scipy.ndimage import convolve1d
 import json, h5py, os, timeit, logging, argparse, gc, glob, fcntl
@@ -20,7 +20,7 @@ if __name__ == '__main__':
     
     1. Check for checkpointed simulation of the same name
     
-    2. load image from the ImageNet dataset
+    2. load digital mouse atlas (digimouse)
     
     3. Define Simulation Geometry
         - Domain size (x,y,z) in grid points and dx in m
@@ -63,8 +63,8 @@ if __name__ == '__main__':
         help='directory to save simulation data'
     )
     parser.add_argument(
-        '--ImageNet_dir', type=str,
-        default='/mnt/fast/datasets/still/ImageNet/ILSVRC2012/TrainingSet/',
+        '--digimouse_dir', type=str,
+        default='/home/wv00017/digimouse_atlas/atlas_380x992x208.img',
         action='store',
         help='directory containing ImageNet dataset'
     )
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--in_progress_file', type=str,
-        default='/mnt/fast/nobackup/users/wv00017/ImageNet_fluence_correction/ImageNet_checkpoint_file.json',
+        default='/mnt/fast/nobackup/users/wv00017/ImageNet_fluence_correction/digimouse_checkpoint_file.json',
         action='store', help='file to keep track of which images from ImageNet \
         have been used in simulations'
     )
@@ -91,7 +91,6 @@ if __name__ == '__main__':
         help='points per wavelength, only lower to 1 to test code if VRAM is limited'
     )
     parser.add_argument('--nimages', type=int, default=16, action='store')
-    parser.add_argument('--seed', type=int, default=None, action='store')
     parser.add_argument('--crop_size', type=int, default=256, action='store')
     parser.add_argument('--sim_git_hash', type=str, default=None, action='store')
     parser.add_argument('--recon_iterations', type=int, default=5, action='store')
@@ -141,15 +140,9 @@ if __name__ == '__main__':
             cfg = json.load(f)
         logging.info(f'checkpoint config found {cfg}')
         
-        phantom = ImageNet_phantom(cfg['seed'])
+        phantom = digimouse_phantom(cfg['digimouse_dir'])
         
-    else:
-        if args.seed:
-            seed = args.seed
-            logging.info(f'seed provided: {seed}')
-        else:
-            seed = np.random.randint(0, 2**32 - 1)
-            logging.info(f'no seed provided, random seed selected: {seed}')        
+    else:       
         
         # It is imperative that dx is small enough to support high enough 
         # frequencies and that [nx, ny, nz] have low prime factors i.e. 2, 3, 5
@@ -181,7 +174,7 @@ if __name__ == '__main__':
         cfg = {
             'save_dir' : args.save_dir,
             'sim_git_hash' : args.sim_git_hash, # git hash of simulation code
-            'seed' : seed, # used in procedurally generated phantoms
+            'seed' : None, # used in procedurally generated phantoms
             'nimages' : args.nimages, # number of images to simulate
             'nsensors' : 256,
             'nphotons' : 1e8,
@@ -204,10 +197,11 @@ if __name__ == '__main__':
             'image_no' : 0, # for checkpointing
             'stage' : 'optical', # for checkpointing (optical, acoustic, inverse)
             'weights_dir' : args.weights_dir, # directory containing weights for combining sensor data
+            'digimouse_dir' : args.digimouse_dir, # path to digimouse atlas
             'forward_model' : args.forward_model, # forward model to use (invision, point)
             'inverse_model' : args.inverse_model, # inverse model to use (invision, point)
             'crop_p0_3d_size' : args.crop_p0_3d_size, # size of 3D p0 to crop to
-            'phantom' : 'ImageNet_phantom',
+            'phantom' : 'digimouse_phantom',
             'delete_p0_3d' : args.delete_p0_3d, # delete p0_3d after each pulse to save memory
             'noise_std' : args.noise_std, # standard deviation of Guassian noise to add to sensor data
             'irf_path' : args.irf_path, # path to impulse response function
@@ -230,34 +224,31 @@ if __name__ == '__main__':
         with open(cfg['save_dir']+'config.json', 'w') as f:
             json.dump(cfg, f, indent='\t')
         
-        phantom = ImageNet_phantom(seed)
-              
-        ImageNet_files = glob.glob(f'{args.ImageNet_dir}/**/*.JPEG', recursive=True)
+        phantom = digimouse_phantom(cfg['digimouse_dir'])
+        y_positions_and_rotations = [str(a)+'_'+str(b) for a in np.arange(200, 875, 25) for b in np.arange(4)]
         with open(args.in_progress_file, 'r+') as f:
-            # select nimages from ImageNet dataset
             
             fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-            # do not use the same image twice
+            # do not image the same y position and rotation twice
             try:
                 ckpt_dict = json.load(f)
             except:
                 logging.info('checkpoint file is empty')
                 ckpt_dict = {}
-            used_image_files = ckpt_dict.keys()
-            for dir in used_image_files:
-                if dir in ImageNet_files:
-                    ImageNet_files.remove(dir)
+            used_y_positions_and_rotations = ckpt_dict.keys()
+            for item in used_y_positions_and_rotations:
+                if item in y_positions_and_rotations:
+                    y_positions_and_rotations.remove(dir)
             
-            rng = np.random.default_rng(seed)
-            if len(ImageNet_files) < cfg['nimages']:
-                cfg['nimages'] = len(ImageNet_files)
-                logging.info(f'{cfg["nimages"]} images in left ImageNet dataset')
+            if len(y_positions_and_rotations) < cfg['nimages']:
+                cfg['nimages'] = len(y_positions_and_rotations)
+                logging.info(f'{cfg["nimages"]} images in left digimouse dataset')
             if cfg['nimages'] == 0:
-                logging.info('no images left in ImageNet dataset')
+                logging.info('no images left in digimouse dataset')
                 exit(0)
-            ImageNet_files = rng.choice(ImageNet_files, cfg['nimages'], replace=False)
+            y_positions_and_rotations = y_positions_and_rotations[:cfg['nimages']]
         
-            for file in ImageNet_files:
+            for file in y_positions_and_rotations:
                 ckpt_dict[file] = {'save_dir' : cfg['save_dir']}
                 ckpt_dict[file]['seed'] = cfg['seed']
                 ckpt_dict[file]['sim_complete'] = False
@@ -294,42 +285,45 @@ if __name__ == '__main__':
     
     # get files in use by this simulation but not yet completed
     ckpt_dict = uf.load_json(args.in_progress_file)
-    ImageNet_files = {
+    y_positions_and_rotations = {
         k : v for k, v in ckpt_dict.items() if v['save_dir'] == cfg['save_dir']
     }
-    logging.debug(f'checkpointed files: {ImageNet_files}')
-    for i, image_file in enumerate(ImageNet_files.keys()):
-        if ImageNet_files[image_file]['sim_complete'] is True:
-            logging.info(f'{image_file} {i+1}/{len(ImageNet_files)} is complete')
+    logging.debug(f'checkpointed files: {y_positions_and_rotations}')
+    for i, y_idx_rotation in enumerate(y_positions_and_rotations.keys()):
+        if y_positions_and_rotations[y_idx_rotation]['sim_complete'] is True:
+            logging.info(f'{y_idx_rotation} {i+1}/{len(y_positions_and_rotations)} is complete')
             continue
         else:
-            logging.info(f'simulation {image_file} {i+1}/{len(ImageNet_files)}')
+            logging.info(f'simulation {y_idx_rotation} {i+1}/{len(y_positions_and_rotations)}')
 
-        (volume, bg_mask) = phantom.create_volume(cfg, image_file)
+        (y_pos, rotation) = y_idx_rotation.split('_')
+        (volume, bg_mask) = phantom.create_volume(cfg, int(y_pos), int(rotation))
         
         # save 2D slice of the volume to HDF5 file
-        h5_group = image_file.replace('/', '__')
+        h5_group = y_idx_rotation.replace('/', '__')
         with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
-            f.create_group(h5_group)
-            f[h5_group].create_dataset(
-                'mu_a',
-                data=uf.square_centre_crop(
-                    volume[0,:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size']
-                ), dtype=np.float32
-            )
-            f[h5_group].create_dataset(
-                'mu_s',
-                data=uf.square_centre_crop(
-                    volume[1,:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size']
-                ), dtype=np.float32
-            )
+            f.require_group(h5_group)
+            if 'mu_a' not in f[h5_group]:
+                f[h5_group].create_dataset(
+                    'mu_a',
+                    data=uf.square_centre_crop(
+                        volume[0,:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size']
+                    ), dtype=np.float32
+                )
+            if 'mu_s' not in f[h5_group]:
+                f[h5_group].create_dataset(
+                    'mu_s',
+                    data=uf.square_centre_crop(
+                        volume[1,:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size']
+                    ), dtype=np.float32
+                )
  
         if cfg['stage'] == 'optical':
             # optical simulation
             simulation = optical_simulation.MCX_adapter(cfg, source='invision')
         
             gc.collect()        
-            logging.info(f'mcx, image: {image_file}')
+            logging.info(f'mcx, y_idx_rotation: {y_idx_rotation}')
         
             start = timeit.default_timer()
             # out can be energy absorbed, fluence, pressure, sensor data
@@ -393,7 +387,7 @@ if __name__ == '__main__':
             
             gc.collect()
             
-            logging.info(f'k-wave forward, image: {image_file}')
+            logging.info(f'k-wave forward, y_idx_rotation: {y_idx_rotation}')
             
             start = timeit.default_timer()
             with h5py.File(cfg['save_dir']+'temp.h5', 'r') as f:
@@ -441,7 +435,7 @@ if __name__ == '__main__':
             with open(cfg['save_dir']+'/config.json', 'w') as f:
                 json.dump(cfg, f, indent='\t')
             
-            logging.info(f'time reversal, image: {image_file}')
+            logging.info(f'time reversal, image: {y_idx_rotation}')
             
             # load sensor data
             start = timeit.default_timer()
@@ -473,12 +467,12 @@ if __name__ == '__main__':
             logging.info(f'p0_recon saved in {timeit.default_timer() - start} seconds')
             
             ckpt_dict = uf.load_json(args.in_progress_file)
-            ckpt_dict[image_file]['sim_complete'] = True
+            ckpt_dict[y_idx_rotation]['sim_complete'] = True
             uf.save_json(args.in_progress_file, ckpt_dict)
             cfg['stage'] = 'optical'
             with open(cfg['save_dir']+'config.json', 'w') as f:
                 json.dump(cfg, f, indent='\t')
-            logging.info(f'{image_file} {i+1}/{len(ImageNet_files)} complete')
+            logging.info(f'{y_idx_rotation} {i+1}/{len(y_positions_and_rotations)} complete')
 
     # delete temp p0_3D dataset
     if cfg['delete_p0_3d'] is True:

@@ -1,4 +1,4 @@
-wavelength (nm), mu_a (m^-1) (Hendrik Buiteveld. 1994. ptical properties of pure water)
+wavelength (nm), mu_a (m^-1) (Hendrik Buiteveld. 1994. optical properties of pure water)
 458.37807569953907, 0.01495705485072183
 465.4580972166832, 0.015074529059662983
 471.78550969826347, 0.015056053348653295
