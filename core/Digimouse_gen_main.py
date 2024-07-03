@@ -150,7 +150,7 @@ if __name__ == '__main__':
         # light source pairs are separted by 0.02474m in the y direction
         mcx_domain_size = [0.082, 0.025, 0.082] # [m]
         kwave_domain_size = [0.082, mcx_domain_size[1], 0.082] # [m]
-        pml_size = 10 # perfectly matched layer size in grid points
+        pml_size = 16 # perfectly matched layer size in grid points
         [mcx_grid_size, dx] = gf.get_optical_grid_size(
             mcx_domain_size,
             c0_min=c_0,

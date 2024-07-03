@@ -90,7 +90,8 @@ class digimouse_phantom(phantom):
             [20, 0.024, 8.9, 0.9, 1.37], # 20 --> adrenal glands
             [21, 0.076, 10.9, 0.9, 1.37] # 21 --> lungs
         ], dtype=np.float32)
-        prop *= 1e3 # [mm^-1] -> [m^-1]
+        prop[:, 1] *= 1e3 # [mm^-1] -> [m^-1]
+        prop[:, 2] *= 1e3 # [mm^-1] -> [m^-1]
         # assign optical properties to the volume
         volume = np.zeros(([2]+cfg['mcx_grid_size']), dtype=np.float32)
         volume[0] = prop[tissue_types,1]

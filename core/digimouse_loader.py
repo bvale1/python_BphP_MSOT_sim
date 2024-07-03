@@ -184,10 +184,11 @@ if __name__ == '__main__':
         [20, 0.024, 8.9, 0.9, 1.37], # 20 --> adrenal glands --> muscle,
         [21, 0.076, 10.9, 0.9, 1.37] # 21 --> lungs --> pig lung, Cheong et al. (1990), 850nm
     ])
-    prop *= 1e3 # [mm^-1] -> [m^-1]
+    prop[:, 1] *= 1e3 # [mm^-1] -> [m^-1]
+    prop[:, 2] *= 1e3 # [mm^-1] -> [m^-1]
     cross_sections_mu_a = prop[cross_sections,1]
     cross_sections_mu_s = prop[cross_sections,2]
     
-    pf.heatmap(cross_sections_mu_a, dx=dx, sharescale=False, title=r'$\mu_{a}$')
-    pf.heatmap(cross_sections_mu_s, dx=dx, sharescale=False, title=r'$\mu_{s}$')
+    pf.heatmap(cross_sections_mu_a, dx=dx, sharescale=False, title=r'$\mu_{a}$ (m$^{-1}$)')
+    pf.heatmap(cross_sections_mu_s, dx=dx, sharescale=False, title=r'$\mu_{s}$ (m$^{-1}$)')
     
