@@ -73,14 +73,14 @@ def get_optical_grid_size(domain_size=[0.082, 0.025, 0.082],
     #dx = domain_size[0] / nx
     #ny = int(2**np.round(np.log2(domain_size[1] / dx))) - 2 * pml_size
     #nz = int(2**np.round(np.log2(domain_size[2] / dx)-2) * 3) - 2 * pml_size
-    min_domain_size = np.asarray(min_domain_size) + 2 * pml_size * dx_min
+    domain_size = np.asarray(domain_size) + 2 * pml_size * dx_min
     grid_size = np.zeros(3, dtype=int)
     for dim in range(3):
         grid_size[dim] = min([i for i in [
-            2**(np.ceil(np.log2((min_domain_size[dim] / dx_min)))) - 2 * pml_size,
-            (2**(np.ceil(np.log2((min_domain_size[dim] / dx_min)))-2) * 3) - 2 * pml_size,
-            (2**(np.ceil(np.log2((min_domain_size[dim] / dx_min)))-3) * 5) - 2 * pml_size
-        ] if i * dx_min >= min_domain_size[dim] - 2 * pml_size * dx_min])
+            2**(np.ceil(np.log2((domain_size[dim] / dx_min)))) - 2 * pml_size,
+            (2**(np.ceil(np.log2((domain_size[dim] / dx_min)))-2) * 3) - 2 * pml_size,
+            (2**(np.ceil(np.log2((domain_size[dim] / dx_min)))-3) * 5) - 2 * pml_size
+        ] if i * dx_min >= domain_size[dim] - 2 * pml_size * dx_min])
     
     return grid_size.tolist(), dx_min
     
