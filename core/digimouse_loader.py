@@ -158,31 +158,31 @@ if __name__ == '__main__':
     # publisher={Elsevier}
     # }
     
-    # He does not specify the wavelength of these optical properties, this is
-    # likely because they are obtained from different wavelengths
+    # Details at https://mcx.space/wiki/index.cgi?MMC/DigimouseMesh 
+    # properties from Strangman et al. (2003) are at 830nm
     prop=np.array([
         [0, coupling_medium_mu_a*1e-3, coupling_medium_mu_s*1e-3, 0.9, 1.37], # 0 --> background
-        [1, 0.0191, 6.6, 0.9, 1.37], # 1 --> skin
-        [2, 0.0136, 8.6, 0.9, 1.37], # 2 --> skeleton
-        [3, 0.0026, 0.01, 0.9, 1.37], # 3 --> eye
-        [4, 0.0186, 11.1, 0.9, 1.37], # 4 --> medulla --> whole brain 
-        [5, 0.0186, 11.1, 0.9, 1.37], # 5 --> cerebellum --> whole brain 
-        [6, 0.0186, 11.1, 0.9, 1.37], # 6 --> olfactory bulbs --> whole brain 
-        [7, 0.0186, 11.1, 0.9, 1.37], # 7 --> external cerebrum --> whole brain 
-        [8, 0.0186, 11.1, 0.9, 1.37], # 8 --> striatum --> whole brain 
-        [9, 0.0240, 8.9, 0.9, 1.37], # 9 --> heart
-        [10, 0.0026, 0.01, 0.9, 1.37], # 10 --> rest of the brain --> whole brain 
-        [11, 0.0240, 8.9, 0.9, 1.37], # 11 --> masseter muscles
-        [12, 0.0240, 8.9, 0.9, 1.37], # 12 --> lachrymal glands
-        [13, 0.0240, 8.9, 0.9, 1.37], # 13 --> bladder
-        [14, 0.0240, 8.9, 0.9, 1.37], # 14 --> testis
-        [15, 0.0240, 8.9, 0.9, 1.37], # 15 --> stomach
-        [16, 0.072, 5.6, 0.9, 1.37], # 16 --> spleen
+        [1, 0.0191, 6.6, 0.9, 1.37], # 1 --> skin --> scalp, Strangman et al. (2003), 830nm
+        [2, 0.0136, 8.6, 0.9, 1.37], # 2 --> skeleton --> skull, Strangman et al. (2003), 830nm
+        [3, 0.0026, 0.01, 0.9, 1.37], # 3 --> eye --> cerebrospinal fluid, Strangman et al. (2003), 830nm
+        [4, 0.0186, 11.1, 0.9, 1.37], # 4 --> medulla --> brain, Strangman et al. (2003), 830nm
+        [5, 0.0186, 11.1, 0.9, 1.37], # 5 --> cerebellum --> brain, Strangman et al. (2003), 830nm
+        [6, 0.0186, 11.1, 0.9, 1.37], # 6 --> olfactory bulbs --> brain, Strangman et al. (2003), 830nm
+        [7, 0.0186, 11.1, 0.9, 1.37], # 7 --> external cerebrum --> brain, Strangman et al. (2003), 830nm
+        [8, 0.0186, 11.1, 0.9, 1.37], # 8 --> striatum --> brain, Strangman et al. (2003), 830nm
+        [9, 0.0240, 8.9, 0.9, 1.37], # 9 --> heart --> muscle,
+        [10, 0.0026, 0.01, 0.9, 1.37], # 10 --> rest of the brain --> cerebrospinal fluid, Strangman et al. (2003), 830nm
+        [11, 0.0240, 8.9, 0.9, 1.37], # 11 --> masseter muscles --> muscle,
+        [12, 0.0240, 8.9, 0.9, 1.37], # 12 --> lachrymal glands --> muscle,
+        [13, 0.0240, 8.9, 0.9, 1.37], # 13 --> bladder --> muscle,
+        [14, 0.0240, 8.9, 0.9, 1.37], # 14 --> testis --> muscle,
+        [15, 0.0240, 8.9, 0.9, 1.37], # 15 --> stomach --> muscle,
+        [16, 0.072, 5.6, 0.9, 1.37], # 16 --> spleen --> liver, Cheong et al. (1990)
         [17, 0.072, 5.6, 0.9, 1.37], # 17 --> pancreas
-        [18, 0.072, 5.6, 0.9, 1.37], # 18 --> liver
-        [19, 0.050, 5.4, 0.9, 1.37], # 19 --> kidneys
-        [20, 0.024, 8.9, 0.9, 1.37], # 20 --> adrenal glands
-        [21, 0.076, 10.9, 0.9, 1.37] # 21 --> lungs
+        [18, 0.072, 5.6, 0.9, 1.37], # 18 --> liver, Cheong et al. (1990)
+        [19, 0.050, 5.4, 0.9, 1.37], # 19 --> kidneys --> cow kidney, Cheong et al. (1990), 789nm
+        [20, 0.024, 8.9, 0.9, 1.37], # 20 --> adrenal glands --> muscle,
+        [21, 0.076, 10.9, 0.9, 1.37] # 21 --> lungs --> pig lung, Cheong et al. (1990), 850nm
     ])
     prop *= 1e3 # [mm^-1] -> [m^-1]
     cross_sections_mu_a = prop[cross_sections,1]

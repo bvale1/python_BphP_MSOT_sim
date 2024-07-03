@@ -238,7 +238,7 @@ if __name__ == '__main__':
             used_y_positions_and_rotations = ckpt_dict.keys()
             for item in used_y_positions_and_rotations:
                 if item in y_positions_and_rotations:
-                    y_positions_and_rotations.remove(dir)
+                    y_positions_and_rotations.remove(item)
             
             if len(y_positions_and_rotations) < cfg['nimages']:
                 cfg['nimages'] = len(y_positions_and_rotations)
