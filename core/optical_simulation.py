@@ -1,8 +1,5 @@
 import numpy as np
-import subprocess
-import os
-import json
-import struct
+import subprocess, os, json, struct, logging
 import func.utility_func as uf
 
 
@@ -211,6 +208,7 @@ class MCX_adapter():
             results = None
             try:
                 results = subprocess.run(cmd)
+                logging.info(f"MCX run: {cmd}, source no: {i}, results: {results}")
             except:
                 raise RuntimeError(
                     f"MCX failed to run: {cmd}, source no: {i}, results: {results}"
