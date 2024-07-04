@@ -126,7 +126,8 @@ def make_filter(n_samples : int,
 
 
 def add_noise(data : np.array,
-              cfg : dict, 
+              cfg : dict,
+              rng : np.random.Generator, 
               std : float = 2.0,
               frequency_distribution : np.array = None,
               cov0 : np.array = None):
@@ -135,33 +136,8 @@ def add_noise(data : np.array,
     Guassian noise is generated and convolved with the amplitude spectrum.
     A covariance matrix can be provided to correlate the noise between certain
     channels.
-    
-    Parameters
-    ----------
-    data : np.ndarray
-        The data to add noise to.
-    cfg : dict
-        The configuration dictionary containing the seed for the random number
-        generator.
-    std : float
-        The standard deviation of the Gaussian noise to add.
-    
-    Returns
-    -------
-    noisy_data : np.ndarray
-        The data with added Gaussian noise.
-    cfg : dict
-        The configuration dictionary with the seed and noise std added.
     '''
-    seed = cfg['seed']
     cfg['noise_std'] = std
-    if seed is None:
-        seed = np.random.randint(0, 2**32 - 1)
-        cfg['seed'] = seed
-        logging.info(f'no seed provided, random seed: {seed}')
-    else:
-        logging.info(f'seed provided by config: {seed}')
-    rng = np.random.default_rng(seed)
     
     noise = rng.normal(0, std, size=data.shape)
     
@@ -234,15 +210,15 @@ if __name__ == '__main__':
     # parse command line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--save_dir', type=str, default='/mnt/fast/nobackup/users/wv00017/20231123_BphP_phantom.c139519.p12',
+        '--save_dir', type=str, default='/mnt/f/cluster_MSOT_simulations/digimouse_fluence_correction/20240702_digimouse_phantom.c174079.p0',
         help='path to simulation data directory'        
     )
     parser.add_argument(
         '--irf_path', type=str, default='invision_irf.npy',
     )
     parser.add_argument(
-        '--save_signals', type=str, default=None, 
-        help='key to save noise added signals to the data.h5 file'
+        '--weights_dir', type=str, default=None,
+        help='path to the directory containing the weights for the inverse model'
     )
     parser.add_argument(
         '--save_images', type=str, default='noisy_p0_tr', 
@@ -254,9 +230,13 @@ if __name__ == '__main__':
         help='standard deviation of the white noise to add to the signals'
     )
     parser.add_argument(
-        '--plot_comparison', type=str, default=None, #'add_noise_comparison.png',
+        '--plot_comparison', type=str, default='add_noise_comparison.png',
         help='path to save a comparison of the original and noise \
             added signal and reconstructions'
+    )
+    parser.add_argument(
+        '--bandpass_filter', default=False, action=argparse.BooleanOptionalAction,
+        help='apply bandpass filter to sensor data'
     )
     parser.add_argument('-v', type=str, help='verbose level', default='INFO')
     args = parser.parse_args()
@@ -269,14 +249,14 @@ if __name__ == '__main__':
     else:
         raise ValueError('verbose level must be INFO or DEBUG')
     
+    logging.info(f'command line arguments: {args}')
+    
     # check if the save directory exists
     if not os.path.exists(args.save_dir):
         raise FileNotFoundError(f'file {args.save_dir} not found')
     logging.debug(f'found directory {args.save_dir}, adding noise...')
     
     # check input arguments
-    if args.save_signals == 'sensor_data': # TODO: add option to overwrite
-        raise ValueError('key sensor_data is reserved for the original signals')
     if args.save_images == 'p0_tr': # TODO: add option to overwrite
         raise ValueError('key p0_tr is reserved for the original images')
         
@@ -288,111 +268,83 @@ if __name__ == '__main__':
         logging.debug(f'configuration file: {cfg}')
     else:
         raise FileNotFoundError(f'file {args.save_dir}/config.json not found')
-       
-    # load the simulated signals [256*2030*4*32/(1024**2) ~ 64 MB]
+    
+    # pass weights_dir to config
+    if args.weights_dir is not None:
+        cfg['weights_dir'] = args.weights_dir
+    
+    # load the simulated signals [256*2030*4*128/(1024**2) ~ 254 MB] if 128 images are in the dataset
     if os.path.exists(os.path.join(args.save_dir, 'data.h5')):
         with h5py.File(os.path.join(args.save_dir, 'data.h5'), 'r') as f:
-            sensor_data = f['sensor_data'][()].astype(np.float32)
+            groups = list(f.keys())
+            logging.info(f'groups {groups}')
+            sensor_data = np.zeros((len(groups), 256, 2030), dtype=np.float32)
+            for i in range(len(groups)):
+                sensor_data[i] = f[groups[i]]['sensor_data'][()]
         logging.info(f'loaded sensor data from {args.save_dir}/data.h5')
     else:
-        raise FileNotFoundError(f'file {args.save_dir}/data.h5 not found')
+        raise FileNotFoundError(f'file {args.save_dir}/data.h5 not found')    
     
-    # initialise new dataset for noisy signals (optional) and noisey reconstructions
-    if args.save_signals is not None:
-        try:
-            with h5py.File(os.path.join(args.save_dir, 'data.h5'), 'r+') as f:
-                f.create_dataset(
-                    args.save_signals,
-                    shape=tuple(np.shape(sensor_data)),
-                    dtype=np.float16
-                )
-            logging.info(f'noisy sensor dataset "{args.save_signals}" created')
-        except Exception as e:
-            # error is most likely because the dataset already exists, which is
-            # fine as it will be overwritten
-            logging.warning(f'{e} {args.save_signals}')
-        
-    if args.save_images is not None:
-        try:
-            with h5py.File(os.path.join(args.save_dir, 'data.h5'), 'r+') as f:
-                f.create_dataset(
-                    args.save_images,
-                    shape=(
-                        cfg['ncycles'],
-                        len(cfg['wavelengths']),
-                        cfg['npulses'],
-                        cfg['crop_size'],
-                        cfg['crop_size']
-                    ),
-                    dtype=np.float32
-                )
-            logging.info(f'noisy reconstruction dataset "{args.save_images}" created')
-        except Exception as e: 
-            # error is most likely because the dataset already exists, which is
-            # fine as it will be overwritten
-            logging.warning(f'{e} {args.save_images}')
-        
-    
-        
     # 4. add appropriate noise to the signals
     # same seed as simulation configuration is used to ensure reproducibility
     # instantiate random number generator
+    if cfg['seed'] is None:
+        cfg['seed'] = np.random.randint(0, 2**32 - 1)
+        logging.info(f'no seed provided, random seed: {cfg["seed"]}')
+    else:
+        logging.info(f'seed provided by config: {cfg["seed"]}')
+    rng = np.random.default_rng(cfg['seed'])
+    
     #(noisy_sensor_data, cfg) = add_gaussian_noise(deepcopy(sensor_data), cfg, args.noise_std)
     #noise_amplitude_distribution = np.load('mean_noise_amplitude_spectrum.npy')
     #noise_amplitude_distribution = noise_amplitude_distribution / np.max(noise_amplitude_distribution)
     #cov0 = np.load('cov0.npy')
     (noisy_sensor_data, cfg) = add_noise(
-        deepcopy(sensor_data), cfg, std=args.noise_std#, cov0=cov0
+        deepcopy(sensor_data), cfg, rng, std=args.noise_std#, cov0=cov0
     )
-    logging.info(f'white noise added to sensor data with std: {cfg["noise_std"]}')
+    logging.info(f'white noise added to sensor data with std: {args.noise_std}')
     
     # 2. apply convolution with the impulse response of the sensor to the signals    
     irf = np.load(args.irf_path)
     sensor_data = convolve1d(sensor_data, irf, mode='nearest', axis=-1)
     #sensor_data = np.fft.ifft(np.fft.fft(sensor_data, axis=-1) * np.fft.fft(irf), axis=-1).real.astype(np.float32)
-    print(f'sensor_data {sensor_data}')
     logging.info('sensor data convolved with impulse response function')
     
     # add the white noise standard deviation to the configuration then save it
     with open(os.path.join(args.save_dir, 'config.json'), 'w') as f:
         json.dump(cfg, f)
-       
-    filter = make_filter(
-        n_samples=cfg['Nt'], fs=1/cfg['dt'], irf=irf,
-        hilbert=True, lp_filter=6.5e6, hp_filter=50e3, rise=0.2,
-        n_filter=512, window='hann'
-    )
-    logging.info('filter created')
-    '''
-    # plot the filter
-    fig, ax = plt.subplots(1, 1, figsize=(5, 5))
-    k = np.arange(1+cfg['Nt']//2)
-    f_array = 1e-6 * k / (cfg['Nt'] * cfg['dt'])
-    ax.plot(f_array, np.abs(filter[:1+cfg['Nt']//2]) * 2)
-    ax.set_title('Filter amplitude response')
-    ax.set_xlabel('Frequency (MHz)')
-    ax.set_ylabel('Amplitude (a.u.)')
-    ax.grid(True)
-    ax.set_axisbelow(True)
-    plt.tight_layout()
-    plt.savefig('filter_amplitude_response.png')    
-    '''
-    # subtract the mean of each channel
-    noisy_sensor_data -= np.mean(noisy_sensor_data, axis=-1, keepdims=True)
     
-    # apply the filter to the noisy sensor data
-    noisy_sensor_data = np.fft.ifft(np.fft.fft(noisy_sensor_data, axis=-1) * filter, axis=-1).real.astype(np.float32)
-    #noisy_sensor_data = convolve1d(noisy_sensor_data, np.fft.ifft(filter), mode='nearest', axis=-1)
-    
-    # 5. (optional) save the new signals
-    if args.save_signals is not None:
-        with h5py.File(os.path.join(args.save_dir, 'data.h5'), 'r+') as f:
-            f[args.save_signals] = noisy_sensor_data
-        logging.info(f'sensor_data saved to {cfg["save_dir"]+"data.h5"}')
-    
+    if args.bandpass_filter:
+        filter = make_filter(
+            n_samples=cfg['Nt'], fs=1/cfg['dt'], irf=irf,
+            hilbert=True, lp_filter=6.5e6, hp_filter=50e3, rise=0.2,
+            n_filter=512, window='hann'
+        )
+        logging.info('filter created')
+        '''
+        # plot the filter
+        fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+        k = np.arange(1+cfg['Nt']//2)
+        f_array = 1e-6 * k / (cfg['Nt'] * cfg['dt'])
+        ax.plot(f_array, np.abs(filter[:1+cfg['Nt']//2]) * 2)
+        ax.set_title('Filter amplitude response')
+        ax.set_xlabel('Frequency (MHz)')
+        ax.set_ylabel('Amplitude (a.u.)')
+        ax.grid(True)
+        ax.set_axisbelow(True)
+        plt.tight_layout()
+        plt.savefig('filter_amplitude_response.png')    
+        '''
+        # subtract the mean of each channel
+        #noisy_sensor_data -= np.mean(noisy_sensor_data, axis=-1, keepdims=True)
+        
+        # apply the filter to the noisy sensor data
+        noisy_sensor_data = np.fft.ifft(np.fft.fft(noisy_sensor_data, axis=-1) * filter, axis=-1).real.astype(np.float32)
+        #noisy_sensor_data = convolve1d(noisy_sensor_data, np.fft.ifft(filter), mode='nearest', axis=-1)
+        logging.info('bandpass filter applied to noisy sensor data')
+        
     # 6. run image reconstruction algorithm
     start = timeit.default_timer()
-    cfg['recon_iterations'] = 1
     simulation = acoustic_inverse_simulation.kwave_inverse_adapter(
         cfg,
         transducer_model=cfg['inverse_model']
@@ -405,38 +357,36 @@ if __name__ == '__main__':
     
     # iterate over the cycles, wavelengths and pulses
     #cycle = 0; wavelength_index = 1; pulse = 0
-    for cycle in range(sensor_data.shape[0]):
-        for wavelength_index in range(sensor_data.shape[1]):
-            for pulse in range(sensor_data.shape[2]):
-       
-                logging.info(f'time reversal, cycle: {cycle+1}, \
-                                wavelength_index: {wavelength_index+1}, \
-                                pulse: {pulse+1}')
-                
-                start = timeit.default_timer()
-                noisy_tr = simulation.run_time_reversal(
-                    noisy_sensor_data[cycle, wavelength_index, pulse]
-                )
-                #noisy_tr = reconstruct(
-                #    noisy_sensor_data[cycle, wavelength_index, cycle],
-                #    fs=1/cfg['dt'],
-                #    geometry=geometry, 
-                #    n_pixels=(256, 1, 256),
-                #    field_of_view=cfg['dx']*np.array([256, 0, 256]), 
-                #    speed_of_sound=cfg['c_0']
-                #)[:, 0, :].T
-                noisy_tr[noisy_tr < 0.0] = 0.0
-                print(f'noisy_tr {noisy_tr.shape}')
-                noisy_tr = uf.square_centre_crop(noisy_tr, cfg['crop_size'])
-                logging.info(f'time reversal run in \
-                                {timeit.default_timer() - start} seconds')
-                
-                # 7. (optional) save the reconstructed images
-                if args.save_images is not None:
-                    start = timeit.default_timer()
-                    with h5py.File(os.path.join(args.save_dir, 'data.h5'), 'r+') as f:
-                        f[args.save_images][cycle, wavelength_index, pulse] = noisy_tr
-                    logging.info(f'reconstruction saved in {timeit.default_timer() - start} seconds')
+    for i in range(sensor_data.shape[0]):
+        logging.info(f'time reversal, image: {i+1}/{sensor_data.shape[0]}')
+        
+        start = timeit.default_timer()
+        noisy_tr = simulation.run_time_reversal(
+            noisy_sensor_data[i]
+        )
+        #noisy_tr = reconstruct(
+        #    noisy_sensor_data[i],
+        #    fs=1/cfg['dt'],
+        #    geometry=geometry, 
+        #    n_pixels=(256, 1, 256),
+        #    field_of_view=cfg['dx']*np.array([256, 0, 256]), 
+        #    speed_of_sound=cfg['c_0']
+        #)[:, 0, :].T
+        noisy_tr[noisy_tr < 0.0] = 0.0
+        print(f'noisy_tr {noisy_tr.shape}')
+        noisy_tr = uf.square_centre_crop(noisy_tr, cfg['crop_size'])
+        logging.info(f'time reversal run in \
+                        {timeit.default_timer() - start} seconds')
+        
+        # 7. (optional) save the reconstructed images
+        if args.save_images is not None:
+            start = timeit.default_timer()
+            with h5py.File(os.path.join(args.save_dir, 'data.h5'), 'r+') as f:
+                if args.save_images not in f[groups[i]].keys():
+                    f[groups[i]].create_dataset(args.save_images, data=noisy_tr, dtype=np.float32)
+                else:
+                    f[groups[i]][args.save_images][()] = noisy_tr
+            logging.info(f'reconstruction saved in {timeit.default_timer() - start} seconds')
 
 
     # for testing purposes save a comparison of the original and noise added 
@@ -452,10 +402,10 @@ if __name__ == '__main__':
         f_array = k / (cfg['Nt'] * cfg['dt'] ) * 1e-6
         
         fig, ax = plt.subplots(2, 2, figsize=(10, 10))
-        fig.suptitle('Comparison of original and nois added signals and reconstructions')
+        fig.suptitle('Comparison of original and noise added signals and reconstructions')
         
-        ax[0, 0].plot(t_array, noisy_sensor_data[0, 1, 0, 0], label='noise added', linestyle='--')
-        ax[0, 0].plot(t_array, sensor_data[0, 1, 0, 0], label='original', linestyle=':')        
+        ax[0, 0].plot(t_array, noisy_sensor_data[0, 0], label='noise added', linestyle='--')
+        ax[0, 0].plot(t_array, sensor_data[0, 0], label='original', linestyle=':')        
         ax[0, 0].set_title('Time domain signals')
         ax[0, 0].set_xlabel(r'Time ($\mu$s)')
         ax[0, 0].set_ylabel('Amplitude (Pa)')
@@ -463,12 +413,12 @@ if __name__ == '__main__':
         ax[0, 0].set_axisbelow(True)
         ax[0, 0].legend()
         
-        f_mag_sensor_data = np.abs(np.fft.fft(sensor_data[0, 1, 0, 0]))
+        f_mag_sensor_data = np.abs(np.fft.fft(sensor_data[0, 0]))
         # normalise the magnitude of the fft and only take below the nyquist frequency
         # the factor of 2 is to account for the negative frequencies
         f_mag_sensor_data = 2 * f_mag_sensor_data[0:int(1+cfg['Nt']/2)] / (cfg['Nt'])
         f_mag_sensor_data[0] /= 2 # DC component does not get doubled
-        f_mag_noisy_sensor_data = np.abs(np.fft.fft(noisy_sensor_data[0, 1, 0, 0]))
+        f_mag_noisy_sensor_data = np.abs(np.fft.fft(noisy_sensor_data[0, 0]))
         # normalise the magnitude of the fft and only take below the nyquist frequency
         f_mag_noisy_sensor_data = 2 * f_mag_noisy_sensor_data[0:int(1+cfg['Nt']/2)] / (cfg['Nt'])
         f_mag_noisy_sensor_data[0] /= 2 # DC component is halved
@@ -487,8 +437,8 @@ if __name__ == '__main__':
         
         # load the original and noise added reconstructions
         with h5py.File(os.path.join(args.save_dir, 'data.h5'), 'r') as f:
-            p0_tr = f['p0_tr'][0, 1, 0]
-            noisy_tr = f[args.save_images][0, 1, 0]
+            p0_tr = f[groups[0]]['p0_tr'][()]
+            noisy_tr = f[groups[0]][args.save_images][()]
         extent = [-1e3*cfg['dx']*cfg['crop_size']/2,
                 1e3*cfg['dx']*cfg['crop_size']/2,
                 -1e3*cfg['dx']*cfg['crop_size']/2,

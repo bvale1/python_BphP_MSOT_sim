@@ -58,21 +58,15 @@ def quadratic_profile_tumor(dx : Union[int, float],
     
     return absoption_profile
 
+
 def get_optical_grid_size(domain_size=[0.082, 0.025, 0.082],
                           c0_min=1500,
                           points_per_wavelength=2,
                           f_max=7e6,
                           pml_size=10):
     
-    # calculate grid size from powers of 2 and 3
+    # calculate grid size from prime factors 2, 3 and 5
     dx_min = c0_min / (points_per_wavelength * f_max)
-    #nx = 2**(np.ceil(np.log2(domain_size[0] / dx_min))-2) * 3
-    
-    # subtract pml from each edge
-    #nx = int(nx - 2 * pml_size)
-    #dx = domain_size[0] / nx
-    #ny = int(2**np.round(np.log2(domain_size[1] / dx))) - 2 * pml_size
-    #nz = int(2**np.round(np.log2(domain_size[2] / dx)-2) * 3) - 2 * pml_size
     domain_size = np.asarray(domain_size) + 2 * pml_size * dx_min
     grid_size = np.zeros(3, dtype=int)
     for dim in range(3):
@@ -82,7 +76,10 @@ def get_optical_grid_size(domain_size=[0.082, 0.025, 0.082],
             (2**(np.ceil(np.log2((domain_size[dim] / dx_min)))-3) * 5) - 2 * pml_size
         ] if i * dx_min >= domain_size[dim] - 2 * pml_size * dx_min])
     
-    return grid_size.tolist(), dx_min
+    domain_size -= 2 * pml_size * dx_min
+    dx = np.min(domain_size / grid_size)
+    
+    return grid_size.tolist(), dx
     
     
 def get_acoustic_grid_size(dx, domain_size=[0.082, 0.025, 0.082], pml_size=10):
@@ -97,13 +94,7 @@ def get_acoustic_grid_size(dx, domain_size=[0.082, 0.025, 0.082], pml_size=10):
         ] if i * dx >= domain_size[dim] - 2 * pml_size * dx])
     
     return grid_size.tolist(), dx
-    
-    #nx = int(2**(np.round(np.log2(domain_size[0] / dx))-2) * 3) - 2 * pml_size
-    #ny = int(2**(np.round(np.log2(domain_size[1] / dx)))) - 2 * pml_size
-    #nz = int(2**(np.round(np.log2(domain_size[2] / dx))-2) * 3) - 2 * pml_size
-    
-    #return [nx, ny, nz], dx
-                           
+
                            
 def random_spline_mask(rng : np.random.Generator,
                        R_min=85,

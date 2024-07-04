@@ -28,6 +28,7 @@ if __name__ == '__main__':
     digimouse = zoom(digimouse, zoom_factors, order=0)
     
     cross_sections = np.transpose(digimouse[:,200:875:25,:], axes=(1,2,0))
+    pf.heatmap(cross_sections, dx=dx, sharescale=True, title='tissue types', cmap='tab20')
     
     # translate digimouse so the centre of mass along the xz plane
     # at y_ydx is in the centre
@@ -159,7 +160,9 @@ if __name__ == '__main__':
     # }
     
     # Details at https://mcx.space/wiki/index.cgi?MMC/DigimouseMesh 
-    # properties from Strangman et al. (2003) are at 830nm
+    # properties from Strangman et al. (2003) are at 830nm.
+    # he seems to have used the values for adipose tissue as for skin, which 
+    # likely overestimates the absorption and scattering coefficients of adipose
     prop=np.array([
         [0, coupling_medium_mu_a*1e-3, coupling_medium_mu_s*1e-3, 0.9, 1.37], # 0 --> background
         [1, 0.0191, 6.6, 0.9, 1.37], # 1 --> skin --> scalp, Strangman et al. (2003), 830nm

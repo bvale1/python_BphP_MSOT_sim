@@ -110,6 +110,10 @@ if __name__ == '__main__':
         '--noise_std', type=float, default=1.5, action='store',
         help='standard deviation Guassian noise to add to the sensor data'
     )
+    parser.add_argument(
+        '--bandpass_filter', default=False, action=argparse.BooleanOptionalAction,
+        help='apply bandpass filter to sensor data'
+    )
     args = parser.parse_args()
     
     if args.v == 'INFO':
@@ -143,6 +147,14 @@ if __name__ == '__main__':
         
         phantom = ImageNet_phantom(cfg['seed'])
         
+        if cfg['seed']:
+            seed = cfg['seed']
+            logging.info(f'seed provided: {seed}')
+        else:
+            seed = np.random.randint(0, 2**32 - 1)
+            logging.info(f'no seed provided, random seed selected: {seed}')        
+        rng = np.random.default_rng(seed)
+        
     else:
         if args.seed:
             seed = args.seed
@@ -150,6 +162,7 @@ if __name__ == '__main__':
         else:
             seed = np.random.randint(0, 2**32 - 1)
             logging.info(f'no seed provided, random seed selected: {seed}')        
+        rng = np.random.default_rng(seed)
         
         # It is imperative that dx is small enough to support high enough 
         # frequencies and that [nx, ny, nz] have low prime factors i.e. 2, 3, 5
@@ -220,7 +233,7 @@ if __name__ == '__main__':
         # Energy total delivered is wavelength dependant and normally disributed
         Emean = 70.0727 * 1e-3; # [J]
         Estd = 0.7537 * 1e-3; # [J]
-        cfg['LaserEnergy'] = np.random.normal(
+        cfg['LaserEnergy'] = rng.normal(
             loc=Emean, scale=Estd, size=(cfg['nimages'])
         ).astype(np.float32)
         cfg['LaserEnergy'] = cfg['LaserEnergy'].tolist()
@@ -248,7 +261,6 @@ if __name__ == '__main__':
                 if dir in ImageNet_files:
                     ImageNet_files.remove(dir)
             
-            rng = np.random.default_rng(seed)
             if len(ImageNet_files) < cfg['nimages']:
                 cfg['nimages'] = len(ImageNet_files)
                 logging.info(f'{cfg["nimages"]} images in left ImageNet dataset')
@@ -275,11 +287,13 @@ if __name__ == '__main__':
     irf = np.load(args.irf_path)
     
     # intialise bandpass filter
-    filter = make_filter(
-        n_samples=cfg['Nt'], fs=1/cfg['dt'], irf=irf,
-        hilbert=True, lp_filter=6.5e6, hp_filter=50e3, rise=0.2,
-        n_filter=512, window='hann'
-    )
+    if args.bandpass_filter:
+        filter = make_filter(
+            n_samples=cfg['Nt'], fs=1/cfg['dt'], irf=irf,
+            hilbert=True, lp_filter=6.5e6, hp_filter=50e3, rise=0.2,
+            n_filter=512, window='hann'
+        )
+        logging.info('bandpass filter initialised')
     
     with h5py.File(cfg['save_dir']+'temp.h5', 'w') as f:
             logging.info('allocating storage for p0_3d temp.h5')
@@ -452,11 +466,12 @@ if __name__ == '__main__':
             start = timeit.default_timer()
             # add noise to sensor data
             if cfg['noise_std'] > 0.0:
-                (out, cfg) = add_noise(out, cfg, std=cfg['noise_std'])
+                (out, cfg) = add_noise(out, cfg, rng, std=cfg['noise_std'])
             # apply convolution with the impulse response function
             out = convolve1d(out, irf, mode='nearest', axis=-1)
             # apply bandpass filter to the noisy sensor data
-            out = np.fft.ifft(np.fft.fft(out, axis=-1) * filter, axis=-1).real.astype(np.float32)
+            if args.bandpass_filter:
+                out = np.fft.ifft(np.fft.fft(out, axis=-1) * filter, axis=-1).real.astype(np.float32)
             logging.info(f'noise added in {timeit.default_timer() - start} seconds')
     
             start = timeit.default_timer()

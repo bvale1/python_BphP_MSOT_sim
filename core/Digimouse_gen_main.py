@@ -109,6 +109,10 @@ if __name__ == '__main__':
         '--noise_std', type=float, default=1.5, action='store',
         help='standard deviation Guassian noise to add to the sensor data'
     )
+    parser.add_argument(
+        '--bandpass_filter', default=False, action=argparse.BooleanOptionalAction,
+        help='apply bandpass filter to sensor data'
+    )
     args = parser.parse_args()
     
     if args.v == 'INFO':
@@ -141,9 +145,8 @@ if __name__ == '__main__':
         logging.info(f'checkpoint config found {cfg}')
         
         phantom = digimouse_phantom(cfg['digimouse_dir'])
-        
-    else:       
-        
+                
+    else:               
         # It is imperative that dx is small enough to support high enough 
         # frequencies and that [nx, ny, nz] have low prime factors i.e. 2, 3, 5
         c_0 = 1500.0 # speed of sound [m s^-1]
@@ -207,6 +210,7 @@ if __name__ == '__main__':
             'irf_path' : args.irf_path, # path to impulse response function
             'dt' : 25e-9, # time step [s]
             'Nt' : 2030, # number of time steps
+            'bandpass_filter' : args.bandpass_filter, # apply bandpass filter to sensor data
         }
         
         logging.info(f'no checkpoint, creating config {cfg}')
@@ -265,24 +269,34 @@ if __name__ == '__main__':
     # load impulse response function
     irf = np.load(args.irf_path)
     
+    # initialise random number generator
+    if cfg['seed']:
+        logging.info(f'seed provided: {cfg['seed']}')
+    else:
+        cfg['seed'] = np.random.randint(0, 2**32 - 1)
+        logging.info(f'no seed provided, random seed selected: {cfg['seed']}')        
+    rng = np.random.default_rng(cfg['seed'])
+    
     # intialise bandpass filter
-    filter = make_filter(
-        n_samples=cfg['Nt'], fs=1/cfg['dt'], irf=irf,
-        hilbert=True, lp_filter=6.5e6, hp_filter=50e3, rise=0.2,
-        n_filter=512, window='hann'
-    )
+    if cfg['bandpass_filter']:
+        filter = make_filter(
+            n_samples=cfg['Nt'], fs=1/cfg['dt'], irf=irf,
+            hilbert=True, lp_filter=6.5e6, hp_filter=50e3, rise=0.2,
+            n_filter=512, window='hann'
+        )
+        logging.info('bandpass filter initialised')
     
     with h5py.File(cfg['save_dir']+'temp.h5', 'w') as f:
-            logging.info('allocating storage for p0_3d temp.h5')
-            f.create_dataset(
-                'p0_3D',
-                shape=(
-                    cfg['crop_p0_3d_size'],
-                    cfg['kwave_grid_size'][1],
-                    cfg['crop_p0_3d_size']
-                ), dtype=np.float32
-            )
-    
+        logging.info('allocating storage for p0_3d temp.h5')
+        f.create_dataset(
+            'p0_3D',
+            shape=(
+                cfg['crop_p0_3d_size'],
+                cfg['kwave_grid_size'][1],
+                cfg['crop_p0_3d_size']
+            ), dtype=np.float32
+        )
+
     # get files in use by this simulation but not yet completed
     ckpt_dict = uf.load_json(args.in_progress_file)
     y_positions_and_rotations = {
@@ -446,11 +460,12 @@ if __name__ == '__main__':
             start = timeit.default_timer()
             # add noise to sensor data
             if cfg['noise_std'] > 0.0:
-                (out, cfg) = add_noise(out, cfg, std=cfg['noise_std'])
+                (out, cfg) = add_noise(out, cfg, rng, std=cfg['noise_std'])
             # apply convolution with the impulse response function
             out = convolve1d(out, irf, mode='nearest', axis=-1)
             # apply bandpass filter to the noisy sensor data
-            out = np.fft.ifft(np.fft.fft(out, axis=-1) * filter, axis=-1).real.astype(np.float32)
+            if cfg['bandpass_filter']:
+                out = np.fft.ifft(np.fft.fft(out, axis=-1) * filter, axis=-1).real.astype(np.float32)
             logging.info(f'noise added in {timeit.default_timer() - start} seconds')
     
             start = timeit.default_timer()
