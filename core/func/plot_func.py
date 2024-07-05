@@ -112,8 +112,6 @@ def heatmap(img,
             ax[frame].set_xlabel('x (mm)')
             if labels:
                 ax[frame].set(title=labels[frame])
-            elif nframes > 1:
-                ax[frame].set(title='pulse '+str(frame))
             if not sharescale:
                 cbar = plt.colorbar(frames[frame], ax=ax[frame])
                 if cbar_label:

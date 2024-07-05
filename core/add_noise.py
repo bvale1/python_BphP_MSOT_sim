@@ -210,7 +210,7 @@ if __name__ == '__main__':
     # parse command line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--save_dir', type=str, default='/mnt/f/cluster_MSOT_simulations/digimouse_fluence_correction/20240702_digimouse_phantom.c174079.p0',
+        '--save_dir', type=str, default='/mnt/f/cluster_MSOT_simulations/digimouse_fluence_correction/20240702_digimouse_phantom.c174176.p1',
         help='path to simulation data directory'        
     )
     parser.add_argument(

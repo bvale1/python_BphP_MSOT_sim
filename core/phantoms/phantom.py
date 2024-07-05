@@ -7,6 +7,7 @@ from typing import Union
 class phantom:
     
     def __init__(self):
+        # gets directory of the phantom file, used to load chromophores
         self.path = os.path.dirname(os.path.realpath(__file__))
     
     
@@ -14,8 +15,7 @@ class phantom:
     def create_volume(self, cfg : dict):
         pass
 
-    # methods to define chromophore's needed for the phantom
-    
+    # methods to define chromophores needed for the phantom
     
     # depricated
     def define_water(self) -> dict:
@@ -46,9 +46,9 @@ class phantom:
         return np.interp(wavelengths_interp, wavelengths, property).reshape(-1).tolist()
 
 
-    def define_ReBphP_PCM(self, wavelengths_interp: Union[list, np.ndarray]) -> dict:
+    def define_ReBphP_PCM(self, wavelengths_m: Union[list, np.ndarray]) -> dict:
         # (m^2 mol^-1) = (mm^-1 M^-1) = (mm^-1 mol^-1 dm^3) = (mm^-1 mol^-1 L^3)
-        wavelengths_interp = np.asarray(wavelengths_interp) * 1e9 # [m] -> [nm]
+        wavelengths_interp = np.asarray(wavelengths_m) * 1e9 # [m] -> [nm]
         
         # ignore first line, load both columns into numpy array
         with open(self.path+'/Chromophores/epsilon_a_ReBphP_PCM_Pr.txt', 'r') as f:
@@ -79,13 +79,13 @@ class phantom:
     
     
     def define_water89_gelatin1_intralipid10(self, 
-                                             wavelengths_interp : Union[list, np.ndarray]
+                                             wavelengths_m : Union[list, np.ndarray]
                                              ) -> dict:
         # Hanna Jonasson et al. 2022. Water and hemoglobin modulated gelatin-based
         # phantoms to spectrally mimic inflamed tissue in the
         # validation of biomedical techniques and the modeling
         # of microdialysis data
-        wavelengths_interp = np.asarray(wavelengths_interp) * 1e9 # [m] -> [nm]
+        wavelengths_interp = np.asarray(wavelengths_m) * 1e9 # [m] -> [nm]
 
         with open(self.path+'/Chromophores/mu_a_water89_gelatin1_intralipid10.txt', 'r') as f:
             data = np.genfromtxt(f, skip_header=1, dtype=np.float32, delimiter=', ')
@@ -112,7 +112,7 @@ class phantom:
 
     # not in use
     def define_agarose_gel(self, 
-                           wavelengths : Union[list, np.ndarray]
+                           wavelengths_m : Union[list, np.ndarray]
                            ) -> dict:
         # TODO: find optical properties of agarose gel
         # Afrina Mustari et al. 2018. Agarose-based Tissue Mimicking Optical
@@ -127,31 +127,32 @@ class phantom:
     
     # not in use
     def define_intralipid_10(self, 
-                             wavelengths : Union[list, np.ndarray]
+                             wavelengths_m : Union[list, np.ndarray]
                              ) -> dict:
         # Light scattering in Intralipid-10% in the wavelength range of 400-1100 nm
         # Hugo J. van Staveren. 1991
         # https://opg.optica.org/ao/fulltext.cfm?uri=ao-30-31-4507&id=39328
         # TODO: find mu_a and make sense of the units [mL L^-1 mm^-1]
-        wavelengths = np.asarray(wavelengths) * 1e6 # [m] -> [um]
+        wavelengths_nm = np.asarray(wavelengths_m) * 1e6 # [m] -> [um]
         self.intralipid10 = {
             'mu_a' : [0.0, 0.0], # [m^-1]
-            'mu_s' : (0.016 * (wavelengths**(-2.4)) * 1e-6).tolist(), # [mL L^-1 mm^-1]
-            'n' : 1.33 * np.ones_like(wavelengths), # refractive index
-            'g' : (1.1 - (0.58*wavelengths)).tolist() # anisotropy
+            'mu_s' : (0.016 * (wavelengths_nm**(-2.4)) * 1e-6).tolist(), # [mL L^-1 mm^-1]
+            'n' : 1.33 * np.ones_like(wavelengths_nm), # refractive index
+            'g' : (1.1 - (0.58*wavelengths_nm)).tolist() # anisotropy
         }
         return self.intralipid10
     
+    '''
     def define_Hb(self,
-                  wavelengths_interp : Union[list, np.ndarray]
+                  wavelengths_m : Union[list, np.ndarray]
                   ) -> dict:
         # Optical properties of biological tissues: a review Steven L Jacques, 2013
         # https://iopscience.iop.org/article/10.1088/0031-9155/58/11/R37/meta
-        wavelengths_interp = np.asarray(wavelengths_interp) * 1e9 # [m] -> [nm]
+        wavelengths_interp = np.asarray(wavelengths_m) * 1e9 # [m] -> [nm]
         
         with open(self.path+'/Chromophores/blood_litcomp_dat.txt', 'r') as f:
             data = np.genfromtxt(f, skip_header=1, dtype=np.float32, delimiter=' ')
-        wavelengths = data[:,0] # [nm]
+        wavelengths_nm = data[:,0] # [nm]
         mu_a_Hb = data[:,1] * 1e3 # [mm^-1] -> [m^-1]
         mu_a_HbO2 = data[:,2] * 1e3 # [mm^-1] -> [m^-1]
         mu_s = data[:,3] * 1e3 # [mm^-1] -> [m^-1]
@@ -159,60 +160,102 @@ class phantom:
         
         self.Hb = {
             'mu_a' : self.interp_property(
-                mu_a_Hb, wavelengths, wavelengths_interp
+                mu_a_Hb, wavelengths_nm, wavelengths_interp
             ), # [m^-1]
             'mu_s' : self.interp_property(
-                mu_s, wavelengths, wavelengths_interp
+                mu_s, wavelengths_nm, wavelengths_interp
             ), # [m^-1]
             'n' : 1.33, # refractive index
             'g' : self.interp_property(
-                g, wavelengths, wavelengths_interp
+                g, wavelengths_nm, wavelengths_interp
             ) # anisotropy
         }
         self.HbO2 = {
             'mu_a' : self.interp_property(
-                mu_a_HbO2, wavelengths, wavelengths_interp
+                mu_a_HbO2, wavelengths_nm, wavelengths_interp
             ), # [m^-1]
             'mu_s' : self.interp_property(
-                mu_s, wavelengths, wavelengths_interp
+                mu_s, wavelengths_nm, wavelengths_interp
             ), # [m^-1]
             'n' : 1.33, # refractive index
             'g' : self.interp_property(
-                g, wavelengths, wavelengths_interp
+                g, wavelengths_nm, wavelengths_interp
             ) # anisotropy
         }
         return self.Hb, self.HbO2
+    '''
     
+    def define_Hb(self,
+                  wavelengths_m : Union[list, np.ndarray]
+                  ) -> dict:
+        # Optical properties of biological tissues: a review Steven L Jacques, 2013
+        # https://iopscience.iop.org/article/10.1088/0031-9155/58/11/R37/meta
+        wavelengths_interp = np.asarray(wavelengths_m) * 1e9 # [m] -> [nm]
+        
+        with open(self.path+'/Chromophores/mu_a_HbO2.txt', 'r') as f:
+            data_HbO2 = np.genfromtxt(f, skip_header=1, dtype=np.float32, delimiter=', ')
+        wavelengths_HbO2 = data_HbO2[:,0] # [nm]
+        mu_a_HbO2 = data_HbO2[:,1] * 1e2 # [cm^-1] -> [m^-1]
+        
+        with open(self.path+'/Chromophores/mu_a_Hb.txt', 'r') as f:
+            data_Hb = np.genfromtxt(f, skip_header=1, dtype=np.float32, delimiter=', ')
+        wavelengths_Hb = data_Hb[:,0] # [nm]
+        mu_a_Hb = data_Hb[:,1] * 1e2
+
+        with open(self.path+'/Chromophores/blood_litcomp_dat.txt', 'r') as f:
+            data_mu_s = np.genfromtxt(f, skip_header=1, dtype=np.float32, delimiter=' ')
+        wavelengths_mu_s = data_mu_s[:,0] # [nm]
+        mu_s = data_mu_s[:,3] * 1e3 # [mm^-1] -> [m^-1]
+        g = data_mu_s[:,4] # anisotropy
+        
+        self.Hb = {
+            'mu_a' : self.interp_property(
+                mu_a_Hb, wavelengths_Hb, wavelengths_interp
+            ), # [m^-1]
+            'mu_s' : self.interp_property(
+                mu_s, wavelengths_mu_s, wavelengths_interp
+            ), # [m^-1]
+            'n' : 1.33, # refractive index
+            'g' : self.interp_property(
+                g, wavelengths_mu_s, wavelengths_interp
+            ) # anisotropy
+        }
+        self.HbO2 = {
+            'mu_a' : self.interp_property(
+                mu_a_HbO2, wavelengths_HbO2, wavelengths_interp
+            ), # [m^-1]
+            'mu_s' : self.interp_property(
+                mu_s, wavelengths_mu_s, wavelengths_interp
+            ), # [m^-1]
+            'n' : 1.33, # refractive index
+            'g' : self.interp_property(
+                g, wavelengths_mu_s, wavelengths_interp
+            ) # anisotropy
+        }
+        return self.Hb, self.HbO2
+            
     def define_H2O(self,
-                   wavelengths_interp : Union[list, np.ndarray],
+                   wavelengths_m : Union[list, np.ndarray],
                    temp : float = 34 # [celcius]
                    ) -> dict:
-        wavelengths_interp = np.asarray(wavelengths_interp) * 1e9 # [m] -> [nm]
+        wavelengths_interp = np.asarray(wavelengths_m) * 1e9 # [m] -> [nm]
         # absorption and scattering 300nm-800nm Optical properties of pure water Hendrik Buiteveld
         # https://www.spiedigitallibrary.org/conference-proceedings-of-spie/2258/0000/Optical-properties-of-pure-water/10.1117/12.190060.full
         with open(self.path+'/Chromophores/coefficients_H2O.txt', 'r') as f:
             data = np.genfromtxt(f, skip_header=1, dtype=np.float32, delimiter=', ')
         data[np.isnan(data)] = 0.0
-        wavelengths_mu_a = data[:,0]
+        wavelengths_nm = data[:,0]
         mu_a = data[:,1] + (temp - 20.1) * data[:,2] # (a + A(T-20.1)) [m^-1]
         mu_s = data[:,3] # [m^-1]
         
         self.H2O = {
             'mu_a' : self.interp_property(
-                wavelengths_mu_a, mu_a, wavelengths_interp 
+                mu_a, wavelengths_nm, wavelengths_interp 
             ), # [m^-1]
             'mu_s' : self.interp_property(
-                wavelengths_mu_a, mu_s, wavelengths_interp
+                mu_s, wavelengths_nm, wavelengths_interp
             ), # [m^-1]
             'n' : 1.33, # refractive index
             'g' : 0.9 # anisotropy
         }
         return self.H2O
-    
-    def define_brain(self,
-                     wavelengths_interp : Union[list, np.ndarray]
-                     ) -> dict:
-        # Optical properties of biological tissues: a review Steven L Jacques, 2013
-        # https://iopscience.iop.org/article/10.1088/0031-9155/58/11/R37/meta
-        wavelengths_interp = np.asarray(wavelengths_interp) * 1e9
-    # define additional chromophores here
