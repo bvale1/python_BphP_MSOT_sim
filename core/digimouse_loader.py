@@ -129,6 +129,18 @@ if __name__ == '__main__':
         mu_a(0.15, 0.85, 0.85) # 21 --> lungs, alexandrakis eta al. (2005)
     ])
     
+    # liver absorption is very high but this is validated by
+    # @article{parsa1989optical,
+    # title={Optical properties of rat liver between 350 and 2200 nm},
+    # author={Parsa, Parwane and Jacques, Steven L and Nishioka, Norman S},
+    # journal={Applied optics},
+    # volume={28},
+    # number={12},
+    # pages={2325--2330},
+    # year={1989},
+    # publisher={Optica Publishing Group}
+    # }
+    
     # optical scattering coefficient [mm^-1]
     mu_s_alex = lambda a, b : (a * (wavelength_nm**(-b))) # alexandrakis eta al. (2005)
     mu_s_jac = lambda a, b : (a * ((wavelength_nm/500)**(-b))) # Jacques & Stevens (2013) 
