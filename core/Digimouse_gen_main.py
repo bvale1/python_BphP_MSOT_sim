@@ -113,6 +113,10 @@ if __name__ == '__main__':
         '--bandpass_filter', default=False, action=argparse.BooleanOptionalAction,
         help='apply bandpass filter to sensor data'
     )
+    parser.add_argument(
+        '--wavelength_m', type=float, default=700e-9, action='store',
+        help='wavelength of light source [m]'
+    )
     args = parser.parse_args()
     
     if args.v == 'INFO':
@@ -145,6 +149,8 @@ if __name__ == '__main__':
         logging.info(f'checkpoint config found {cfg}')
         
         phantom = digimouse_phantom(cfg['digimouse_dir'])
+        H2O = phantom.define_H2O(cfg['wavelengths'])
+        (Hb, HbO2) = phantom.define_Hb(cfg['wavelengths'])
                 
     else:               
         # It is imperative that dx is small enough to support high enough 
@@ -154,7 +160,7 @@ if __name__ == '__main__':
         mcx_domain_size = [0.082, 0.025, 0.082] # [m]
         kwave_domain_size = [0.082, mcx_domain_size[1], 0.082] # [m]
         pml_size = 16 # perfectly matched layer size in grid points
-        [mcx_grid_size, dx] = gf.get_optical_grid_size(
+        [mcx_grid_size, dx] = gf.get_sim_grid_size(
             mcx_domain_size,
             c0_min=c_0,
             pml_size=pml_size,
@@ -163,15 +169,8 @@ if __name__ == '__main__':
         logging.info(f'maximum supported acoustic frequency: {1e-6 * c_0 / (dx * args.ppw)} MHz')
         mcx_domain_size = [mcx_grid_size[0]*dx,
                            mcx_grid_size[1]*dx,
-                           mcx_grid_size[2]*dx]# [m], modify grid size for chosen dx
-        [kwave_grid_size, dx] = gf.get_acoustic_grid_size(
-            dx, 
-            domain_size=kwave_domain_size,
-            pml_size=pml_size
-        )
-        kwave_domain_size = [kwave_grid_size[0]*dx,
-                             kwave_grid_size[1]*dx,
-                             kwave_grid_size[2]*dx]# [m], modify grid size for chosen dx
+                           mcx_grid_size[2]*dx]# [m], modify domain size for chosen dx
+        kwave_grid_size = mcx_grid_size # [m] use same grid for acoustic sim
         
         # configure simulation
         cfg = {
@@ -182,6 +181,7 @@ if __name__ == '__main__':
             'nsensors' : 256,
             'nphotons' : 1e8,
             'nsources' : 10,
+            'wavelengths' : [args.wavelength_m], # [m]
             'mcx_domain_size' : mcx_domain_size,
             'kwave_domain_size' : kwave_domain_size,
             'mcx_grid_size': mcx_grid_size,
@@ -229,6 +229,9 @@ if __name__ == '__main__':
             json.dump(cfg, f, indent='\t')
         
         phantom = digimouse_phantom(cfg['digimouse_dir'])
+        H2O = phantom.define_H2O(cfg['wavelengths'])
+        (Hb, HbO2) = phantom.define_Hb(cfg['wavelengths'])
+
         y_positions_and_rotations = [str(a)+'_'+str(b) for a in np.arange(200, 875, 25) for b in np.arange(4)]
         with open(args.in_progress_file, 'r+') as f:
             

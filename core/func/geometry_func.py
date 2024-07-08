@@ -11,6 +11,7 @@ def grid_xyz(dx, grid_size):
         indexing='ij'
     )
 
+
 def sphere_mask(dx, grid_size, radius, origin):
     
     [X,Y,Z] = grid_xyz(dx, grid_size)
@@ -22,6 +23,7 @@ def sphere_mask(dx, grid_size, radius, origin):
     )
     
     return distances <= radius
+
 
 def cylinder_mask(dx: Union[int, float],
                   grid_size: Union[list, tuple, np.ndarray],
@@ -38,6 +40,7 @@ def cylinder_mask(dx: Union[int, float],
     )
     
     return distances <= radius
+
 
 def quadratic_profile_tumor(dx : Union[int, float],
                             grid_size : Union[list, tuple, np.ndarray],
@@ -59,11 +62,11 @@ def quadratic_profile_tumor(dx : Union[int, float],
     return absoption_profile
 
 
-def get_optical_grid_size(domain_size=[0.082, 0.025, 0.082],
+def get_sim_grid_size(domain_size=[0.082, 0.025, 0.082],
                           c0_min=1500,
                           points_per_wavelength=2,
                           f_max=7e6,
-                          pml_size=10):
+                          pml_size=16):
     
     # calculate grid size from prime factors 2, 3 and 5
     dx_min = c0_min / (points_per_wavelength * f_max)
@@ -77,21 +80,7 @@ def get_optical_grid_size(domain_size=[0.082, 0.025, 0.082],
         ] if i * dx_min >= domain_size[dim] - 2 * pml_size * dx_min])
     
     domain_size -= 2 * pml_size * dx_min
-    dx = np.min(domain_size / grid_size)
-    
-    return grid_size.tolist(), dx
-    
-    
-def get_acoustic_grid_size(dx, domain_size=[0.082, 0.025, 0.082], pml_size=10):
-    
-    domain_size = np.asarray(domain_size) + 2 * pml_size * dx
-    grid_size = np.zeros(3, dtype=int)
-    for dim in range(3):
-        grid_size[dim] = min([i for i in [
-            2**(np.ceil(np.log2((domain_size[dim] / dx)))) - 2 * pml_size,
-            (2**(np.ceil(np.log2((domain_size[dim] / dx)))-2) * 3) - 2 * pml_size,
-            (2**(np.ceil(np.log2((domain_size[dim] / dx)))-3) * 5) - 2 * pml_size
-        ] if i * dx >= domain_size[dim] - 2 * pml_size * dx])
+    dx = np.max(domain_size / grid_size)
     
     return grid_size.tolist(), dx
 
