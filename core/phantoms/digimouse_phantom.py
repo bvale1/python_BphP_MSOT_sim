@@ -113,7 +113,7 @@ class digimouse_phantom(phantom):
         mu_s_jac(2.14, 1.2), # 10 --> rest of the brain --> brain, Jacques & Stevens (2013)
         mu_s_alex(4e7, 2.82), # 11 --> masseter muscles, alexandrakis eta al. (2005)
         mu_s_alex(38, 0.53), # 12 --> lachrymal glands --> adipose, alexandrakis eta al. (2005)
-        self.H2O['mu_s'], # 13 --> bladder --> water, Hendrik Buiteveld (1994)
+        self.H2O['mu_s'][0], # 13 --> bladder --> water, Hendrik Buiteveld (1994)
         mu_s_alex(4e7, 2.82), # 14 --> testis --> muscle, alexandrakis eta al. (2005)
         mu_s_alex(792, 0.97), # 15 --> stomach, alexandrakis eta al. (2005)
         mu_s_alex(629, 1.05), # 16 --> spleen, alexandrakis eta al. (2005)
