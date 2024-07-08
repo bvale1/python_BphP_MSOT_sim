@@ -65,7 +65,7 @@ if __name__ == '__main__':
     coupling_medium_mu_s = 0.1 # [mm^-1]
     
     wavelength_nm = 700 # [nm]
-    wavelength_m = wavelength_nm * 1e-9 # [m]
+    wavelength_m = [wavelength_nm * 1e-9] # [m]
     
     # The following are optical properties recommended for use by the authors of digimouse
     # @article{alexandrakis2005tomographic,

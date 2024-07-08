@@ -241,8 +241,8 @@ class phantom:
         wavelengths_interp = np.asarray(wavelengths_m) * 1e9 # [m] -> [nm]
         # absorption and scattering 300nm-800nm Optical properties of pure water Hendrik Buiteveld
         # https://www.spiedigitallibrary.org/conference-proceedings-of-spie/2258/0000/Optical-properties-of-pure-water/10.1117/12.190060.full
-        with open(self.path+'/Chromophores/coefficients_H2O.txt', 'r') as f:
-            data = np.genfromtxt(f, skip_header=1, dtype=np.float32, delimiter=', ')
+        with open(self.path+'/Chromophores/coefficients_H2O.txt', 'r', encoding='latin1') as f:
+            data = np.genfromtxt(f, skip_header=1, dtype=np.float32, delimiter=', ', comments=None)
         data[np.isnan(data)] = 0.0
         wavelengths_nm = data[:,0]
         mu_a = data[:,1] + (temp - 20.1) * data[:,2] # (a + A(T-20.1)) [m^-1]
