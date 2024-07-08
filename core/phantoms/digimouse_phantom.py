@@ -44,7 +44,7 @@ class digimouse_phantom(phantom):
         # volume (volume[nx//2, ny//2, nz//2])
         tissue_types = np.zeros(cfg['mcx_grid_size'], dtype=np.int8)
         if y_idx - ny//2 < 0:
-            # pad the digimouse phantom with zeros
+            # pad the digimouse phantom with zeros (background/coupling medium)
             digimouse = np.pad(
                 digimouse, 
                 ((0, 0), (ny//2 - y_idx, 0), (0, 0)),
@@ -52,7 +52,7 @@ class digimouse_phantom(phantom):
                 constant_values=0
             )
         if y_idx + ny//2 > digimouse.shape[1]:
-            # pad the digimouse phantom with zeros
+            # pad the digimouse phantom with zeros (background/coupling medium)
             digimouse = np.pad(
                 digimouse, 
                 ((0, 0), (0, y_idx + ny//2 - digimouse.shape[1]), (0, 0)),
@@ -69,7 +69,7 @@ class digimouse_phantom(phantom):
         wavelengths_nm = wavelength_m * 1e9 # [m] -> [nm]
 
         # blood volume fraction S_B, oxygen saturation x, water volume fraction S_W
-        mu_a = lambda S_B, x, S_W : (S_B*(x*self.Hb['mu_a']+(1-x)*self.HbO2['mu_a']) + S_W*self.H2O['mu_a']) # alexandrakis eta al. (2005)
+        mu_a = lambda S_B, x, S_W : (S_B*(x*self.Hb['mu_a'][0]+(1-x)*self.HbO2['mu_a'][0]) + S_W*self.H2O['mu_a'][0]) # alexandrakis eta al. (2005)
         # power law function for scattering coefficient
         mu_s_alex = lambda a, b : (a * (wavelengths_nm**(-b))) # alexandrakis eta al. (2005)
         mu_s_jac = lambda a, b : (a * ((wavelengths_nm/500)**(-b))) # Jacques & Stevens (2013) 
@@ -88,7 +88,7 @@ class digimouse_phantom(phantom):
         mu_a(0.03, 0.6, 0.75), # 10 --> rest of the brain --> Rat brain cortex, Jacques & Stevens (2013)
         mu_a(0.07, 0.8, 0.5), # 11 --> masseter muscles, alexandrakis eta al. (2005)
         mu_a(0.0033, 0.7, 0.5), # 12 --> lachrymal glands --> adipose, alexandrakis eta al. (2005)
-        self.H2O['mu_s'], # 13 --> bladder --> water, Hendrik Buiteveld (1994)
+        self.H2O['mu_s'][0], # 13 --> bladder --> water, Hendrik Buiteveld (1994)
         mu_a(0.07, 0.8, 0.5), # 14 --> testis --> muscle, alexandrakis eta al. (2005)
         mu_a(0.01, 0.7, 0.8), # 15 --> stomach, alexandrakis eta al. (2005)
         mu_a(0.3, 0.75, 0.7), # 16 --> spleen, alexandrakis eta al. (2005)
