@@ -274,10 +274,10 @@ if __name__ == '__main__':
     
     # initialise random number generator
     if cfg['seed']:
-        logging.info(f'seed provided: {cfg['seed']}')
+        logging.info(f'seed provided: {cfg["seed"]}')
     else:
         cfg['seed'] = np.random.randint(0, 2**32 - 1)
-        logging.info(f'no seed provided, random seed selected: {cfg['seed']}')        
+        logging.info(f'no seed provided, random seed selected: {cfg["seed"]}')        
     rng = np.random.default_rng(cfg['seed'])
     
     # intialise bandpass filter
