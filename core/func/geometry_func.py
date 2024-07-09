@@ -89,7 +89,8 @@ def random_spline_mask(rng : np.random.Generator,
                        R_min=85,
                        R_max=125,
                        n_min=6,
-                       n_max=12):
+                       n_max=12,
+                       crop_size=256):
     n_points = int(rng.uniform(n_min, n_max))
     # define the boundary with a coarse set of random points
     R_coarse = rng.uniform(R_min, R_max, n_points).astype(np.float32)
@@ -103,7 +104,7 @@ def random_spline_mask(rng : np.random.Generator,
     x = R * np.sin(theta)
     y = R * np.cos(theta)
     # create the binary mask within the boundary using 2D linear interpolation
-    [X, Y] = np.meshgrid(np.arange(256)-128, np.arange(256)-128)
+    [X, Y] = np.meshgrid(np.arange(crop_size)-crop_size//2, np.arange(crop_size)-crop_size//2)
     interp = interpolate.LinearNDInterpolator(
         list(zip(x, y)), np.ones(1000), fill_value=0
     )

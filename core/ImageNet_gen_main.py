@@ -145,8 +145,6 @@ if __name__ == '__main__':
             cfg = json.load(f)
         logging.info(f'checkpoint config found {cfg}')
         
-        phantom = ImageNet_phantom(cfg['seed'])
-        
         if cfg['seed']:
             seed = cfg['seed']
             logging.info(f'seed provided: {seed}')
@@ -154,6 +152,8 @@ if __name__ == '__main__':
             seed = np.random.randint(0, 2**32 - 1)
             logging.info(f'no seed provided, random seed selected: {seed}')        
         rng = np.random.default_rng(seed)
+        
+        phantom = ImageNet_phantom(rng)
         
     else:
         if args.seed:
@@ -171,24 +171,19 @@ if __name__ == '__main__':
         mcx_domain_size = [0.082, 0.025, 0.082] # [m]
         kwave_domain_size = [0.082, mcx_domain_size[1], 0.082] # [m]
         pml_size = 10 # perfectly matched layer size in grid points
-        [mcx_grid_size, dx] = gf.get_optical_grid_size(
+        [mcx_grid_size, dx] = gf.get_sim_grid_size(
             mcx_domain_size,
             c0_min=c_0,
             pml_size=pml_size,
-            points_per_wavelength=args.ppw
+            points_per_wavelength=args.ppw,
+            f_max=6.8e6
         )
         logging.info(f'maximum supported acoustic frequency: {1e-6 * c_0 / (dx * args.ppw)} MHz')
         mcx_domain_size = [mcx_grid_size[0]*dx,
                            mcx_grid_size[1]*dx,
-                           mcx_grid_size[2]*dx]# [m], modify grid size for chosen dx
-        [kwave_grid_size, dx] = gf.get_acoustic_grid_size(
-            dx, 
-            domain_size=kwave_domain_size,
-            pml_size=pml_size
-        )
-        kwave_domain_size = [kwave_grid_size[0]*dx,
-                             kwave_grid_size[1]*dx,
-                             kwave_grid_size[2]*dx]# [m], modify grid size for chosen dx
+                           mcx_grid_size[2]*dx]# [m], modify domain size for chosen dx
+        kwave_grid_size = mcx_grid_size # [m] use same grid for acoustic sim
+        kwave_domain_size = mcx_domain_size # [m] use same domain for acoustic sim
         
         # configure simulation
         cfg = {
@@ -214,7 +209,6 @@ if __name__ == '__main__':
             'recon_iterations' : args.recon_iterations, # time reversal iterations
             'recon_alpha' : args.recon_alpha, # time reversal alpha (regularisation hyperparameter)
             'crop_size' : args.crop_size, # pixel with of output images and ground truth
-            'image_no' : 0, # for checkpointing
             'stage' : 'optical', # for checkpointing (optical, acoustic, inverse)
             'weights_dir' : args.weights_dir, # directory containing weights for combining sensor data
             'forward_model' : args.forward_model, # forward model to use (invision, point)
@@ -226,6 +220,7 @@ if __name__ == '__main__':
             'irf_path' : args.irf_path, # path to impulse response function
             'dt' : 25e-9, # time step [s]
             'Nt' : 2030, # number of time steps
+            'bandpass_filter' : args.bandpass_filter, # apply bandpass filter to sensor data
         }
         
         logging.info(f'no checkpoint, creating config {cfg}')
@@ -243,7 +238,7 @@ if __name__ == '__main__':
         with open(cfg['save_dir']+'config.json', 'w') as f:
             json.dump(cfg, f, indent='\t')
         
-        phantom = ImageNet_phantom(seed)
+        phantom = ImageNet_phantom(rng)
               
         ImageNet_files = glob.glob(f'{args.ImageNet_dir}/**/*.JPEG', recursive=True)
         with open(args.in_progress_file, 'r+') as f:

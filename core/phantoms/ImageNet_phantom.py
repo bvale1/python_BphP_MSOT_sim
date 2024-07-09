@@ -8,9 +8,9 @@ import func.utility_func as uf
 
 class ImageNet_phantom(phantom):
     
-    def __init__(self, seed : int):
+    def __init__(self, rng : np.random.Generator):
         super().__init__()
-        self.rng = np.random.default_rng(seed=seed)
+        self.rng = rng
         
     def create_volume(self, cfg: dict, image_file : str):
         ppw = cfg['points_per_wavelength']
@@ -22,10 +22,10 @@ class ImageNet_phantom(phantom):
             image /= 255.0
             image = np.transpose(image, (2, 0, 1))
         
-        mu_s_min = 500 # [m^-1]
-        mu_s_max = 2500 # [m^-1]
-        mu_a_min = 0.5 # [m^-1]
-        mu_a_max = 2.5 # [m^-1]
+        mu_s_min = self.rng.uniform(8000, 12000) # [m^-1]
+        mu_s_max = self.rng.uniform(26000, 30000) # [m^-1]
+        mu_a_min = self.rng.uniform(2, 10) # [m^-1]
+        mu_a_max = self.rng.uniform(20, 200) # [m^-1]
         coupling_medium_mu_a = 0.1 # [m^-1]
         coupling_medium_mu_s = 100 # [m^-1]
         
@@ -38,7 +38,9 @@ class ImageNet_phantom(phantom):
         )
         
         (mu_a_channel, mu_s_channel) = np.random.choice([0, 1, 2], 2, replace=False)
-        bg_mask = gf.random_spline_mask(self.rng, R_min=42.5*ppw, R_max=62.5*ppw)
+        bg_mask = gf.random_spline_mask(
+            self.rng, R_min=35*ppw, R_max=90*ppw, crop_size=cfg['crop_size']
+        )
         bg_mask = uf.square_centre_pad(bg_mask, cfg['mcx_grid_size'][0])
         bg_mask = bg_mask[:,np.newaxis,:]
         image = uf.square_centre_pad(image, cfg['mcx_grid_size'][0])

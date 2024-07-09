@@ -199,7 +199,6 @@ if __name__ == '__main__':
             'recon_iterations' : args.recon_iterations, # time reversal iterations
             'recon_alpha' : args.recon_alpha, # time reversal alpha (regularisation hyperparameter)
             'crop_size' : args.crop_size, # pixel with of output images and ground truth
-            'image_no' : 0, # for checkpointing
             'stage' : 'optical', # for checkpointing (optical, acoustic, inverse)
             'weights_dir' : args.weights_dir, # directory containing weights for combining sensor data
             'digimouse_dir' : args.digimouse_dir, # path to digimouse atlas
