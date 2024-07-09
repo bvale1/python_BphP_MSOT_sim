@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import func.plot_func as pf
 from scipy.ndimage import zoom
 from phantoms.phantom import phantom
+from phantoms.digimouse_phantom import digimouse_phantom
 
 # this is a test script I used to implement and visualise the digimouse phantom
 
@@ -29,7 +30,7 @@ digimouse = digimouse.reshape(380, 992, 208, order='F')
 # }
 
 if __name__ == '__main__':
-    
+    '''
     dx = 0.0001
     domain = np.array([380, 992, 208]) * dx
     new_domain = np.array([308, 992, 380]) * dx
@@ -232,4 +233,27 @@ if __name__ == '__main__':
     
     pf.heatmap(cross_sections_mu_a, dx=dx, sharescale=True, title=r'$\mu_{a}$ (m$^{-1}$)')
     pf.heatmap(cross_sections_mu_s, dx=dx, sharescale=True, title=r'$\mu_{s}$ (m$^{-1}$)')
+    '''
+    cfg = {
+     'wavelengths': [7e-07],
+     'mcx_domain_size': [0.082, 0.025, 0.082],
+     'kwave_domain_size': [0.082, 0.025, 0.082],
+     'mcx_grid_size': [748, 236, 748],
+     'kwave_grid_size': [748, 236, 748],
+     'points_per_wavelength': 2,
+     'dx': 0.00010962566844919787,
+     'phantom': 'digimouse_phantom',
+     'crop_size': 360
+    }
+    phantom_obj = digimouse_phantom('\\\\wsl$\\Ubuntu-22.04\\home\\wv00017\\digimouse_atlas\\atlas_380x992x208.img')
+    H2O = phantom_obj.define_H2O(700e-9)
+    (Hb, HbO2) = phantom_obj.define_Hb(700e-9)
+    (volume, bg_mask) = phantom_obj.create_volume(cfg, 500, rotate=3)
+    shape = volume.shape[1:]
+    volume = volume[:,(shape[0]-cfg['crop_size'])//2:(shape[0]+cfg['crop_size'])//2,:,(shape[2]-cfg['crop_size'])//2:(shape[2]+cfg['crop_size'])//2]
+    bg_mask = bg_mask[(shape[0]-cfg['crop_size'])//2:(shape[0]+cfg['crop_size'])//2,  (shape[2]-cfg['crop_size'])//2:(shape[2]+cfg['crop_size'])//2]
+    pf.heatmap(volume[0,:,volume.shape[2]//2,:], dx=cfg['dx'], title=r'$\mu_{a}$ (m$^{-1}$)')
+    pf.heatmap(volume[1,:,volume.shape[2]//2,:], dx=cfg['dx'], title=r'$\mu_{s}$ (m$^{-1}$)')
+    pf.heatmap(bg_mask, dx=cfg['dx'], title='mask')
+    
     

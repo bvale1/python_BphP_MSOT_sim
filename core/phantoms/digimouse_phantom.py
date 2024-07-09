@@ -1,8 +1,5 @@
 import numpy as np
 from phantoms.phantom import phantom
-import func.geometry_func as gf
-import func.utility_func as uf
-from scipy import interpolate
 from scipy.ndimage import zoom
 
 
@@ -31,15 +28,11 @@ class digimouse_phantom(phantom):
         
         zoom_factors = [n / o for n, o in zip([308, 992, 380], [308, 992, 208])]
         digimouse = zoom(digimouse, zoom_factors, order=0)
-        
         # interpolate to mcx grid dx
         zoom_factors = [dx / cfg['dx'], dx / cfg['dx'], dx / cfg['dx']]
         digimouse = zoom(digimouse, zoom_factors, order=0)
         digimouse = np.rot90(digimouse, rotate, axes=(0, 2))
-        
         [nx, ny, nz] = cfg['mcx_grid_size']
-        # background mask
-        bg_mask = digimouse[:,y_idx,:] != 0
         # translate digimouse[380//2, y_idx, 380//2] to be at the center of the
         # volume (volume[nx//2, ny//2, nz//2])
         tissue_types = np.zeros(cfg['mcx_grid_size'], dtype=np.int8)
@@ -51,6 +44,7 @@ class digimouse_phantom(phantom):
                 mode='constant',
                 constant_values=0
             )
+            y_idx = ny//2
         if y_idx + ny//2 > digimouse.shape[1]:
             # pad the digimouse phantom with zeros (background/coupling medium)
             digimouse = np.pad(
@@ -59,10 +53,12 @@ class digimouse_phantom(phantom):
                 mode='constant',
                 constant_values=0
             )
-        
         digimouse = digimouse[:, (y_idx-ny//2):(y_idx+ny//2), :]
         # place the digimouse phantom in the center of the volume
-        tissue_types[(nx-digimouse.shape[0])//2:(nx+digimouse.shape[0])//2, :, (nz-digimouse.shape[2])//2:(nz+digimouse.shape[0])//2] = digimouse        
+        tissue_types[(nx-digimouse.shape[0])//2:(nx+digimouse.shape[0])//2, :, (nz-digimouse.shape[2])//2:(nz+digimouse.shape[2])//2] = digimouse        
+        
+        # background mask
+        bg_mask = tissue_types[:,ny//2,:] != 0
         
         coupling_medium_mu_a = 0.1 # [m^-1]
         coupling_medium_mu_s = 100 # [m^-1]
@@ -71,8 +67,8 @@ class digimouse_phantom(phantom):
         # blood volume fraction S_B, oxygen saturation x, water volume fraction S_W
         mu_a = lambda S_B, x, S_W : (S_B*(x*self.Hb['mu_a'][0]+(1-x)*self.HbO2['mu_a'][0]) + S_W*self.H2O['mu_a'][0]) # alexandrakis eta al. (2005)
         # power law function for scattering coefficient
-        mu_s_alex = lambda a, b : (a * (wavelengths_nm**(-b))) # alexandrakis eta al. (2005)
-        mu_s_jac = lambda a, b : (a * ((wavelengths_nm/500)**(-b))) # Jacques & Stevens (2013) 
+        mu_s_alex = lambda a, b : (a * (wavelengths_nm**(-b))) * 1e3 # alexandrakis eta al. (2005)
+        mu_s_jac = lambda a, b : (a * ((wavelengths_nm/500)**(-b))) * 1e3 # Jacques & Stevens (2013) 
         
         absorption_coefficients = np.array([
         coupling_medium_mu_a, # 0 --> background
@@ -97,7 +93,7 @@ class digimouse_phantom(phantom):
         mu_a(0.056, 0.75, 0.8),  # 19 --> kidneys, alexandrakis eta al. (2005)
         mu_a(0.07, 0.8, 0.5), # 20 --> adrenal glands --> muscle, alexandrakis eta al. (2005)
         mu_a(0.15, 0.85, 0.85) # 21 --> lungs, alexandrakis eta al. (2005)
-        ])
+        ]) # [m^-1]
 
         scattering_coefficients = np.array([
         coupling_medium_mu_s, # 0 --> background
@@ -122,13 +118,13 @@ class digimouse_phantom(phantom):
         mu_s_alex(41700, 1.51), # 19 --> kidneys, alexandrakis eta al. (2005)
         mu_s_alex(4e7, 2.82), # 20 --> adrenal glands --> muscle, alexandrakis eta al. (2005)
         mu_s_alex(68.4, 0.53) # 21 --> lungs, alexandrakis eta al. (2005)
-        ])
+        ]) # [m^-1]
         scattering_coefficients /= (1 - 0.9) # reduced scattering -> scattering, g = 0.9
 
         # assign optical properties to the volume
-        volume = np.zeros(([2]+cfg['mcx_grid_size']), dtype=np.float32)
+        volume = np.zeros(([2, nx, ny, nz]), dtype=np.float32)
         
-        volume[0] = absorption_coefficients[tissue_types] * 1e3 # [mm^-1] -> [m^-1]
-        volume[1] = scattering_coefficients[tissue_types] * 1e3 # [mm^-1] -> [m^-1]        
+        volume[0] = absorption_coefficients[tissue_types] # [m^-1]
+        volume[1] = scattering_coefficients[tissue_types] # [m^-1]
         
         return (volume, bg_mask)

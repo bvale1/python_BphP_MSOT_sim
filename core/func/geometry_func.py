@@ -66,7 +66,7 @@ def get_sim_grid_size(domain_size=[0.082, 0.025, 0.082],
                       c0_min=1500,
                       points_per_wavelength=2,
                       f_max=7e6,
-                      pml_size=16):
+                      pml_size=10):
     
     # calculate grid size from prime factors 2, 3 and 5
     dx_min = c0_min / (points_per_wavelength * f_max)

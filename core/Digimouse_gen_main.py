@@ -106,7 +106,7 @@ if __name__ == '__main__':
         help='interpolate sensor data from 256 to 512 sensors'
     )
     parser.add_argument(
-        '--noise_std', type=float, default=1.5, action='store',
+        '--noise_std', type=float, default=0.0, action='store',
         help='standard deviation Guassian noise to add to the sensor data'
     )
     parser.add_argument(
@@ -159,18 +159,20 @@ if __name__ == '__main__':
         # light source pairs are separted by 0.02474m in the y direction
         mcx_domain_size = [0.082, 0.025, 0.082] # [m]
         kwave_domain_size = [0.082, mcx_domain_size[1], 0.082] # [m]
-        pml_size = 16 # perfectly matched layer size in grid points
+        pml_size = 10 # perfectly matched layer size in grid points
         [mcx_grid_size, dx] = gf.get_sim_grid_size(
             mcx_domain_size,
             c0_min=c_0,
             pml_size=pml_size,
-            points_per_wavelength=args.ppw
+            points_per_wavelength=args.ppw,
+            f_max=6.8e6
         )
         logging.info(f'maximum supported acoustic frequency: {1e-6 * c_0 / (dx * args.ppw)} MHz')
         mcx_domain_size = [mcx_grid_size[0]*dx,
                            mcx_grid_size[1]*dx,
                            mcx_grid_size[2]*dx]# [m], modify domain size for chosen dx
         kwave_grid_size = mcx_grid_size # [m] use same grid for acoustic sim
+        kwave_domain_size = mcx_domain_size # [m] use same domain for acoustic sim
         
         # configure simulation
         cfg = {
