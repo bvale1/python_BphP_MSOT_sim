@@ -243,7 +243,7 @@ if __name__ == '__main__':
      'points_per_wavelength': 2,
      'dx': 0.00010962566844919787,
      'phantom': 'digimouse_phantom',
-     'crop_size': 360
+     'crop_size': 384
     }
     phantom_obj = digimouse_phantom('\\\\wsl$\\Ubuntu-22.04\\home\\wv00017\\digimouse_atlas\\atlas_380x992x208.img')
     H2O = phantom_obj.define_H2O(700e-9)

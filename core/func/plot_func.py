@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import logging
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 # plots 4D data as a 3D scatter plot
 def plot4D(data,
@@ -81,6 +82,9 @@ def heatmap(img,
             extent=extent,
             origin='lower'
         ))
+        divider = make_axes_locatable(ax[0])
+        cbar_ax = divider.append_axes('right', size='5%', pad=0.05)
+        cbar = fig.colorbar(frames[0], cax=cbar_ax, orientation='vertical')        
         
     else: # multiple pulses
         nframes = shape[0]

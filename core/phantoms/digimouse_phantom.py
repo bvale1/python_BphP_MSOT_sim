@@ -66,7 +66,7 @@ class digimouse_phantom(phantom):
 
         # blood volume fraction S_B, oxygen saturation x, water volume fraction S_W
         mu_a = lambda S_B, x, S_W : (S_B*(x*self.Hb['mu_a'][0]+(1-x)*self.HbO2['mu_a'][0]) + S_W*self.H2O['mu_a'][0]) # alexandrakis eta al. (2005)
-        # power law function for scattering coefficient
+        # power law function for reduced scattering coefficient
         mu_s_alex = lambda a, b : (a * (wavelengths_nm**(-b))) * 1e3 # alexandrakis eta al. (2005)
         mu_s_jac = lambda a, b : (a * ((wavelengths_nm/500)**(-b))) * 1e3 # Jacques & Stevens (2013) 
         
@@ -96,7 +96,7 @@ class digimouse_phantom(phantom):
         ]) # [m^-1]
 
         scattering_coefficients = np.array([
-        coupling_medium_mu_s, # 0 --> background
+        0.0, # 0 --> background
         mu_s_alex(38, 0.53), # 1 --> skin --> adipose, alexandrakis eta al. (2005)
         mu_s_alex(35600, 1.47), # 2 --> skeleton, alexandrakis eta al. (2005)
         mu_s_alex(38, 0.53), # 3 --> eye --> adipose, alexandrakis eta al. (2005)
@@ -120,6 +120,7 @@ class digimouse_phantom(phantom):
         mu_s_alex(68.4, 0.53) # 21 --> lungs, alexandrakis eta al. (2005)
         ]) # [m^-1]
         scattering_coefficients /= (1 - 0.9) # reduced scattering -> scattering, g = 0.9
+        scattering_coefficients[0] = coupling_medium_mu_s
 
         # assign optical properties to the volume
         volume = np.zeros(([2, nx, ny, nz]), dtype=np.float32)
