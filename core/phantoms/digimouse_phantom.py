@@ -65,7 +65,8 @@ class digimouse_phantom(phantom):
         wavelengths_nm = wavelength_m * 1e9 # [m] -> [nm]
 
         # blood volume fraction S_B, oxygen saturation x, water volume fraction S_W
-        mu_a = lambda S_B, x, S_W : (S_B*(x*self.Hb['mu_a'][0]+(1-x)*self.HbO2['mu_a'][0]) + S_W*self.H2O['mu_a'][0]) # alexandrakis eta al. (2005)
+        # note that the equation in the paper contains a typo, mu_a_HbO2 and mu_a_Hb are the wrong way around
+        mu_a = lambda S_B, x, S_W : (S_B*(x*self.HbO2['mu_a'][0]+(1-x)*self.Hb['mu_a'][0]) + S_W*self.H2O['mu_a'][0]) # alexandrakis eta al. (2005)
         # power law function for reduced scattering coefficient
         mu_s_alex = lambda a, b : (a * (wavelengths_nm**(-b))) * 1e3 # alexandrakis eta al. (2005)
         mu_s_jac = lambda a, b : (a * ((wavelengths_nm/500)**(-b))) * 1e3 # Jacques & Stevens (2013) 
