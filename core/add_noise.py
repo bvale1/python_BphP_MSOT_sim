@@ -306,7 +306,7 @@ if __name__ == '__main__':
     
     # 2. apply convolution with the impulse response of the sensor to the signals    
     irf = np.load(args.irf_path)
-    sensor_data = convolve1d(sensor_data, irf, mode='nearest', axis=-1)
+    noisy_sensor_data = convolve1d(noisy_sensor_data, irf, mode='nearest', axis=-1)
     #sensor_data = np.fft.ifft(np.fft.fft(sensor_data, axis=-1) * np.fft.fft(irf), axis=-1).real.astype(np.float32)
     logging.info('sensor data convolved with impulse response function')
     

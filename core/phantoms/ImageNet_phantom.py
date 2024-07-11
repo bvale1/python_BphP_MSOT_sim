@@ -22,10 +22,10 @@ class ImageNet_phantom(phantom):
             image /= 255.0
             image = np.transpose(image, (2, 0, 1))
         
-        mu_s_min = self.rng.uniform(8000, 12000) # [m^-1]
-        mu_s_max = self.rng.uniform(26000, 30000) # [m^-1]
+        mu_s_min = self.rng.uniform(6000, 12000) # [m^-1]
+        mu_s_max = self.rng.uniform(13000, 26000) # [m^-1]
         mu_a_min = self.rng.uniform(2, 10) # [m^-1]
-        mu_a_max = self.rng.uniform(20, 200) # [m^-1]
+        mu_a_max = self.rng.uniform(20, 60) # [m^-1]
         coupling_medium_mu_a = 0.1 # [m^-1]
         coupling_medium_mu_s = 100 # [m^-1]
         

@@ -85,7 +85,7 @@ class digimouse_phantom(phantom):
         mu_a(0.03, 0.6, 0.75), # 10 --> rest of the brain --> Rat brain cortex, Jacques & Stevens (2013)
         mu_a(0.07, 0.8, 0.5), # 11 --> masseter muscles, alexandrakis eta al. (2005)
         mu_a(0.0033, 0.7, 0.5), # 12 --> lachrymal glands --> adipose, alexandrakis eta al. (2005)
-        self.H2O['mu_s'][0], # 13 --> bladder --> water, Hendrik Buiteveld (1994)
+        self.H2O['mu_a'][0], # 13 --> bladder --> water, Hendrik Buiteveld (1994)
         mu_a(0.07, 0.8, 0.5), # 14 --> testis --> muscle, alexandrakis eta al. (2005)
         mu_a(0.01, 0.7, 0.8), # 15 --> stomach, alexandrakis eta al. (2005)
         mu_a(0.3, 0.75, 0.7), # 16 --> spleen, alexandrakis eta al. (2005)
@@ -110,7 +110,7 @@ class digimouse_phantom(phantom):
         mu_s_jac(2.14, 1.2), # 10 --> rest of the brain --> brain, Jacques & Stevens (2013)
         mu_s_alex(4e7, 2.82), # 11 --> masseter muscles, alexandrakis eta al. (2005)
         mu_s_alex(38, 0.53), # 12 --> lachrymal glands --> adipose, alexandrakis eta al. (2005)
-        self.H2O['mu_s'][0], # 13 --> bladder --> water, Hendrik Buiteveld (1994)
+        0.0, # 13 --> bladder --> water, Hendrik Buiteveld (1994)
         mu_s_alex(4e7, 2.82), # 14 --> testis --> muscle, alexandrakis eta al. (2005)
         mu_s_alex(792, 0.97), # 15 --> stomach, alexandrakis eta al. (2005)
         mu_s_alex(629, 1.05), # 16 --> spleen, alexandrakis eta al. (2005)
@@ -122,6 +122,7 @@ class digimouse_phantom(phantom):
         ]) # [m^-1]
         #scattering_coefficients /= (1 - 0.9) # reduced scattering -> scattering, g = 0.9
         scattering_coefficients[0] = coupling_medium_mu_s
+        scattering_coefficients[13] = self.H2O['mu_s'][0]
 
         # assign optical properties to the volume
         volume = np.zeros(([2, nx, ny, nz]), dtype=np.float32)
