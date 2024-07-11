@@ -120,7 +120,7 @@ class digimouse_phantom(phantom):
         mu_s_alex(4e7, 2.82), # 20 --> adrenal glands --> muscle, alexandrakis eta al. (2005)
         mu_s_alex(68.4, 0.53) # 21 --> lungs, alexandrakis eta al. (2005)
         ]) # [m^-1]
-        scattering_coefficients /= (1 - 0.9) # reduced scattering -> scattering, g = 0.9
+        #scattering_coefficients /= (1 - 0.9) # reduced scattering -> scattering, g = 0.9
         scattering_coefficients[0] = coupling_medium_mu_s
 
         # assign optical properties to the volume

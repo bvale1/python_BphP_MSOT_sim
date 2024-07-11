@@ -117,7 +117,10 @@ def heatmap(img,
             if labels:
                 ax[frame].set(title=labels[frame])
             if not sharescale:
-                cbar = plt.colorbar(frames[frame], ax=ax[frame])
+                divider = make_axes_locatable(ax[frame])
+                cbar_ax = divider.append_axes('right', size='5%', pad=0.05)
+                cbar = fig.colorbar(frames[frame], cax=cbar_ax, orientation='vertical')
+                #cbar = plt.colorbar(frames[frame], ax=ax[frame])
                 if cbar_label:
                     cbar.set_label=cbar_label
 
