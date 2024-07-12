@@ -86,10 +86,10 @@ def get_sim_grid_size(domain_size=[0.082, 0.025, 0.082],
 
                            
 def random_spline_mask(rng : np.random.Generator,
-                       R_min=85,
-                       R_max=125,
-                       n_min=6,
-                       n_max=12,
+                       R_min=50,
+                       R_max=110,
+                       n_min=7,
+                       n_max=14,
                        crop_size=256):
     n_points = int(rng.uniform(n_min, n_max))
     # define the boundary with a coarse set of random points

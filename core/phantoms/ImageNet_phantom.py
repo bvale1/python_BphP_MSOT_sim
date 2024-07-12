@@ -39,7 +39,7 @@ class ImageNet_phantom(phantom):
         
         (mu_a_channel, mu_s_channel) = np.random.choice([0, 1, 2], 2, replace=False)
         bg_mask = gf.random_spline_mask(
-            self.rng, R_min=35*ppw, R_max=90*ppw, crop_size=cfg['crop_size']
+            self.rng, R_min=25*ppw, R_max=55*ppw, crop_size=cfg['crop_size']
         )
         bg_mask = uf.square_centre_pad(bg_mask, cfg['mcx_grid_size'][0])
         bg_mask = bg_mask[:,np.newaxis,:]
