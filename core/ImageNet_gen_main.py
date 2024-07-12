@@ -92,7 +92,7 @@ if __name__ == '__main__':
     )
     parser.add_argument('--nimages', type=int, default=16, action='store')
     parser.add_argument('--seed', type=int, default=None, action='store')
-    parser.add_argument('--crop_size', type=int, default=256, action='store')
+    parser.add_argument('--crop_size', type=int, default=384, action='store')
     parser.add_argument('--sim_git_hash', type=str, default=None, action='store')
     parser.add_argument('--recon_iterations', type=int, default=5, action='store')
     parser.add_argument('--recon_alpha', type=float, default=1.0, action='store')

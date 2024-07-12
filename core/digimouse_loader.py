@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import func.plot_func as pf
-from scipy.ndimage import zoom
+from skimage.transform import resize
 from phantoms.phantom import phantom
 from phantoms.digimouse_phantom import digimouse_phantom
 
@@ -32,13 +32,10 @@ digimouse = digimouse.reshape(380, 992, 208, order='F')
 if __name__ == '__main__':
     '''
     dx = 0.0001
-    domain = np.array([380, 992, 208]) * dx
-    new_domain = np.array([308, 992, 380]) * dx
     
     grid = np.array([308, 992, 208])
-    new_grid = np.array([308, 992, 380])
-    zoom_factors = [n / o for n, o in zip(new_grid, grid)]
-    digimouse = zoom(digimouse, zoom_factors, order=0)
+    new_grid = np.array([208, 992, 208])
+    digimouse = resize(digimouse, (208, 992, 208), order=0, preserve_range=True, anti_aliasing=False)
     
     cross_sections = np.transpose(digimouse[:,200:875:25,:], axes=(1,2,0))
     # for the sake of visualisation, combine all the brain parts into one
@@ -103,7 +100,7 @@ if __name__ == '__main__':
     mu_s_H2O = H2O['mu_s'][0] * 1e-3 # [m^-1] -> [mm^-1]
     
     # optical absorption coefficient at 700 nm [mm^-1]
-    mu_a = lambda S_B, x, S_W : (S_B*(x*mu_a_Hb+(1-x)*mu_a_HbO2) + S_W*mu_a_H2O)
+    mu_a = lambda S_B, x, S_W : (S_B*(x*mu_a_HbO2+(1-x)*mu_a_Hb) + S_W*mu_a_H2O)
     # blood volume fraction S_B, oxygen saturation x, water volume fraction S_W
     absorption_coefficients = np.array([
         coupling_medium_mu_a, # 0 --> background
@@ -146,7 +143,7 @@ if __name__ == '__main__':
     mu_s_alex = lambda a, b : (a * (wavelength_nm**(-b))) # alexandrakis eta al. (2005)
     mu_s_jac = lambda a, b : (a * ((wavelength_nm/500)**(-b))) # Jacques & Stevens (2013) 
     scattering_coefficients = np.array([
-        coupling_medium_mu_s, # 0 --> background
+        0.0, # 0 --> background
         mu_s_alex(38, 0.53), # 1 --> skin --> adipose, alexandrakis eta al. (2005)
         mu_s_alex(35600, 1.47), # 2 --> skeleton, alexandrakis eta al. (2005)
         mu_s_alex(38, 0.53), # 3 --> eye --> adipose, alexandrakis eta al. (2005)
@@ -159,7 +156,7 @@ if __name__ == '__main__':
         mu_s_jac(2.14, 1.2), # 10 --> rest of the brain --> brain, Jacques & Stevens (2013)
         mu_s_alex(4e7, 2.82), # 11 --> masseter muscles, alexandrakis eta al. (2005)
         mu_s_alex(38, 0.53), # 12 --> lachrymal glands --> adipose, alexandrakis eta al. (2005)
-        mu_s_H2O, # 13 --> bladder --> water, Hendrik Buiteveld (1994)
+        0.0, # 13 --> bladder --> water, Hendrik Buiteveld (1994)
         mu_s_alex(4e7, 2.82), # 14 --> testis --> muscle, alexandrakis eta al. (2005)
         mu_s_alex(792, 0.97), # 15 --> stomach, alexandrakis eta al. (2005)
         mu_s_alex(629, 1.05), # 16 --> spleen, alexandrakis eta al. (2005)
@@ -172,6 +169,8 @@ if __name__ == '__main__':
     scattering_coefficients /= (1 - 0.9) # reduced scattering -> scattering, g = 0.9
     cross_sections_mu_a = absorption_coefficients[cross_sections] * 1e3 # [mm^-1] -> [m^-1]
     cross_sections_mu_s = scattering_coefficients[cross_sections] * 1e3 # [mm^-1] -> [m^-1]
+    scattering_coefficients[0] = coupling_medium_mu_s
+    scattering_coefficients[13] = mu_s_H2O
     
     # The following optical properties were collected for digimouse by Qianqian
     # Fang, the author of MCX.    
@@ -243,7 +242,7 @@ if __name__ == '__main__':
      'points_per_wavelength': 2,
      'dx': 0.00010962566844919787,
      'phantom': 'digimouse_phantom',
-     'crop_size': 384
+     'crop_size': 256
     }
     phantom_obj = digimouse_phantom('\\\\wsl$\\Ubuntu-22.04\\home\\wv00017\\digimouse_atlas\\atlas_380x992x208.img')
     H2O = phantom_obj.define_H2O(700e-9)

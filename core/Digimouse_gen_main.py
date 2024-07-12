@@ -91,7 +91,7 @@ if __name__ == '__main__':
         help='points per wavelength, only lower to 1 to test code if VRAM is limited'
     )
     parser.add_argument('--nimages', type=int, default=16, action='store')
-    parser.add_argument('--crop_size', type=int, default=256, action='store')
+    parser.add_argument('--crop_size', type=int, default=384, action='store')
     parser.add_argument('--sim_git_hash', type=str, default=None, action='store')
     parser.add_argument('--recon_iterations', type=int, default=5, action='store')
     parser.add_argument('--recon_alpha', type=float, default=1.0, action='store')
@@ -465,12 +465,16 @@ if __name__ == '__main__':
             # add noise to sensor data
             if cfg['noise_std'] > 0.0:
                 (out, cfg) = add_noise(out, cfg, rng, std=cfg['noise_std'])
+                logging.info(f'noise added in {timeit.default_timer() - start} seconds')
             # apply convolution with the impulse response function
+            start = timeit.default_timer()
             out = convolve1d(out, irf, mode='nearest', axis=-1)
+            logging.info(f'convolution with irf completed in {timeit.default_timer() - start} seconds')
             # apply bandpass filter to the noisy sensor data
             if cfg['bandpass_filter']:
+                start = timeit.default_timer()
                 out = np.fft.ifft(np.fft.fft(out, axis=-1) * filter, axis=-1).real.astype(np.float32)
-            logging.info(f'noise added in {timeit.default_timer() - start} seconds')
+                logging.info(f'bandpass filter applied in {timeit.default_timer() - start} seconds')
     
             start = timeit.default_timer()
             tr = simulation.run_time_reversal(out)

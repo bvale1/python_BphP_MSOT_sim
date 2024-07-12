@@ -59,8 +59,6 @@ def heatmap(img,
     shape = np.shape(img)
     if sharescale or len(shape) == 2:
         mask = np.logical_not(np.isnan(img))
-        print(mask.shape)
-        print(np.sum(mask))
         if not vmin:
             vmin = np.min(img[mask])
         if not vmax:

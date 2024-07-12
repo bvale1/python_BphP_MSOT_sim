@@ -1,6 +1,6 @@
 import numpy as np
 from phantoms.phantom import phantom
-from scipy.ndimage import zoom
+from skimage.transform import resize
 
 
 class digimouse_phantom(phantom):
@@ -25,12 +25,14 @@ class digimouse_phantom(phantom):
         
         # spatial dimensions of the digimouse phantom
         dx = 0.0001 # [m]
-        
-        zoom_factors = [n / o for n, o in zip([308, 992, 380], [308, 992, 208])]
-        digimouse = zoom(digimouse, zoom_factors, order=0)
+        digimouse = resize(
+            digimouse, (208, 992, 208), order=0, preserve_range=True, anti_aliasing=False
+        )
         # interpolate to mcx grid dx
-        zoom_factors = [dx / cfg['dx'], dx / cfg['dx'], dx / cfg['dx']]
-        digimouse = zoom(digimouse, zoom_factors, order=0)
+        new_shape = (np.array(digimouse.shape) * dx / cfg['dx']).astype(int)
+        digimouse = resize(
+            digimouse, new_shape, order=0, preserve_range=True, anti_aliasing=False
+        )
         digimouse = np.rot90(digimouse, rotate, axes=(0, 2))
         [nx, ny, nz] = cfg['mcx_grid_size']
         # translate digimouse[380//2, y_idx, 380//2] to be at the center of the
@@ -120,7 +122,7 @@ class digimouse_phantom(phantom):
         mu_s_alex(4e7, 2.82), # 20 --> adrenal glands --> muscle, alexandrakis eta al. (2005)
         mu_s_alex(68.4, 0.53) # 21 --> lungs, alexandrakis eta al. (2005)
         ]) # [m^-1]
-        #scattering_coefficients /= (1 - 0.9) # reduced scattering -> scattering, g = 0.9
+        scattering_coefficients /= (1 - 0.9) # reduced scattering -> scattering, g = 0.9
         scattering_coefficients[0] = coupling_medium_mu_s
         scattering_coefficients[13] = self.H2O['mu_s'][0]
 
