@@ -15,8 +15,8 @@ class Clara_experiment_phantom(phantom):
             self.ReBphP_PCM['Pfr'],
             wavelength_idx=1
         )
-        # [M] = [mol L^-3] = [mol/mm^3]
-        c_tot = 0.0001 * gf.cylinder_mask(
+        # [M] = [mol L^-1] = [mol mm^-3] = 1e3 [mol m^-3]
+        c_tot = 1e-5 * gf.cylinder_mask(
             cfg['dx'],
             cfg['mcx_grid_size'],
             1.5e-3,
@@ -45,8 +45,10 @@ class Clara_experiment_phantom(phantom):
             [(cfg['mcx_domain_size'][0]/2), 0.0, (cfg['mcx_domain_size'][2]/2)]
         )
         for i in range(len(cfg['wavelengths'])):
-            volume[i,0,:,:,:] = 1 * mask #self.water89_gelatin1_intralipid10['mu_a'][i] * mask
-            volume[i,1,:,:,:] = 1000 * mask #self.water89_gelatin1_intralipid10['mu_s'][i] * mask
+            volume[i,0,~mask] = 0.1
+            volume[i,1,~mask] = 100
+            volume[i,0,mask] = 1 #self.water89_gelatin1_intralipid10['mu_a'][i] * mask
+            volume[i,1,mask] = 1000 #self.water89_gelatin1_intralipid10['mu_s'][i] * mask
         bg_mask = mask[:,0,:]
         
         return (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask)
