@@ -238,6 +238,8 @@ class phantom:
                    wavelengths_m : Union[list, np.ndarray],
                    temp : float = 34 # [celcius]
                    ) -> dict:
+        if any(wavelengths_m > 800e-9) or any(wavelengths_m < 300e-9):
+            logging.info('Warning: H2O optical data is only 300nm and 800nm')
         wavelengths_interp = np.asarray(wavelengths_m) * 1e9 # [m] -> [nm]
         # absorption and scattering 300nm-800nm Optical properties of pure water Hendrik Buiteveld
         # https://www.spiedigitallibrary.org/conference-proceedings-of-spie/2258/0000/Optical-properties-of-pure-water/10.1117/12.190060.full

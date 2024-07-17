@@ -114,7 +114,7 @@ if __name__ == '__main__':
         help='apply bandpass filter to sensor data'
     )
     parser.add_argument(
-        '--wavelength_m', type=float, default=700e-9, action='store',
+        '--wavelength_m', type=float, default=None, action='store',
         help='wavelength of light source [m]'
     )
     args = parser.parse_args()
@@ -233,30 +233,33 @@ if __name__ == '__main__':
         H2O = phantom.define_H2O(cfg['wavelengths'])
         (Hb, HbO2) = phantom.define_Hb(cfg['wavelengths'])
 
-        y_positions_and_rotations = [str(a)+'_'+str(b) for a in np.arange(200, 875, 25) for b in np.arange(4)]
+        if cfg['wavelengths'][0]:
+            y_positions_and_wavelengths = [str(a)+'_'+str(b) for a in np.arange(200, 875, 25) for b in np.array(cfg['wavelengths'])*1e9]
+        else:
+            y_positions_and_wavelengths = [str(a)+'_'+str(b) for a in np.arange(200, 875, 25) for b in np.arange(650, 810, 10)]
         with open(args.in_progress_file, 'r+') as f:
             
             fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-            # do not image the same y position and rotation twice
+            # do not image the same y position and wavelength twice
             try:
                 ckpt_dict = json.load(f)
             except:
                 logging.info('checkpoint file is empty')
                 ckpt_dict = {}
-            used_y_positions_and_rotations = ckpt_dict.keys()
-            for item in used_y_positions_and_rotations:
-                if item in y_positions_and_rotations:
-                    y_positions_and_rotations.remove(item)
+            used_y_positions_and_wavelengths = ckpt_dict.keys()
+            for item in used_y_positions_and_wavelengths:
+                if item in y_positions_and_wavelengths:
+                    y_positions_and_wavelengths.remove(item)
             
-            if len(y_positions_and_rotations) < cfg['nimages']:
-                cfg['nimages'] = len(y_positions_and_rotations)
+            if len(y_positions_and_wavelengths) < cfg['nimages']:
+                cfg['nimages'] = len(y_positions_and_wavelengths)
                 logging.info(f'{cfg["nimages"]} images in left digimouse dataset')
             if cfg['nimages'] == 0:
                 logging.info('no images left in digimouse dataset')
                 exit(0)
-            y_positions_and_rotations = y_positions_and_rotations[:cfg['nimages']]
+            y_positions_and_wavelengths = y_positions_and_wavelengths[:cfg['nimages']]
         
-            for file in y_positions_and_rotations:
+            for file in y_positions_and_wavelengths:
                 ckpt_dict[file] = {'save_dir' : cfg['save_dir']}
                 ckpt_dict[file]['seed'] = cfg['seed']
                 ckpt_dict[file]['sim_complete'] = False
@@ -303,22 +306,24 @@ if __name__ == '__main__':
 
     # get files in use by this simulation but not yet completed
     ckpt_dict = uf.load_json(args.in_progress_file)
-    y_positions_and_rotations = {
+    y_positions_and_wavelengths = {
         k : v for k, v in ckpt_dict.items() if v['save_dir'] == cfg['save_dir']
     }
-    logging.debug(f'checkpointed files: {y_positions_and_rotations}')
-    for i, y_idx_rotation in enumerate(y_positions_and_rotations.keys()):
-        if y_positions_and_rotations[y_idx_rotation]['sim_complete'] is True:
-            logging.info(f'{y_idx_rotation} {i+1}/{len(y_positions_and_rotations)} is complete')
+    logging.debug(f'checkpointed files: {y_positions_and_wavelengths}')
+    for i, y_idx_wavelength in enumerate(y_positions_and_wavelengths.keys()):
+        if y_positions_and_wavelengths[y_idx_wavelength]['sim_complete'] is True:
+            logging.info(f'{y_idx_wavelength} {i+1}/{len(y_positions_and_wavelengths)} is complete')
             continue
         else:
-            logging.info(f'simulation {y_idx_rotation} {i+1}/{len(y_positions_and_rotations)}')
+            logging.info(f'simulation {y_idx_wavelength} {i+1}/{len(y_positions_and_wavelengths)}')
 
-        (y_pos, rotation) = y_idx_rotation.split('_')
-        (volume, bg_mask) = phantom.create_volume(cfg, int(y_pos), int(rotation))
+        (y_pos, wavelength_nm) = y_idx_wavelength.split('_')
+        (volume, bg_mask) = phantom.create_volume(
+            cfg, int(y_pos), rotate=2, wavelength_m=float(wavelength_nm)*1e-9
+        )
         
         # save 2D slice of the volume to HDF5 file
-        h5_group = y_idx_rotation.replace('/', '__')
+        h5_group = y_idx_wavelength.replace('/', '__')
         with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
             f.require_group(h5_group)
             if 'mu_a' not in f[h5_group]:
@@ -341,7 +346,7 @@ if __name__ == '__main__':
             simulation = optical_simulation.MCX_adapter(cfg, source='invision')
         
             gc.collect()        
-            logging.info(f'mcx, y_idx_rotation: {y_idx_rotation}')
+            logging.info(f'mcx, y_idx_rotation: {y_idx_wavelength}')
         
             start = timeit.default_timer()
             # out can be energy absorbed, fluence, pressure, sensor data

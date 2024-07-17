@@ -30,7 +30,7 @@ digimouse = digimouse.reshape(380, 992, 208, order='F')
 # }
 
 if __name__ == '__main__':
-    '''
+    
     dx = 0.0001
     
     grid = np.array([308, 992, 208])
@@ -38,15 +38,15 @@ if __name__ == '__main__':
     digimouse = resize(digimouse, (208, 992, 208), order=0, preserve_range=True, anti_aliasing=False)
     
     cross_sections = np.transpose(digimouse[:,200:875:25,:], axes=(1,2,0))
-    # for the sake of visualisation, combine all the brain parts into one
-    cross_sections_vis = cross_sections.copy()
-    cross_sections_vis[cross_sections_vis==4] = 10
-    cross_sections_vis[cross_sections_vis==5] = 10
-    cross_sections_vis[cross_sections_vis==6] = 10
-    cross_sections_vis[cross_sections_vis==7] = 10
-    cross_sections_vis[cross_sections_vis==8] = 10
-    cross_sections_vis[cross_sections_vis>=9] -= 5
-    pf.heatmap(cross_sections_vis, dx=dx, sharescale=True, title='tissue types', cmap='tab20')
+    # for visualisation, combine all the brain parts into one
+    #cross_sections_vis = cross_sections.copy()
+    #cross_sections_vis[cross_sections_vis==4] = 10
+    #cross_sections_vis[cross_sections_vis==5] = 10
+    #cross_sections_vis[cross_sections_vis==6] = 10
+    #cross_sections_vis[cross_sections_vis==7] = 10
+    #cross_sections_vis[cross_sections_vis==8] = 10
+    #cross_sections_vis[cross_sections_vis>=9] -= 5
+    #pf.heatmap(cross_sections_vis, dx=dx, sharescale=True, title='tissue types', cmap='tab20')
     
     # translate digimouse so the centre of mass along the xz plane
     # at y_ydx is in the centre
@@ -56,14 +56,25 @@ if __name__ == '__main__':
     #    COM_x = np.sum(digimouse[:,:]!=0)*x / (digimouse.shape[0]*digimouse.shape[2])
     #    COM_z = np.sum(digimouse[:,:]!=0)*z / (digimouse.shape[0]*digimouse.shape[2])
     
+    wavelengths_nm = np.arange(680, 805, 5) # [nm]
+    wavelengths_m = wavelengths_nm * 1e-9 # [nm] -> [m]
+    coupling_medium_mu_a = 0.1 # [m^-1]
+    coupling_medium_mu_s = 100 # [m^-1]
     
-    bg_masks = cross_sections != 0
+    chromophores_obj = phantom()    
+    (Hb, HbO2) = chromophores_obj.define_Hb(wavelengths_m)
+    H2O = chromophores_obj.define_H2O(wavelengths_m)
+    mu_a_Hb = np.asarray(Hb['mu_a']) # [m^-1]
+    mu_a_HbO2 = np.asarray(HbO2['mu_a']) # [m^-1]
+    mu_a_H2O = np.asarray(H2O['mu_a']) # [m^-1]
+    mu_s_H2O = np.asarray(H2O['mu_s']) # [m^-1]
     
-    coupling_medium_mu_a = 0.0001 # [mm^-1]
-    coupling_medium_mu_s = 0.1 # [mm^-1]
-    
-    wavelength_nm = 700 # [nm]
-    wavelength_m = [wavelength_nm * 1e-9] # [m]
+    # blood volume fraction S_B, oxygen saturation x, water volume fraction S_W
+    # note that the equation in the paper contains a typo, mu_a_HbO2 and mu_a_Hb are the wrong way around
+    mu_a = lambda S_B, x, S_W : (S_B*(x*mu_a_HbO2 + (1-x)*mu_a_Hb) + S_W*mu_a_H2O) # alexandrakis eta al. (2005)
+    # power law function for reduced scattering coefficient
+    mu_s_alex = lambda a, b : (a * (wavelengths_nm**(-b))) * 1e3 # [m^-1] alexandrakis eta al. (2005)
+    mu_s_jac = lambda a, b : (a * ((wavelengths_nm/500)**(-b))) * 1e3 # [m^-1] Jacques & Stevens (2013) 
     
     # The following are optical properties recommended for use by the authors of digimouse
     # @article{alexandrakis2005tomographic,
@@ -91,19 +102,9 @@ if __name__ == '__main__':
     # The optical properties of water are from Hendrik Buiteveld (1994)
     # 
     
-    chromophores_obj = phantom()    
-    (Hb, HbO2) = chromophores_obj.define_Hb(wavelength_m)
-    H2O = chromophores_obj.define_H2O(wavelength_m)
-    mu_a_Hb = Hb['mu_a'][0] * 1e-3 # [m^-1] -> [mm^-1]
-    mu_a_HbO2 = HbO2['mu_a'][0] * 1e-3 # [m^-1] -> [mm^-1]
-    mu_a_H2O = H2O['mu_a'][0] * 1e-3 # [m^-1] -> [mm^-1]
-    mu_s_H2O = H2O['mu_s'][0] * 1e-3 # [m^-1] -> [mm^-1]
-    
-    # optical absorption coefficient at 700 nm [mm^-1]
-    mu_a = lambda S_B, x, S_W : (S_B*(x*mu_a_HbO2+(1-x)*mu_a_Hb) + S_W*mu_a_H2O)
     # blood volume fraction S_B, oxygen saturation x, water volume fraction S_W
     absorption_coefficients = np.array([
-        coupling_medium_mu_a, # 0 --> background
+        np.zeros_like(wavelengths_m), # 0 --> background
         mu_a(0.0033, 0.7, 0.5), # 1 --> skin --> adipose, alexandrakis eta al. (2005)
         mu_a(0.049, 0.8, 0.15), # 2 --> skeleton, alexandrakis eta al. (2005)
         mu_a(0.0033, 0.7, 0.5), # 3 --> eye --> adipose, alexandrakis eta al. (2005)
@@ -125,7 +126,9 @@ if __name__ == '__main__':
         mu_a(0.056, 0.75, 0.8),  # 19 --> kidneys, alexandrakis eta al. (2005)
         mu_a(0.07, 0.8, 0.5), # 20 --> adrenal glands --> muscle, alexandrakis eta al. (2005)
         mu_a(0.15, 0.85, 0.85) # 21 --> lungs, alexandrakis eta al. (2005)
-    ])
+    ]) # [m^-1]
+    absorption_coefficients[0,:] = coupling_medium_mu_a
+    
     
     # liver absorption is very high but this is validated by
     # @article{parsa1989optical,
@@ -139,11 +142,8 @@ if __name__ == '__main__':
     # publisher={Optica Publishing Group}
     # }
     
-    # optical scattering coefficient [mm^-1]
-    mu_s_alex = lambda a, b : (a * (wavelength_nm**(-b))) # alexandrakis eta al. (2005)
-    mu_s_jac = lambda a, b : (a * ((wavelength_nm/500)**(-b))) # Jacques & Stevens (2013) 
     scattering_coefficients = np.array([
-        0.0, # 0 --> background
+        np.zeros_like(wavelengths_m), # 0 --> background
         mu_s_alex(38, 0.53), # 1 --> skin --> adipose, alexandrakis eta al. (2005)
         mu_s_alex(35600, 1.47), # 2 --> skeleton, alexandrakis eta al. (2005)
         mu_s_alex(38, 0.53), # 3 --> eye --> adipose, alexandrakis eta al. (2005)
@@ -156,7 +156,7 @@ if __name__ == '__main__':
         mu_s_jac(2.14, 1.2), # 10 --> rest of the brain --> brain, Jacques & Stevens (2013)
         mu_s_alex(4e7, 2.82), # 11 --> masseter muscles, alexandrakis eta al. (2005)
         mu_s_alex(38, 0.53), # 12 --> lachrymal glands --> adipose, alexandrakis eta al. (2005)
-        0.0, # 13 --> bladder --> water, Hendrik Buiteveld (1994)
+        np.zeros_like(wavelengths_m), # 13 --> bladder --> water, Hendrik Buiteveld (1994)
         mu_s_alex(4e7, 2.82), # 14 --> testis --> muscle, alexandrakis eta al. (2005)
         mu_s_alex(792, 0.97), # 15 --> stomach, alexandrakis eta al. (2005)
         mu_s_alex(629, 1.05), # 16 --> spleen, alexandrakis eta al. (2005)
@@ -165,12 +165,10 @@ if __name__ == '__main__':
         mu_s_alex(41700, 1.51), # 19 --> kidneys, alexandrakis eta al. (2005)
         mu_s_alex(4e7, 2.82), # 20 --> adrenal glands --> muscle, alexandrakis eta al. (2005)
         mu_s_alex(68.4, 0.53) # 21 --> lungs, alexandrakis eta al. (2005)
-    ])
+    ]) # [m^-1]
     scattering_coefficients /= (1 - 0.9) # reduced scattering -> scattering, g = 0.9
-    cross_sections_mu_a = absorption_coefficients[cross_sections] * 1e3 # [mm^-1] -> [m^-1]
-    cross_sections_mu_s = scattering_coefficients[cross_sections] * 1e3 # [mm^-1] -> [m^-1]
-    scattering_coefficients[0] = coupling_medium_mu_s
-    scattering_coefficients[13] = mu_s_H2O
+    scattering_coefficients[0,:] = coupling_medium_mu_s
+    scattering_coefficients[13,:] = mu_s_H2O
     
     # The following optical properties were collected for digimouse by Qianqian
     # Fang, the author of MCX.    
@@ -201,37 +199,58 @@ if __name__ == '__main__':
     # properties from Strangman et al. (2003) are at 830nm.
     # he seems to have used the values for adipose tissue as for skin, which 
     # likely overestimates the absorption and scattering coefficients of adipose
-    prop=np.array([
-        [0, coupling_medium_mu_a, coupling_medium_mu_s, 0.9, 1.37], # 0 --> background
-        [1, 0.0191, 6.6, 0.9, 1.37], # 1 --> skin --> scalp, Strangman et al. (2003), 830nm
-        [2, 0.0136, 8.6, 0.9, 1.37], # 2 --> skeleton --> skull, Strangman et al. (2003), 830nm
-        [3, 0.0026, 0.01, 0.9, 1.37], # 3 --> eye --> cerebrospinal fluid, Strangman et al. (2003), 830nm
-        [4, 0.0186, 11.1, 0.9, 1.37], # 4 --> medulla --> brain, Strangman et al. (2003), 830nm
-        [5, 0.0186, 11.1, 0.9, 1.37], # 5 --> cerebellum --> brain, Strangman et al. (2003), 830nm
-        [6, 0.0186, 11.1, 0.9, 1.37], # 6 --> olfactory bulbs --> brain, Strangman et al. (2003), 830nm
-        [7, 0.0186, 11.1, 0.9, 1.37], # 7 --> external cerebrum --> brain, Strangman et al. (2003), 830nm
-        [8, 0.0186, 11.1, 0.9, 1.37], # 8 --> striatum --> brain, Strangman et al. (2003), 830nm
-        [9, 0.0240, 8.9, 0.9, 1.37], # 9 --> heart --> muscle,
-        [10, 0.0026, 0.01, 0.9, 1.37], # 10 --> rest of the brain --> cerebrospinal fluid, Strangman et al. (2003), 830nm
-        [11, 0.0240, 8.9, 0.9, 1.37], # 11 --> masseter muscles --> muscle,
-        [12, 0.0240, 8.9, 0.9, 1.37], # 12 --> lachrymal glands --> muscle,
-        [13, 0.0240, 8.9, 0.9, 1.37], # 13 --> bladder --> muscle,
-        [14, 0.0240, 8.9, 0.9, 1.37], # 14 --> testis --> muscle,
-        [15, 0.0240, 8.9, 0.9, 1.37], # 15 --> stomach --> muscle,
-        [16, 0.072, 5.6, 0.9, 1.37], # 16 --> spleen --> liver, Cheong et al. (1990)
-        [17, 0.072, 5.6, 0.9, 1.37], # 17 --> pancreas
-        [18, 0.072, 5.6, 0.9, 1.37], # 18 --> liver, Cheong et al. (1990)
-        [19, 0.050, 5.4, 0.9, 1.37], # 19 --> kidneys --> cow kidney, Cheong et al. (1990), 789nm
-        [20, 0.024, 8.9, 0.9, 1.37], # 20 --> adrenal glands --> muscle,
-        [21, 0.076, 10.9, 0.9, 1.37] # 21 --> lungs --> pig lung, Cheong et al. (1990), 850nm
-    ])
-    prop[:, 1] *= 1e3 # [mm^-1] -> [m^-1]
-    prop[:, 2] *= 1e3 # [mm^-1] -> [m^-1]
+    #prop=np.array([
+    #    [0, coupling_medium_mu_a, coupling_medium_mu_s, 0.9, 1.37], # 0 --> background
+    #    [1, 0.0191, 6.6, 0.9, 1.37], # 1 --> skin --> scalp, Strangman et al. (2003), 830nm
+    #    [2, 0.0136, 8.6, 0.9, 1.37], # 2 --> skeleton --> skull, Strangman et al. (2003), 830nm
+    #    [3, 0.0026, 0.01, 0.9, 1.37], # 3 --> eye --> cerebrospinal fluid, Strangman et al. (2003), 830nm
+    #    [4, 0.0186, 11.1, 0.9, 1.37], # 4 --> medulla --> brain, Strangman et al. (2003), 830nm
+    #    [5, 0.0186, 11.1, 0.9, 1.37], # 5 --> cerebellum --> brain, Strangman et al. (2003), 830nm
+    #    [6, 0.0186, 11.1, 0.9, 1.37], # 6 --> olfactory bulbs --> brain, Strangman et al. (2003), 830nm
+    #    [7, 0.0186, 11.1, 0.9, 1.37], # 7 --> external cerebrum --> brain, Strangman et al. (2003), 830nm
+    #    [8, 0.0186, 11.1, 0.9, 1.37], # 8 --> striatum --> brain, Strangman et al. (2003), 830nm
+    #    [9, 0.0240, 8.9, 0.9, 1.37], # 9 --> heart --> muscle,
+    #    [10, 0.0026, 0.01, 0.9, 1.37], # 10 --> rest of the brain --> cerebrospinal fluid, Strangman et al. (2003), 830nm
+    #    [11, 0.0240, 8.9, 0.9, 1.37], # 11 --> masseter muscles --> muscle,
+    #    [12, 0.0240, 8.9, 0.9, 1.37], # 12 --> lachrymal glands --> muscle,
+    #    [13, 0.0240, 8.9, 0.9, 1.37], # 13 --> bladder --> muscle,
+    #    [14, 0.0240, 8.9, 0.9, 1.37], # 14 --> testis --> muscle,
+    #    [15, 0.0240, 8.9, 0.9, 1.37], # 15 --> stomach --> muscle,
+    #    [16, 0.072, 5.6, 0.9, 1.37], # 16 --> spleen --> liver, Cheong et al. (1990)
+    #    [17, 0.072, 5.6, 0.9, 1.37], # 17 --> pancreas
+    #    [18, 0.072, 5.6, 0.9, 1.37], # 18 --> liver, Cheong et al. (1990)
+    #    [19, 0.050, 5.4, 0.9, 1.37], # 19 --> kidneys --> cow kidney, Cheong et al. (1990), 789nm
+    #    [20, 0.024, 8.9, 0.9, 1.37], # 20 --> adrenal glands --> muscle,
+    #    [21, 0.076, 10.9, 0.9, 1.37] # 21 --> lungs --> pig lung, Cheong et al. (1990), 850nm
+    #])
+    #prop[:, 1] *= 1e3 # [mm^-1] -> [m^-1]
+    #prop[:, 2] *= 1e3 # [mm^-1] -> [m^-1]
     #cross_sections_mu_a = prop[cross_sections,1]
     #cross_sections_mu_s = prop[cross_sections,2]
     
+    # 770 nm = idx 17
+    cross_sections_mu_a = absorption_coefficients[cross_sections, 17]
+    cross_sections_mu_s = scattering_coefficients[cross_sections, 17]
+    
     pf.heatmap(cross_sections_mu_a, dx=dx, sharescale=True, title=r'$\mu_{a}$ (m$^{-1}$)')
     pf.heatmap(cross_sections_mu_s, dx=dx, sharescale=True, title=r'$\mu_{s}$ (m$^{-1}$)')
+    
+    tissue_labels = ['adipose', 'skeleton', 'eye', 'brain', 'heart', 'muscle', 'water', 'stomach', 'liver & spleen', 'kidneys', 'lungs']
+    labels_idx = np.array([1, 2, 3, 4, 9, 11, 13, 15, 16, 19, 21])
+    fig, ax = plt.subplots(1, 1, figsize=(6,8))
+    for i in range(len(tissue_labels)):
+        ax.plot(wavelengths_nm, absorption_coefficients[labels_idx[i]], label=tissue_labels[i])
+    ax.plot(wavelengths_nm, mu_a_Hb, label='Hb')
+    ax.plot(wavelengths_nm, mu_a_HbO2, label='HbO2')
+    ax.legend()
+    ax.set_xlim(680, 800)
+    ax.set_yscale('log')
+    ax.set_ylabel(r'$\mu_{a}$ $($m$^{-1})$')
+    ax.set_xlabel('wavelength (nm)')
+    ax.grid(True)
+    ax.set_axisbelow(True)
+    
+    
     '''
     cfg = {
      'wavelengths': [7e-07],
@@ -254,5 +273,5 @@ if __name__ == '__main__':
     pf.heatmap(volume[0,:,volume.shape[2]//2,:], dx=cfg['dx'], title=r'$\mu_{a}$ (m$^{-1}$)')
     pf.heatmap(volume[1,:,volume.shape[2]//2,:], dx=cfg['dx'], title=r'$\mu_{s}$ (m$^{-1}$)')
     pf.heatmap(bg_mask, dx=cfg['dx'], title='mask')
-    
+    '''
     
