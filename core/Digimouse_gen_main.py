@@ -149,8 +149,6 @@ if __name__ == '__main__':
         logging.info(f'checkpoint config found {cfg}')
         
         phantom = digimouse_phantom(cfg['digimouse_dir'])
-        H2O = phantom.define_H2O(cfg['wavelengths'])
-        (Hb, HbO2) = phantom.define_Hb(cfg['wavelengths'])
                 
     else:               
         # It is imperative that dx is small enough to support high enough 
@@ -230,8 +228,6 @@ if __name__ == '__main__':
             json.dump(cfg, f, indent='\t')
         
         phantom = digimouse_phantom(cfg['digimouse_dir'])
-        H2O = phantom.define_H2O(cfg['wavelengths'])
-        (Hb, HbO2) = phantom.define_Hb(cfg['wavelengths'])
 
         if cfg['wavelengths'][0]:
             y_positions_and_wavelengths = [str(a)+'_'+str(b) for a in np.arange(200, 875, 25) for b in np.array(cfg['wavelengths'])*1e9]
@@ -317,7 +313,11 @@ if __name__ == '__main__':
         else:
             logging.info(f'simulation {y_idx_wavelength} {i+1}/{len(y_positions_and_wavelengths)}')
 
+        
+
         (y_pos, wavelength_nm) = y_idx_wavelength.split('_')
+        H2O = phantom.define_H2O(wavelengths_m=[float(wavelength_nm)*1e-9])
+        (Hb, HbO2) = phantom.define_Hb(wavelengths_m=[float(wavelength_nm)*1e-9])
         (volume, bg_mask) = phantom.create_volume(
             cfg, int(y_pos), rotate=2, wavelength_m=float(wavelength_nm)*1e-9
         )
