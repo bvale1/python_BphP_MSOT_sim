@@ -201,8 +201,8 @@ class phantom:
         # this does not include scattering data, although scattering of water is
         # very low in this wavelength range (mu_s < 1e-3 m^-1 for wavelengths > 600nm)
         # see Hendrik Buiteveld 1998 for scattering
-        wavelengths_interp = np.asarray(wavelengths_m) * 1e9
-        if any(wavelengths_m > 400) or any(wavelengths_m < 1300):
+        wavelengths_interp = np.asarray(wavelengths_m) * 1e9 # [m] -> [nm]
+        if any(wavelengths_interp > 400) or any(wavelengths_interp < 1300):
             logging.info('Warning: H2O optical data is only 400nm and 1300nm')
             
         with open(self.path+'/Chromophores/hale_and_querry_h20.txt', 'r') as f:
@@ -227,10 +227,10 @@ class phantom:
                    wavelengths_m : Union[list, np.ndarray],
                    temp : float = 34 # [celcius]
                    ) -> dict:
-        wavelengths_m = np.asarray(wavelengths_m)
-        if any(wavelengths_m > 800e-9) or any(wavelengths_m < 300e-9):
+        wavelengths_interp = np.asarray(wavelengths_m) * 1e9 # [m] -> [nm]
+        if any(wavelengths_interp > 800e-9) or any(wavelengths_interp < 300e-9):
             logging.info('Warning: H2O optical data is only 300nm and 800nm')
-        wavelengths_interp = wavelengths_m * 1e9 # [m] -> [nm]
+        
         # absorption and scattering 300nm-800nm Optical properties of pure water Hendrik Buiteveld
         # https://www.spiedigitallibrary.org/conference-proceedings-of-spie/2258/0000/Optical-properties-of-pure-water/10.1117/12.190060.full
         with open(self.path+'/Chromophores/coefficients_H2O.txt', 'r', encoding='latin1') as f:
