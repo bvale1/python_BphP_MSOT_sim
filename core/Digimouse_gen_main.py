@@ -232,7 +232,7 @@ if __name__ == '__main__':
         if cfg['wavelengths'][0]:
             y_positions_and_wavelengths = [str(a)+'_'+str(b) for a in np.arange(200, 875, 25) for b in np.array(cfg['wavelengths'])*1e9]
         else:
-            y_positions_and_wavelengths = [str(a)+'_'+str(b) for a in np.arange(200, 875, 25) for b in np.arange(650, 810, 10)]
+            y_positions_and_wavelengths = [str(a)+'_'+str(b) for a in np.arange(200, 875, 25) for b in np.arange(650, 910, 10)]
         with open(args.in_progress_file, 'r+') as f:
             
             fcntl.flock(f.fileno(), fcntl.LOCK_EX)

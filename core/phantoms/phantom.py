@@ -142,49 +142,6 @@ class phantom:
         }
         return self.intralipid10
     
-    '''
-    def define_Hb(self,
-                  wavelengths_m : Union[list, np.ndarray]
-                  ) -> dict:
-        # Optical properties of biological tissues: a review Steven L Jacques, 2013
-        # https://iopscience.iop.org/article/10.1088/0031-9155/58/11/R37/meta
-        wavelengths_interp = np.asarray(wavelengths_m) * 1e9 # [m] -> [nm]
-        
-        with open(self.path+'/Chromophores/blood_litcomp_dat.txt', 'r') as f:
-            data = np.genfromtxt(f, skip_header=1, dtype=np.float32, delimiter=' ')
-        wavelengths_nm = data[:,0] # [nm]
-        mu_a_Hb = data[:,1] * 1e3 # [mm^-1] -> [m^-1]
-        mu_a_HbO2 = data[:,2] * 1e3 # [mm^-1] -> [m^-1]
-        mu_s = data[:,3] * 1e3 # [mm^-1] -> [m^-1]
-        g = data[:,4] # anisotropy
-        
-        self.Hb = {
-            'mu_a' : self.interp_property(
-                mu_a_Hb, wavelengths_nm, wavelengths_interp
-            ), # [m^-1]
-            'mu_s' : self.interp_property(
-                mu_s, wavelengths_nm, wavelengths_interp
-            ), # [m^-1]
-            'n' : 1.33, # refractive index
-            'g' : self.interp_property(
-                g, wavelengths_nm, wavelengths_interp
-            ) # anisotropy
-        }
-        self.HbO2 = {
-            'mu_a' : self.interp_property(
-                mu_a_HbO2, wavelengths_nm, wavelengths_interp
-            ), # [m^-1]
-            'mu_s' : self.interp_property(
-                mu_s, wavelengths_nm, wavelengths_interp
-            ), # [m^-1]
-            'n' : 1.33, # refractive index
-            'g' : self.interp_property(
-                g, wavelengths_nm, wavelengths_interp
-            ) # anisotropy
-        }
-        return self.Hb, self.HbO2
-    '''
-    
     def define_Hb(self,
                   wavelengths_m : Union[list, np.ndarray]
                   ) -> dict:
@@ -233,14 +190,47 @@ class phantom:
             ) # anisotropy
         }
         return self.Hb, self.HbO2
+    
+    
+    def define_HbO2(self,
+                    wavelengths_m : Union[list, np.ndarray]
+                    ) -> dict:
+        # (Hale and Querry 1973 Optical Constants of Water in the 200-nm to 200-mu m Wavelength Region)
+        # https://opg.optica.org/ao/fulltext.cfm?uri=ao-12-3-555&id=17737
+        # this data is only for H2O at 25 degrees celcius
+        # this does not include scattering data, although scattering of water is
+        # very low in this wavelength range (mu_s < 1e-3 m^-1 for wavelengths > 600nm)
+        # see Hendrik Buiteveld 1998 for scattering
+        wavelengths_interp = np.asarray(wavelengths_m) * 1e9
+        if any(wavelengths_m > 400) or any(wavelengths_m < 1300):
+            logging.info('Warning: H2O optical data is only 400nm and 1300nm')
             
+        with open(self.path+'/Chromophores/hale_and_querry_h20.txt', 'r') as f:
+            data = np.genfromtxt(f, skip_header=1, dtype=np.float32, delimiter=', ')
+        data[np.isnan(data)] = 0.0
+        wavelengths_nm = data[:,0]
+        mu_a = data[:,1] * 1e2 # [cm^-1] -> [m^-1]
+        
+        self.H2O = {
+            'mu_a' : self.interp_property(
+                mu_a, wavelengths_nm, wavelengths_interp 
+            ), # [m^-1]
+            'mu_s' : [0.0], # [m^-1]
+            'n' : 1.33, # refractive index
+            'g' : 0.9 # anisotropy
+        }
+        return self.H2O
+    
+    '''
+    # depricated in favor of hale and querry 1973 due to greater wavelength range
     def define_H2O(self,
                    wavelengths_m : Union[list, np.ndarray],
                    temp : float = 34 # [celcius]
                    ) -> dict:
+        wavelengths_m = np.asarray(wavelengths_m)
         if any(wavelengths_m > 800e-9) or any(wavelengths_m < 300e-9):
             logging.info('Warning: H2O optical data is only 300nm and 800nm')
-        wavelengths_interp = np.asarray(wavelengths_m) * 1e9 # [m] -> [nm]
+        wavelengths_interp = wavelengths_m * 1e9 # [m] -> [nm]
         # absorption and scattering 300nm-800nm Optical properties of pure water Hendrik Buiteveld
         # https://www.spiedigitallibrary.org/conference-proceedings-of-spie/2258/0000/Optical-properties-of-pure-water/10.1117/12.190060.full
         with open(self.path+'/Chromophores/coefficients_H2O.txt', 'r', encoding='latin1') as f:
@@ -261,3 +251,4 @@ class phantom:
             'g' : 0.9 # anisotropy
         }
         return self.H2O
+    '''
