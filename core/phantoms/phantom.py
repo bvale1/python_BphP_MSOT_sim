@@ -193,8 +193,8 @@ class phantom:
     
     
     def define_H2O(self,
-                    wavelengths_m : Union[list, np.ndarray]
-                    ) -> dict:
+                   wavelengths_m : Union[list, np.ndarray]
+                   ) -> dict:
         # (Hale and Querry 1973 Optical Constants of Water in the 200-nm to 200-mu m Wavelength Region)
         # https://opg.optica.org/ao/fulltext.cfm?uri=ao-12-3-555&id=17737
         # this data is only for H2O at 25 degrees celcius

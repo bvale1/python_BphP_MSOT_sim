@@ -346,7 +346,7 @@ if __name__ == '__main__':
             simulation = optical_simulation.MCX_adapter(cfg, source='invision')
         
             gc.collect()        
-            logging.info(f'mcx, y_idx_rotation: {y_idx_wavelength}')
+            logging.info(f'mcx, y_idx_wavelength: {y_idx_wavelength}')
         
             start = timeit.default_timer()
             # out can be energy absorbed, fluence, pressure, sensor data
@@ -410,7 +410,7 @@ if __name__ == '__main__':
             
             gc.collect()
             
-            logging.info(f'k-wave forward, y_idx_rotation: {y_idx_rotation}')
+            logging.info(f'k-wave forward, y_idx_wavelength: {y_idx_wavelength}')
             
             start = timeit.default_timer()
             with h5py.File(cfg['save_dir']+'temp.h5', 'r') as f:
@@ -458,7 +458,7 @@ if __name__ == '__main__':
             with open(cfg['save_dir']+'/config.json', 'w') as f:
                 json.dump(cfg, f, indent='\t')
             
-            logging.info(f'time reversal, image: {y_idx_rotation}')
+            logging.info(f'time reversal, image: {y_idx_wavelength}')
             
             # load sensor data
             start = timeit.default_timer()
@@ -495,12 +495,12 @@ if __name__ == '__main__':
             logging.info(f'p0_recon saved in {timeit.default_timer() - start} seconds')
             
             ckpt_dict = uf.load_json(args.in_progress_file)
-            ckpt_dict[y_idx_rotation]['sim_complete'] = True
+            ckpt_dict[y_idx_wavelength]['sim_complete'] = True
             uf.save_json(args.in_progress_file, ckpt_dict)
             cfg['stage'] = 'optical'
             with open(cfg['save_dir']+'config.json', 'w') as f:
                 json.dump(cfg, f, indent='\t')
-            logging.info(f'{y_idx_rotation} {i+1}/{len(y_positions_and_rotations)} complete')
+            logging.info(f'{y_idx_wavelength} {i+1}/{len(y_positions_and_wavelengths)} complete')
 
     # delete temp p0_3D dataset
     if cfg['delete_p0_3d'] is True:
