@@ -1,4 +1,4 @@
-lambda(nm) Ua(1/cm) (Hale and Querry 1973 Optical Constants of Water in the 200-nm to 200-mu m Wavelength Region)
+lambda(nm) Ua(cm^-1) (Hale and Querry 1973 Optical Constants of Water in the 200 nm to 200 mu m Wavelength Region)
 400.00	0.00058000
 425.00	0.00038000
 450.00	0.00028000
