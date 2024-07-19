@@ -205,9 +205,9 @@ class phantom:
         if any(wavelengths_interp > 400) or any(wavelengths_interp < 1300):
             logging.info('Warning: H2O optical data is only 400nm and 1300nm')
             
-        with open(self.path+'/Chromophores/hale_and_querry_h20.txt', 'r') as f:
-            data = np.genfromtxt(f, skip_header=1, dtype=np.float32, delimiter=' ')
-        data[np.isnan(data)] = 0.0
+        data = np.loadtxt(
+            '/Chromophores/hale_and_querry_h20.txt', skiprows=1
+        ).astype(np.float32)
         wavelengths_nm = data[:,0]
         mu_a = data[:,1] * 1e2 # [cm^-1] -> [m^-1]
         
