@@ -117,6 +117,10 @@ if __name__ == '__main__':
         '--wavelength_m', type=float, default=None, action='store',
         help='wavelength of light source [m]'
     )
+    parser.add_argument(
+        '--axisymmetric', default=False, action=argparse.BooleanOptionalAction,
+        help='make digimouse phantom axisymmetric, reduces out of plane signal'
+    )
     args = parser.parse_args()
     
     if args.v == 'INFO':
@@ -210,6 +214,7 @@ if __name__ == '__main__':
             'dt' : 25e-9, # time step [s]
             'Nt' : 2030, # number of time steps
             'bandpass_filter' : args.bandpass_filter, # apply bandpass filter to sensor data
+            'axisymmetric' : args.axisymmetric # make digimouse phantom axisymmetric
         }
         
         logging.info(f'no checkpoint, creating config {cfg}')
@@ -319,7 +324,8 @@ if __name__ == '__main__':
         H2O = phantom.define_H2O(wavelengths_m=[float(wavelength_nm)*1e-9])
         (Hb, HbO2) = phantom.define_Hb(wavelengths_m=[float(wavelength_nm)*1e-9])
         (volume, bg_mask) = phantom.create_volume(
-            cfg, int(y_pos), rotate=2, wavelength_m=float(wavelength_nm)*1e-9
+            cfg, int(y_pos), rotate=2, wavelength_m=float(wavelength_nm)*1e-9,
+            axisymmetric=cfg['axisymmetric']
         )
         
         # save 2D slice of the volume to HDF5 file

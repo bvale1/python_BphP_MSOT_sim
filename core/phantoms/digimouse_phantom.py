@@ -13,7 +13,8 @@ class digimouse_phantom(phantom):
                       cfg: dict, 
                       y_idx : int,
                       rotate : int,
-                      wavelength_m : int = 700e-9
+                      wavelength_m : int = 700e-9,
+                      axisymmetric : bool = False
                       ) -> tuple[np.ndarray, np.ndarray]:
         assert rotate in [0, 1, 2, 3], 'Rotation must be 0, 1, 2 or 3 corresponding to 0, pi/2, pi and 3*pi/2 respectively'
         assert 100 <= y_idx <= 875, 'y_idx must be between 100 and 875' 
@@ -59,8 +60,11 @@ class digimouse_phantom(phantom):
         # place the digimouse phantom in the center of the volume
         tissue_types[(nx-digimouse.shape[0])//2:(nx+digimouse.shape[0])//2, :, (nz-digimouse.shape[2])//2:(nz+digimouse.shape[2])//2] = digimouse        
         
+        if axisymmetric:
+            tissue_types = np.repeat(tissue_types[:, [(ny//2)-1], :], ny, axis=1)
+
         # background mask
-        bg_mask = tissue_types[:,ny//2,:] != 0
+        bg_mask = tissue_types[:,(ny//2)-1,:] != 0
         
         coupling_medium_mu_a = 0.1 # [m^-1]
         coupling_medium_mu_s = 100 # [m^-1]
