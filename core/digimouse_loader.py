@@ -61,9 +61,9 @@ if __name__ == '__main__':
     coupling_medium_mu_a = 0.1 # [m^-1]
     coupling_medium_mu_s = 100 # [m^-1]
     
-    chromophores_obj = phantom()    
-    (Hb, HbO2) = chromophores_obj.define_Hb(wavelengths_m)
-    H2O = chromophores_obj.define_H2O(wavelengths_m)
+    chromophores_obj = phantom(wavelengths_m)    
+    (Hb, HbO2) = chromophores_obj.define_Hb()
+    H2O = chromophores_obj.define_H2O()
     mu_a_Hb = np.asarray(Hb['mu_a']) # [m^-1]
     mu_a_HbO2 = np.asarray(HbO2['mu_a']) # [m^-1]
     mu_a_H2O = np.asarray(H2O['mu_a']) # [m^-1]
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     mu_a = lambda S_B, x, S_W : (S_B*(x*mu_a_HbO2 + (1-x)*mu_a_Hb) + S_W*mu_a_H2O) # alexandrakis eta al. (2005)
     # power law function for reduced scattering coefficient
     mu_s_alex = lambda a, b : (a * (wavelengths_nm**(-b))) * 1e3 # [m^-1] alexandrakis eta al. (2005)
-    mu_s_jac = lambda a, b : (a * ((wavelengths_nm/500)**(-b))) * 1e3 # [m^-1] Jacques & Stevens (2013) 
+    mu_s_jac = lambda a, b : (a * ((wavelengths_nm/500)**(-b))) * 1e3 # [m^-1] Steven L Jacques (2013) 
     
     # The following are optical properties recommended for use by the authors of digimouse
     # @article{alexandrakis2005tomographic,
@@ -88,7 +88,7 @@ if __name__ == '__main__':
     # publisher={IOP Publishing}
     # }
     # These are wavelength dependant but several tissue types are missing
-    # so I will use Jacques & Stevens (2013) values for the missing tissue types
+    # so I will use Steven L Jacques (2013) values for the missing tissue types
     # @article{jacques2013optical,
     # title={Optical properties of biological tissues: a review},
     # author={Jacques, Steven L},
@@ -108,13 +108,13 @@ if __name__ == '__main__':
         mu_a(0.0033, 0.7, 0.5), # 1 --> skin --> adipose, alexandrakis eta al. (2005)
         mu_a(0.049, 0.8, 0.15), # 2 --> skeleton, alexandrakis eta al. (2005)
         mu_a(0.0033, 0.7, 0.5), # 3 --> eye --> adipose, alexandrakis eta al. (2005)
-        mu_a(0.03, 0.6, 0.75), # 4 --> medulla --> Rat brain cortex, Jacques & Stevens (2013)
-        mu_a(0.03, 0.6, 0.75), # 5 --> cerebellum --> Rat brain cortex, Jacques & Stevens (2013)
-        mu_a(0.03, 0.6, 0.75), # 6 --> olfactory bulbs --> Rat brain cortex, Jacques & Stevens (2013)
-        mu_a(0.03, 0.6, 0.75), # 7 --> external cerebrum --> Rat brain cortex, Jacques & Stevens (2013)
-        mu_a(0.03, 0.6, 0.75), # 8 --> striatum --> Rat brain cortex, Jacques & Stevens (2013)
+        mu_a(0.03, 0.6, 0.75), # 4 --> medulla --> Rat brain cortex, Steven L Jacques (2013)
+        mu_a(0.03, 0.6, 0.75), # 5 --> cerebellum --> Rat brain cortex, Steven L Jacques (2013)
+        mu_a(0.03, 0.6, 0.75), # 6 --> olfactory bulbs --> Rat brain cortex, Steven L Jacques (2013)
+        mu_a(0.03, 0.6, 0.75), # 7 --> external cerebrum --> Rat brain cortex, Steven L Jacques (2013)
+        mu_a(0.03, 0.6, 0.75), # 8 --> striatum --> Rat brain cortex, Steven L Jacques (2013)
         mu_a(0.05, 0.75, 0.5), # 9 --> heart, alexandrakis eta al. (2005)
-        mu_a(0.03, 0.6, 0.75), # 10 --> rest of the brain --> Rat brain cortex, Jacques & Stevens (2013)
+        mu_a(0.03, 0.6, 0.75), # 10 --> rest of the brain --> Rat brain cortex, Steven L Jacques (2013)
         mu_a(0.07, 0.8, 0.5), # 11 --> masseter muscles, alexandrakis eta al. (2005)
         mu_a(0.0033, 0.7, 0.5), # 12 --> lachrymal glands --> adipose, alexandrakis eta al. (2005)
         mu_a_H2O, # 13 --> bladder --> water, Hendrik Buiteveld (1994)
@@ -147,13 +147,13 @@ if __name__ == '__main__':
         mu_s_alex(38, 0.53), # 1 --> skin --> adipose, alexandrakis eta al. (2005)
         mu_s_alex(35600, 1.47), # 2 --> skeleton, alexandrakis eta al. (2005)
         mu_s_alex(38, 0.53), # 3 --> eye --> adipose, alexandrakis eta al. (2005)
-        mu_s_jac(2.14, 1.2), # 4 --> medulla --> brain, Jacques & Stevens (2013)
-        mu_s_jac(2.14, 1.2), # 5 --> cerebellum --> brain, Jacques & Stevens (2013)
-        mu_s_jac(2.14, 1.2), # 6 --> olfactory bulbs --> brain, Jacques & Stevens (2013)
-        mu_s_jac(2.14, 1.2), # 7 --> external cerebrum --> brain, Jacques & Stevens (2013)
-        mu_s_jac(2.14, 1.2), # 8 --> striatum --> brain, Jacques & Stevens (2013)
+        mu_s_jac(2.14, 1.2), # 4 --> medulla --> brain, Steven L Jacques (2013)
+        mu_s_jac(2.14, 1.2), # 5 --> cerebellum --> brain, Steven L Jacques (2013)
+        mu_s_jac(2.14, 1.2), # 6 --> olfactory bulbs --> brain, Steven L Jacques (2013)
+        mu_s_jac(2.14, 1.2), # 7 --> external cerebrum --> brain, Steven L Jacques (2013)
+        mu_s_jac(2.14, 1.2), # 8 --> striatum --> brain, Steven L Jacques (2013)
         mu_s_alex(10600, 1.43), # 9 --> heart, alexandrakis eta al. (2005)
-        mu_s_jac(2.14, 1.2), # 10 --> rest of the brain --> brain, Jacques & Stevens (2013)
+        mu_s_jac(2.14, 1.2), # 10 --> rest of the brain --> brain, Steven L Jacques (2013)
         mu_s_alex(4e7, 2.82), # 11 --> masseter muscles, alexandrakis eta al. (2005)
         mu_s_alex(38, 0.53), # 12 --> lachrymal glands --> adipose, alexandrakis eta al. (2005)
         np.zeros_like(wavelengths_m), # 13 --> bladder --> water, Hendrik Buiteveld (1994)
@@ -274,4 +274,61 @@ if __name__ == '__main__':
     pf.heatmap(volume[1,:,volume.shape[2]//2,:], dx=cfg['dx'], title=r'$\mu_{s}$ (m$^{-1}$)')
     pf.heatmap(bg_mask, dx=cfg['dx'], title='mask')
     '''
+    
+    # plot wavelength dependant optical properties of tissue types
+    fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(10,5))
+    tissue_labels = ['adipose', 'skeleton', 'brain', 'heart', 'muscle', 'stomach', 'liver & spleen', 'kidneys', 'lungs']
+    colours = ['black', 'grey', 'tab:blue', 'tab:purple', 'green', 'tab:red', 'tab:orange', 'tab:pink', 'tab:cyan']
+    linestyles = ['solid', (0,(1,1)), 'dashdot', (0,(5,5)), (0,(3,1,1,1,1,1)), (0,(4,2,4,2,1,2)), (0,(10,1,10,1,10,3)), (0,(10,3)), (0,(4,1))]
+    labels_idx = np.array([1, 2, 4, 9, 11, 13, 15, 16, 19, 21])
+    
+    wavelengths_nm = np.linspace(500, 1200, num=1000)
+    wavelengths_m = wavelengths_nm * 1e-9
+    phantom_obj = digimouse_phantom('\\\\wsl$\\Ubuntu-22.04\\home\\wv00017\\digimouse_atlas\\atlas_380x992x208.img', wavelengths_m)
+    H2O = phantom_obj.define_H2O()
+    (Hb, HbO2) = phantom_obj.define_Hb()
+    tissue_types_dict = phantom_obj.get_tissue_types_dict()
+    tissue_types_dict['brain'] = tissue_types_dict['cerebellum']
+    tissue_types_dict['water'] = tissue_types_dict['bladder']
+    tissue_types_dict['muscle'] = tissue_types_dict['masseter muscles']
+    tissue_types_dict['liver & spleen'] = tissue_types_dict['liver']
+    
+    for i in range(len(tissue_labels)):
+        # absorption coefficient
+        axes[0].plot(
+            wavelengths_nm, 
+            tissue_types_dict[tissue_labels[i]]['mu_a'],
+            linestyle=linestyles[i], 
+            linewidth=2, 
+            color=colours[i], 
+            label=tissue_labels[i]
+        )
+        # Scattering coefficient
+        axes[1].plot(
+            wavelengths_nm,
+            tissue_types_dict[tissue_labels[i]]['mu_s'],
+            linestyle=linestyles[i],
+            linewidth=2,
+            color=colours[i],
+            label=tissue_labels[i]
+        )
+    
+    axes[0].set_xlabel("Wavelength (nm)")
+    axes[0].set_ylabel("Absorption coefficient ($\mathrm{m}^{-1}$)")
+    axes[0].set_yscale("log")
+    #axes[0].set_ylim(0, 1000)
+    axes[0].grid()
+    axes[0].text(0.1, 0.95, 'A', transform=axes[0].transAxes, fontsize=13, fontweight='bold', va='top')
+    axes[0].legend(bbox_to_anchor=(0.47, 0.6, 0.45, 0.38))
+    
+    axes[1].set_xlabel("Wavelength (nm)")
+    axes[1].set_ylabel("Scattering coefficient ($\mathrm{m}^{-1}$)")
+    #axes[1].set_yscale("log")
+    axes[1].grid()
+    #axes[1].set_yticks([1E02,1E01])
+    axes[1].ticklabel_format(useMathText=True)
+    axes[1].ticklabel_format(style='plain')
+    axes[1].text(0.1, 0.95, 'B', transform=axes[1].transAxes, fontsize=13, fontweight='bold', va='top')
+    axes[1].legend(loc="best")
+
     
