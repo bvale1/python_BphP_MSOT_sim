@@ -315,8 +315,8 @@ if __name__ == '__main__':
             logging.info(f'simulation {y_idx_wavelength} {i+1}/{len(y_positions_and_wavelengths)}')
 
         # create phantom
-        phantom = digimouse_phantom(cfg['digimouse_dir'], wavelengths_m=[float(wavelength_nm)*1e-9])        
         (y_pos, wavelength_nm) = y_idx_wavelength.split('_')
+        phantom = digimouse_phantom(cfg['digimouse_dir'], wavelengths_m=[float(wavelength_nm)*1e-9]) 
         H2O = phantom.define_H2O()
         (Hb, HbO2) = phantom.define_Hb()
         (volume, bg_mask) = phantom.create_volume(
