@@ -114,6 +114,10 @@ if __name__ == '__main__':
         '--bandpass_filter', default=False, action=argparse.BooleanOptionalAction,
         help='apply bandpass filter to sensor data'
     )
+    parser.add_argument(
+        '--wavelength_m', type=float, default=None, action='store',
+        help='wavelength of light source [m]'
+    )
     args = parser.parse_args()
     
     if args.v == 'INFO':
@@ -153,7 +157,8 @@ if __name__ == '__main__':
             logging.info(f'no seed provided, random seed selected: {seed}')        
         rng = np.random.default_rng(seed)
         
-        phantom = ImageNet_phantom(rng)
+        phantom = ImageNet_phantom(rng, cfg['wavelengths'])
+        H2O = phantom.define_H2O()
         
     else:
         if args.seed:
@@ -185,6 +190,10 @@ if __name__ == '__main__':
         kwave_grid_size = mcx_grid_size # [m] use same grid for acoustic sim
         kwave_domain_size = mcx_domain_size # [m] use same domain for acoustic sim
         
+        if args.wavelength_m is None:
+            # randomly select a wavelength between 650nm and 950nm
+            args.wavelength_m = round(rng.uniform(65, 95)) * 1e-8
+        
         # configure simulation
         cfg = {
             'save_dir' : args.save_dir,
@@ -194,6 +203,7 @@ if __name__ == '__main__':
             'nsensors' : 256,
             'nphotons' : 1e8,
             'nsources' : 10,
+            'wavelengths' : [args.wavelength_m], # [m]
             'mcx_domain_size' : mcx_domain_size,
             'kwave_domain_size' : kwave_domain_size,
             'mcx_grid_size': mcx_grid_size,
@@ -238,7 +248,8 @@ if __name__ == '__main__':
         with open(cfg['save_dir']+'config.json', 'w') as f:
             json.dump(cfg, f, indent='\t')
         
-        phantom = ImageNet_phantom(rng)
+        phantom = ImageNet_phantom(rng, cfg['wavelengths'])
+        H2O = phantom.define_H2O()
               
         ImageNet_files = glob.glob(f'{args.ImageNet_dir}/**/*.JPEG', recursive=True)
         with open(args.in_progress_file, 'r+') as f:

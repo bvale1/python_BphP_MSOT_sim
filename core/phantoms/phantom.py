@@ -203,7 +203,7 @@ class phantom:
             'mu_a' : self.interp_property(
                 mu_a, wavelengths_nm, self.wavelengths_interp 
             ), # [m^-1]
-            'mu_s' : [0.0], # [m^-1]
+            'mu_s' : np.zeros(len(self.wavelengths_interp), dtype=np.float32).tolist(), # [m^-1]
             'n' : 1.33, # refractive index
             'g' : 0.9 # anisotropy
         }

@@ -22,12 +22,12 @@ class ImageNet_phantom(phantom):
             image /= 255.0
             image = np.transpose(image, (2, 0, 1))
         
-        mu_s_min = self.rng.uniform(6000, 12000) # [m^-1]
-        mu_s_max = self.rng.uniform(13000, 26000) # [m^-1]
-        mu_a_min = self.rng.uniform(2, 10) # [m^-1]
-        mu_a_max = self.rng.uniform(20, 60) # [m^-1]
-        coupling_medium_mu_a = 0.1 # [m^-1]
-        coupling_medium_mu_s = 100 # [m^-1]
+        mu_s_min = self.rng.uniform(2000, 8000) # [m^-1]
+        mu_s_max = self.rng.uniform(10000, 20000) # [m^-1]
+        mu_a_min = self.rng.uniform(5, 20) # [m^-1]
+        mu_a_max = self.rng.uniform(25, 100) # [m^-1]
+        coupling_medium_mu_a = self.H2O['mu_a'][0] # [m^-1]
+        coupling_medium_mu_s = self.H2O['mu_s'][0] # [m^-1]
         
         volume = np.zeros((
             2, cfg['mcx_grid_size'][0], cfg['mcx_grid_size'][1], cfg['mcx_grid_size'][2]            

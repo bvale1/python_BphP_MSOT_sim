@@ -103,31 +103,31 @@ if __name__ == '__main__':
     # 
     
     # blood volume fraction S_B, oxygen saturation x, water volume fraction S_W
-    absorption_coefficients = np.array([
-        np.zeros_like(wavelengths_m), # 0 --> background
-        mu_a(0.0033, 0.7, 0.5), # 1 --> skin --> adipose, alexandrakis eta al. (2005)
-        mu_a(0.049, 0.8, 0.15), # 2 --> skeleton, alexandrakis eta al. (2005)
-        mu_a(0.0033, 0.7, 0.5), # 3 --> eye --> adipose, alexandrakis eta al. (2005)
-        mu_a(0.03, 0.6, 0.75), # 4 --> medulla --> Rat brain cortex, Steven L Jacques (2013)
-        mu_a(0.03, 0.6, 0.75), # 5 --> cerebellum --> Rat brain cortex, Steven L Jacques (2013)
-        mu_a(0.03, 0.6, 0.75), # 6 --> olfactory bulbs --> Rat brain cortex, Steven L Jacques (2013)
-        mu_a(0.03, 0.6, 0.75), # 7 --> external cerebrum --> Rat brain cortex, Steven L Jacques (2013)
-        mu_a(0.03, 0.6, 0.75), # 8 --> striatum --> Rat brain cortex, Steven L Jacques (2013)
-        mu_a(0.05, 0.75, 0.5), # 9 --> heart, alexandrakis eta al. (2005)
-        mu_a(0.03, 0.6, 0.75), # 10 --> rest of the brain --> Rat brain cortex, Steven L Jacques (2013)
-        mu_a(0.07, 0.8, 0.5), # 11 --> masseter muscles, alexandrakis eta al. (2005)
-        mu_a(0.0033, 0.7, 0.5), # 12 --> lachrymal glands --> adipose, alexandrakis eta al. (2005)
-        mu_a_H2O, # 13 --> bladder --> water, Hendrik Buiteveld (1994)
-        mu_a(0.07, 0.8, 0.5), # 14 --> testis --> muscle, alexandrakis eta al. (2005)
-        mu_a(0.01, 0.7, 0.8), # 15 --> stomach, alexandrakis eta al. (2005)
-        mu_a(0.3, 0.75, 0.7), # 16 --> spleen, alexandrakis eta al. (2005)
-        mu_a(0.3, 0.75, 0.7), # 17 --> pancreas --> liver & spleen, alexandrakis eta al. (2005)
-        mu_a(0.3, 0.75, 0.7), # 18 --> liver, alexandrakis eta al. (2005)
-        mu_a(0.056, 0.75, 0.8),  # 19 --> kidneys, alexandrakis eta al. (2005)
-        mu_a(0.07, 0.8, 0.5), # 20 --> adrenal glands --> muscle, alexandrakis eta al. (2005)
-        mu_a(0.15, 0.85, 0.85) # 21 --> lungs, alexandrakis eta al. (2005)
-    ]) # [m^-1]
-    absorption_coefficients[0,:] = coupling_medium_mu_a
+    #absorption_coefficients = np.array([
+    #    np.zeros_like(wavelengths_m), # 0 --> background
+    #    mu_a(0.0033, 0.7, 0.5), # 1 --> skin --> adipose, alexandrakis eta al. (2005)
+    #    mu_a(0.049, 0.8, 0.15), # 2 --> skeleton, alexandrakis eta al. (2005)
+    #    mu_a(0.0033, 0.7, 0.5), # 3 --> eye --> adipose, alexandrakis eta al. (2005)
+    #    mu_a(0.03, 0.6, 0.75), # 4 --> medulla --> Rat brain cortex, Steven L Jacques (2013)
+    #    mu_a(0.03, 0.6, 0.75), # 5 --> cerebellum --> Rat brain cortex, Steven L Jacques (2013)
+    #    mu_a(0.03, 0.6, 0.75), # 6 --> olfactory bulbs --> Rat brain cortex, Steven L Jacques (2013)
+    #    mu_a(0.03, 0.6, 0.75), # 7 --> external cerebrum --> Rat brain cortex, Steven L Jacques (2013)
+    #    mu_a(0.03, 0.6, 0.75), # 8 --> striatum --> Rat brain cortex, Steven L Jacques (2013)
+    #    mu_a(0.05, 0.75, 0.5), # 9 --> heart, alexandrakis eta al. (2005)
+    #    mu_a(0.03, 0.6, 0.75), # 10 --> rest of the brain --> Rat brain cortex, Steven L Jacques (2013)
+    #    mu_a(0.07, 0.8, 0.5), # 11 --> masseter muscles, alexandrakis eta al. (2005)
+    #    mu_a(0.0033, 0.7, 0.5), # 12 --> lachrymal glands --> adipose, alexandrakis eta al. (2005)
+    #    mu_a_H2O, # 13 --> bladder --> water, Hendrik Buiteveld (1994)
+    #    mu_a(0.07, 0.8, 0.5), # 14 --> testis --> muscle, alexandrakis eta al. (2005)
+    #    mu_a(0.01, 0.7, 0.8), # 15 --> stomach, alexandrakis eta al. (2005)
+    #    mu_a(0.3, 0.75, 0.7), # 16 --> spleen, alexandrakis eta al. (2005)
+    #    mu_a(0.3, 0.75, 0.7), # 17 --> pancreas --> liver & spleen, alexandrakis eta al. (2005)
+    #    mu_a(0.3, 0.75, 0.7), # 18 --> liver, alexandrakis eta al. (2005)
+    #    mu_a(0.056, 0.75, 0.8),  # 19 --> kidneys, alexandrakis eta al. (2005)
+    #    mu_a(0.07, 0.8, 0.5), # 20 --> adrenal glands --> muscle, alexandrakis eta al. (2005)
+    #    mu_a(0.15, 0.85, 0.85) # 21 --> lungs, alexandrakis eta al. (2005)
+    #]) # [m^-1]
+    #absorption_coefficients[0,:] = coupling_medium_mu_a
     
     
     # liver absorption is very high but this is validated by
@@ -142,33 +142,33 @@ if __name__ == '__main__':
     # publisher={Optica Publishing Group}
     # }
     
-    scattering_coefficients = np.array([
-        np.zeros_like(wavelengths_m), # 0 --> background
-        mu_s_alex(38, 0.53), # 1 --> skin --> adipose, alexandrakis eta al. (2005)
-        mu_s_alex(35600, 1.47), # 2 --> skeleton, alexandrakis eta al. (2005)
-        mu_s_alex(38, 0.53), # 3 --> eye --> adipose, alexandrakis eta al. (2005)
-        mu_s_jac(2.14, 1.2), # 4 --> medulla --> brain, Steven L Jacques (2013)
-        mu_s_jac(2.14, 1.2), # 5 --> cerebellum --> brain, Steven L Jacques (2013)
-        mu_s_jac(2.14, 1.2), # 6 --> olfactory bulbs --> brain, Steven L Jacques (2013)
-        mu_s_jac(2.14, 1.2), # 7 --> external cerebrum --> brain, Steven L Jacques (2013)
-        mu_s_jac(2.14, 1.2), # 8 --> striatum --> brain, Steven L Jacques (2013)
-        mu_s_alex(10600, 1.43), # 9 --> heart, alexandrakis eta al. (2005)
-        mu_s_jac(2.14, 1.2), # 10 --> rest of the brain --> brain, Steven L Jacques (2013)
-        mu_s_alex(4e7, 2.82), # 11 --> masseter muscles, alexandrakis eta al. (2005)
-        mu_s_alex(38, 0.53), # 12 --> lachrymal glands --> adipose, alexandrakis eta al. (2005)
-        np.zeros_like(wavelengths_m), # 13 --> bladder --> water, Hendrik Buiteveld (1994)
-        mu_s_alex(4e7, 2.82), # 14 --> testis --> muscle, alexandrakis eta al. (2005)
-        mu_s_alex(792, 0.97), # 15 --> stomach, alexandrakis eta al. (2005)
-        mu_s_alex(629, 1.05), # 16 --> spleen, alexandrakis eta al. (2005)
-        mu_s_alex(629, 1.05), # 17 --> pancreas --> liver and spleen, alexandrakis eta al. (2005)
-        mu_s_alex(629, 1.05), # 18 --> liver, alexandrakis eta al. (2005)
-        mu_s_alex(41700, 1.51), # 19 --> kidneys, alexandrakis eta al. (2005)
-        mu_s_alex(4e7, 2.82), # 20 --> adrenal glands --> muscle, alexandrakis eta al. (2005)
-        mu_s_alex(68.4, 0.53) # 21 --> lungs, alexandrakis eta al. (2005)
-    ]) # [m^-1]
-    scattering_coefficients /= (1 - 0.9) # reduced scattering -> scattering, g = 0.9
-    scattering_coefficients[0,:] = coupling_medium_mu_s
-    scattering_coefficients[13,:] = mu_s_H2O
+    #scattering_coefficients = np.array([
+    #    np.zeros_like(wavelengths_m), # 0 --> background
+    #    mu_s_alex(38, 0.53), # 1 --> skin --> adipose, alexandrakis eta al. (2005)
+    #    mu_s_alex(35600, 1.47), # 2 --> skeleton, alexandrakis eta al. (2005)
+    #    mu_s_alex(38, 0.53), # 3 --> eye --> adipose, alexandrakis eta al. (2005)
+    #    mu_s_jac(2.14, 1.2), # 4 --> medulla --> brain, Steven L Jacques (2013)
+    #    mu_s_jac(2.14, 1.2), # 5 --> cerebellum --> brain, Steven L Jacques (2013)
+    #    mu_s_jac(2.14, 1.2), # 6 --> olfactory bulbs --> brain, Steven L Jacques (2013)
+    #    mu_s_jac(2.14, 1.2), # 7 --> external cerebrum --> brain, Steven L Jacques (2013)
+    #    mu_s_jac(2.14, 1.2), # 8 --> striatum --> brain, Steven L Jacques (2013)
+    #    mu_s_alex(10600, 1.43), # 9 --> heart, alexandrakis eta al. (2005)
+    #    mu_s_jac(2.14, 1.2), # 10 --> rest of the brain --> brain, Steven L Jacques (2013)
+    #    mu_s_alex(4e7, 2.82), # 11 --> masseter muscles, alexandrakis eta al. (2005)
+    #    mu_s_alex(38, 0.53), # 12 --> lachrymal glands --> adipose, alexandrakis eta al. (2005)
+    #    np.zeros_like(wavelengths_m), # 13 --> bladder --> water, Hendrik Buiteveld (1994)
+    #    mu_s_alex(4e7, 2.82), # 14 --> testis --> muscle, alexandrakis eta al. (2005)
+    #    mu_s_alex(792, 0.97), # 15 --> stomach, alexandrakis eta al. (2005)
+    #    mu_s_alex(629, 1.05), # 16 --> spleen, alexandrakis eta al. (2005)
+    #    mu_s_alex(629, 1.05), # 17 --> pancreas --> liver and spleen, alexandrakis eta al. (2005)
+    #    mu_s_alex(629, 1.05), # 18 --> liver, alexandrakis eta al. (2005)
+    #    mu_s_alex(41700, 1.51), # 19 --> kidneys, alexandrakis eta al. (2005)
+    #    mu_s_alex(4e7, 2.82), # 20 --> adrenal glands --> muscle, alexandrakis eta al. (2005)
+    #    mu_s_alex(68.4, 0.53) # 21 --> lungs, alexandrakis eta al. (2005)
+    #]) # [m^-1]
+    #scattering_coefficients /= (1 - 0.9) # reduced scattering -> scattering, g = 0.9
+    #scattering_coefficients[0,:] = coupling_medium_mu_s
+    #scattering_coefficients[13,:] = mu_s_H2O
     
     # The following optical properties were collected for digimouse by Qianqian
     # Fang, the author of MCX.    
@@ -229,26 +229,26 @@ if __name__ == '__main__':
     #cross_sections_mu_s = prop[cross_sections,2]
     
     # 770 nm = idx 17
-    cross_sections_mu_a = absorption_coefficients[cross_sections, 17]
-    cross_sections_mu_s = scattering_coefficients[cross_sections, 17]
+    #cross_sections_mu_a = absorption_coefficients[cross_sections, 17]
+    #cross_sections_mu_s = scattering_coefficients[cross_sections, 17]
     
-    pf.heatmap(cross_sections_mu_a, dx=dx, sharescale=True, title=r'$\mu_{a}$ (m$^{-1}$)')
-    pf.heatmap(cross_sections_mu_s, dx=dx, sharescale=True, title=r'$\mu_{s}$ (m$^{-1}$)')
+    #pf.heatmap(cross_sections_mu_a, dx=dx, sharescale=True, title=r'$\mu_{a}$ (m$^{-1}$)')
+    #pf.heatmap(cross_sections_mu_s, dx=dx, sharescale=True, title=r'$\mu_{s}$ (m$^{-1}$)')
     
-    tissue_labels = ['adipose', 'skeleton', 'eye', 'brain', 'heart', 'muscle', 'water', 'stomach', 'liver & spleen', 'kidneys', 'lungs']
-    labels_idx = np.array([1, 2, 3, 4, 9, 11, 13, 15, 16, 19, 21])
-    fig, ax = plt.subplots(1, 1, figsize=(6,8))
-    for i in range(len(tissue_labels)):
-        ax.plot(wavelengths_nm, absorption_coefficients[labels_idx[i]], label=tissue_labels[i])
-    ax.plot(wavelengths_nm, mu_a_Hb, label='Hb')
-    ax.plot(wavelengths_nm, mu_a_HbO2, label='HbO2')
-    ax.legend()
-    ax.set_xlim(680, 800)
-    ax.set_yscale('log')
-    ax.set_ylabel(r'$\mu_{a}$ $($m$^{-1})$')
-    ax.set_xlabel('wavelength (nm)')
-    ax.grid(True)
-    ax.set_axisbelow(True)
+    #tissue_labels = ['adipose', 'skeleton', 'eye', 'brain', 'heart', 'muscle', 'water', 'stomach', 'liver & spleen', 'kidneys', 'lungs']
+    #labels_idx = np.array([1, 2, 3, 4, 9, 11, 13, 15, 16, 19, 21])
+    #fig, ax = plt.subplots(1, 1, figsize=(6,8))
+    #for i in range(len(tissue_labels)):
+    #    ax.plot(wavelengths_nm, absorption_coefficients[labels_idx[i]], label=tissue_labels[i])
+    #ax.plot(wavelengths_nm, mu_a_Hb, label='Hb')
+    #ax.plot(wavelengths_nm, mu_a_HbO2, label='HbO2')
+    #ax.legend()
+    #ax.set_xlim(680, 800)
+    #ax.set_yscale('log')
+    #ax.set_ylabel(r'$\mu_{a}$ $($m$^{-1})$')
+    #ax.set_xlabel('wavelength (nm)')
+    #ax.grid(True)
+    #ax.set_axisbelow(True)
     
     
     '''
@@ -331,4 +331,10 @@ if __name__ == '__main__':
     axes[1].text(0.1, 0.95, 'B', transform=axes[1].transAxes, fontsize=13, fontweight='bold', va='top')
     axes[1].legend(loc="best")
 
-    
+    mu_a = phantom_obj.calculate_tissue_absorption_coefficients()
+    mu_s = phantom_obj.calculate_tissue_scattering_coefficients()
+    wavelength_index = np.where(np.round(wavelengths_nm) == 770)[0][0] # 770 nm
+    cross_sections_mu_a = mu_a[cross_sections, wavelength_index]
+    cross_sections_mu_s = mu_s[cross_sections, wavelength_index]
+    pf.heatmap(cross_sections_mu_a, dx=dx, sharescale=True, title=r'$\mu_{a}(770$ nm$)$ (m$^{-1}$)')
+    pf.heatmap(cross_sections_mu_s, dx=dx, sharescale=True, title=r'$\mu_{s}(770$ nm$)$ (m$^{-1}$)')
