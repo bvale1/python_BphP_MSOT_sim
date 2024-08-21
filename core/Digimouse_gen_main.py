@@ -151,8 +151,6 @@ if __name__ == '__main__':
         with open(args.save_dir+'config.json', 'r') as f:
             cfg = json.load(f)
         logging.info(f'checkpoint config found {cfg}')
-        
-        phantom = digimouse_phantom(cfg['digimouse_dir'])
                 
     else:               
         # It is imperative that dx is small enough to support high enough 
@@ -232,8 +230,6 @@ if __name__ == '__main__':
         with open(cfg['save_dir']+'config.json', 'w') as f:
             json.dump(cfg, f, indent='\t')
         
-        phantom = digimouse_phantom(cfg['digimouse_dir'])
-
         if cfg['wavelengths'][0]:
             y_positions_and_wavelengths = [str(a)+'_'+str(b) for a in np.arange(200, 875, 25) for b in np.array(cfg['wavelengths'])*1e9]
         else:
@@ -318,14 +314,13 @@ if __name__ == '__main__':
         else:
             logging.info(f'simulation {y_idx_wavelength} {i+1}/{len(y_positions_and_wavelengths)}')
 
-        
-
+        # create phantom
+        phantom = digimouse_phantom(cfg['digimouse_dir'], wavelengths_m=[float(wavelength_nm)*1e-9])        
         (y_pos, wavelength_nm) = y_idx_wavelength.split('_')
-        H2O = phantom.define_H2O(wavelengths_m=[float(wavelength_nm)*1e-9])
-        (Hb, HbO2) = phantom.define_Hb(wavelengths_m=[float(wavelength_nm)*1e-9])
+        H2O = phantom.define_H2O()
+        (Hb, HbO2) = phantom.define_Hb()
         (volume, bg_mask) = phantom.create_volume(
-            cfg, int(y_pos), rotate=2, wavelength_m=float(wavelength_nm)*1e-9,
-            axisymmetric=cfg['axisymmetric']
+            cfg, int(y_pos), rotate=2, axisymmetric=cfg['axisymmetric']
         )
         
         # save 2D slice of the volume to HDF5 file
