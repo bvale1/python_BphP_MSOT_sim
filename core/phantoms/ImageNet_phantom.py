@@ -8,8 +8,8 @@ import func.utility_func as uf
 
 class ImageNet_phantom(phantom):
     
-    def __init__(self, rng : np.random.Generator):
-        super().__init__()
+    def __init__(self, rng : np.random.Generator, *args, **kwargs):
+        super(ImageNet_phantom, self).__init__(*args, **kwargs)
         self.rng = rng
         
     def create_volume(self, cfg: dict, image_file : str):
@@ -29,6 +29,8 @@ class ImageNet_phantom(phantom):
         coupling_medium_mu_a = self.H2O['mu_a'][0] # [m^-1]
         coupling_medium_mu_s = self.H2O['mu_s'][0] # [m^-1]
         
+        # volume[0] = absorption coefficient [m^-1]
+        # volume[1] = scattering coefficient [m^-1]
         volume = np.zeros((
             2, cfg['mcx_grid_size'][0], cfg['mcx_grid_size'][1], cfg['mcx_grid_size'][2]            
         ), dtype=np.float32)      

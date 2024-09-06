@@ -84,7 +84,7 @@ class digimouse_phantom(phantom):
             self.power_law_jac_mu_s(2.14, 1.2), # 7 --> external cerebrum --> brain, Steven L Jacques (2013)
             self.power_law_jac_mu_s(2.14, 1.2), # 8 --> striatum --> brain, Steven L Jacques (2013)
             self.power_law_alex_mu_s(10600, 1.43), # 9 --> heart, alexandrakis eta al. (2005)
-            self.power_law_alex_mu_s(2.14, 1.2), # 10 --> rest of the brain --> brain, Steven L Jacques (2013)
+            self.power_law_jac_mu_s(2.14, 1.2), # 10 --> rest of the brain --> brain, Steven L Jacques (2013)
             self.power_law_alex_mu_s(4e7, 2.82), # 11 --> masseter muscles, alexandrakis eta al. (2005)
             self.power_law_alex_mu_s(38, 0.53), # 12 --> lachrymal glands --> adipose, alexandrakis eta al. (2005)
             np.asarray(self.H2O['mu_s']), # 13 --> bladder --> water, Hendrik Buiteveld (1994)
@@ -102,7 +102,7 @@ class digimouse_phantom(phantom):
                       cfg: dict, 
                       y_idx : int,
                       rotate : int,
-                      axisymmetric : bool = False
+                      extrusion : bool = False
                       ) -> tuple[np.ndarray, np.ndarray]:
         assert rotate in [0, 1, 2, 3], 'Rotation must be 0, 1, 2 or 3 corresponding to 0, pi/2, pi and 3*pi/2 respectively'
         assert 100 <= y_idx <= 875, 'y_idx must be between 100 and 875' 
@@ -148,7 +148,7 @@ class digimouse_phantom(phantom):
         # place the digimouse phantom in the center of the volume
         tissue_types[(nx-digimouse.shape[0])//2:(nx+digimouse.shape[0])//2, :, (nz-digimouse.shape[2])//2:(nz+digimouse.shape[2])//2] = digimouse        
         
-        if axisymmetric:
+        if extrusion:
             tissue_types = np.repeat(tissue_types[:, [(ny//2)-1], :], ny, axis=1)
 
         # background mask
@@ -158,6 +158,8 @@ class digimouse_phantom(phantom):
         scattering_coefficients = self.calculate_tissue_scattering_coefficients()
 
         # assign optical properties to the volume
+        # volume[0] = absorption coefficient [m^-1]
+        # volume[1] = scattering coefficient [m^-1]
         volume = np.zeros(([2, nx, ny, nz]), dtype=np.float32)
         
         volume[0] = absorption_coefficients[tissue_types, 0] # [m^-1]

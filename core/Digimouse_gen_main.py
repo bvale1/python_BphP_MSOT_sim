@@ -118,8 +118,8 @@ if __name__ == '__main__':
         help='wavelength of light source [m]'
     )
     parser.add_argument(
-        '--axisymmetric', default=False, action=argparse.BooleanOptionalAction,
-        help='make digimouse phantom axisymmetric, reduces out of plane signal'
+        '--extrusion', default=False, action=argparse.BooleanOptionalAction,
+        help='make digimouse phantom extrusion, reduces out of plane signal'
     )
     args = parser.parse_args()
     
@@ -151,6 +151,7 @@ if __name__ == '__main__':
         with open(args.save_dir+'config.json', 'r') as f:
             cfg = json.load(f)
         logging.info(f'checkpoint config found {cfg}')
+        rng = np.random.default_rng(cfg['seed'])
                 
     else:               
         # It is imperative that dx is small enough to support high enough 
@@ -212,15 +213,24 @@ if __name__ == '__main__':
             'dt' : 25e-9, # time step [s]
             'Nt' : 2030, # number of time steps
             'bandpass_filter' : args.bandpass_filter, # apply bandpass filter to sensor data
-            'axisymmetric' : args.axisymmetric # make digimouse phantom axisymmetric
+            'extrusion' : args.extrusion # make digimouse phantom extrusion
         }
         
         logging.info(f'no checkpoint, creating config {cfg}')
         
+        # initialise random number generator, for digimouse the seed is used
+        # to sample laser energy and if stochastic noise added to the sensor data
+        if cfg['seed']:
+            logging.info(f'seed provided: {cfg["seed"]}')
+        else:
+            cfg['seed'] = np.random.randint(0, 2**32 - 1)
+            logging.info(f'no seed provided, random seed selected: {cfg["seed"]}')        
+        rng = np.random.default_rng(cfg['seed'])
+        
         # Energy total delivered is wavelength dependant and normally disributed
         Emean = 70.0727 * 1e-3; # [J]
         Estd = 0.7537 * 1e-3; # [J]
-        cfg['LaserEnergy'] = np.random.normal(
+        cfg['LaserEnergy'] = rng.normal(
             loc=Emean, scale=Estd, size=(cfg['nimages'])
         ).astype(np.float32)
         cfg['LaserEnergy'] = cfg['LaserEnergy'].tolist()
@@ -231,9 +241,9 @@ if __name__ == '__main__':
             json.dump(cfg, f, indent='\t')
         
         if cfg['wavelengths'][0]:
-            y_positions_and_wavelengths = [str(a)+'_'+str(b) for a in np.arange(200, 875, 25) for b in np.array(cfg['wavelengths'])*1e9]
+            y_positions_and_wavelengths = [str(a)+'_'+str(b) for a in np.arange(200, 800, 25) for b in np.array(cfg['wavelengths'])*1e9]
         else:
-            y_positions_and_wavelengths = [str(a)+'_'+str(b) for a in np.arange(200, 875, 25) for b in np.arange(650, 910, 10)]
+            y_positions_and_wavelengths = [str(a)+'_'+str(b) for a in np.arange(200, 800, 25) for b in np.arange(650, 910, 10)]
         with open(args.in_progress_file, 'r+') as f:
             
             fcntl.flock(f.fileno(), fcntl.LOCK_EX)
@@ -273,14 +283,6 @@ if __name__ == '__main__':
     # load impulse response function
     irf = np.load(args.irf_path)
     
-    # initialise random number generator
-    if cfg['seed']:
-        logging.info(f'seed provided: {cfg["seed"]}')
-    else:
-        cfg['seed'] = np.random.randint(0, 2**32 - 1)
-        logging.info(f'no seed provided, random seed selected: {cfg["seed"]}')        
-    rng = np.random.default_rng(cfg['seed'])
-    
     # intialise bandpass filter
     if cfg['bandpass_filter']:
         filter = make_filter(
@@ -306,7 +308,7 @@ if __name__ == '__main__':
     y_positions_and_wavelengths = {
         k : v for k, v in ckpt_dict.items() if v['save_dir'] == cfg['save_dir']
     }
-    logging.debug(f'checkpointed files: {y_positions_and_wavelengths}')
+    logging.info(f'checkpointed files: {y_positions_and_wavelengths}')
     for i, y_idx_wavelength in enumerate(y_positions_and_wavelengths.keys()):
         if y_positions_and_wavelengths[y_idx_wavelength]['sim_complete'] is True:
             logging.info(f'{y_idx_wavelength} {i+1}/{len(y_positions_and_wavelengths)} is complete')
@@ -320,7 +322,7 @@ if __name__ == '__main__':
         H2O = phantom.define_H2O()
         (Hb, HbO2) = phantom.define_Hb()
         (volume, bg_mask) = phantom.create_volume(
-            cfg, int(y_pos), rotate=2, axisymmetric=cfg['axisymmetric']
+            cfg, int(y_pos), rotate=2, extrusion=cfg['extrusion']
         )
         
         # save 2D slice of the volume to HDF5 file

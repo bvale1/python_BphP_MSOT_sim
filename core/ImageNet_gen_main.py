@@ -99,7 +99,7 @@ if __name__ == '__main__':
     parser.add_argument('--forward_model', type=str, default='invision', action='store')
     parser.add_argument('--inverse_model', type=str, default='invision', action='store')
     parser.add_argument('--crop_p0_3d_size', type=int, default=512, action='store')
-    parser.add_argument('--delete_p0_3d', action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument('--delete_p0_3d', action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument('-v', type=str, help='verbose level', default='INFO')
     parser.add_argument('--Gamma', type=float, default=1.0, action='store', help='Gruneisen parameter')
     parser.add_argument(

@@ -136,7 +136,7 @@ def heatmap(img,
     
     return (fig, ax, frames)
 
-
+'''
 if __name__ == '__main__':
     import h5py
     
@@ -157,3 +157,4 @@ if __name__ == '__main__':
         data,
         save_name='202307020_python_Clara_phantom_ReBphP_0p001/Janek_InVision_MCX_source.png',
     )
+'''
