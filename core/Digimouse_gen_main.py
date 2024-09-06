@@ -343,6 +343,9 @@ if __name__ == '__main__':
                         volume[1,:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size']
                     ), dtype=np.float32
                 )
+            if 'bg_mask' not in f[h5_group]:
+                f[h5_group].create_dataset('bg_mask', data=bg_mask, dtype=np.float32)
+                
  
         if cfg['stage'] == 'optical':
             # optical simulation

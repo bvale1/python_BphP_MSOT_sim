@@ -1,5 +1,5 @@
 import numpy as np
-from phantoms.ImageNet_phantom import fluence_correction_phantom
+from phantoms.fluence_correction_phantom import fluence_correction_phantom
 import json, h5py, os, timeit, logging, argparse, gc
 import func.geometry_func as gf
 import func.utility_func as uf
@@ -64,6 +64,7 @@ if __name__ == '__main__':
     parser.add_argument('--delete_p0_3d', action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument('-v', type=str, help='verbose level', default='INFO')
     parser.add_argument('--Gamma', type=float, default=1.0, action='store', help='Gruneisen parameter')
+    parser.add_argument('--mu_s_guess', type=float, default=10000, action='store', help='Guess for scattering coefficient')
     
     args = parser.parse_args()
     
@@ -75,11 +76,112 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
         logging.info(f'{args.v} not a recognised verbose level, using INFO instead')
     
-    if (os.path.exists(args.save_dir+'config.json') 
-        and os.path.exists(args.save_dir+'data.h5')):
-        
-        with open(args.save_dir+'config.json', 'r') as f:
-            cfg = json.load(f)
-        logging.info(f'dataset config found {cfg}')
-        
+    data, cfg = load_sim(args.save_dir, args='all', verbose=False)
     
+    images = list(data.keys())
+    p0_recon = data[images[0]]['p0_tr']
+    Phi_true = data[images[0]]['Phi']
+    mu_a_true = data[images[0]]['mu_a']
+    bg_mask = data[images[0]]['bg_mask']
+    
+    mu_a = p0_recon.copy() * 0.01 # [m^-1] starting guess for absorption coefficient
+    mu_s = 10000 # [m^-1] assumed scattering coefficient
+    phantom = fluence_correction_phantom(bg_mask, wavelengths_m=cfg['wavelengths'])
+    
+    with h5py.File(cfg['save_dir']+'temp.h5', 'w') as f:
+        logging.info('allocating storage for p0_3d temp.h5')
+        f.create_dataset(
+            'p0_3D',
+            shape=(
+                cfg['crop_p0_3d_size'],
+                cfg['kwave_grid_size'][1],
+                cfg['crop_p0_3d_size']
+            ), dtype=np.float32
+        )
+    
+    for i in range(args.niter):
+        logging.info(f'iteration {i+1}/{args.niter}')
+        volume = phantom.create_volume(mu_a, mu_s, cfg)
+        # optical simulation
+        simulation = optical_simulation.MCX_adapter(cfg, source='invision')
+    
+        gc.collect()
+    
+        start = timeit.default_timer()
+        # out can be energy absorbed, fluence, pressure, sensor data
+        # or recontructed pressure, the variable is overwritten
+        # multiple times to save memory
+        out = simulation.run_mcx(
+            args.mcx_bin_path,
+            volume.copy()
+        )
+        logging.info(f'mcx run in {timeit.default_timer() - start} seconds')
+        
+        # convert from normalised fluence [mm^-2] -> [J m^-2]
+        start = timeit.default_timer()
+        out *= cfg['LaserEnergy'][i] * 1e6
+        
+        # save fluence, to data HDF5 file
+        #with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
+        #    f[h5_group].create_dataset(
+        #        'Phi',
+        #        data=uf.square_centre_crop(
+        #            out[:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size']
+        #        ), dtype=np.float32
+        #    )
+        #logging.info(f'fluence saved in {timeit.default_timer() - start} seconds')
+        
+        start = timeit.default_timer()
+        # calculate initial pressure [J m^-2] * [m^-1] -> [J m^-3] = [Pa]
+        out *= cfg['gruneisen'] * volume[0]
+        
+        # save 3D p0 to temp.h5
+        with h5py.File(cfg['save_dir']+'temp.h5', 'r+') as f:
+            f['p0_3D'][()] =  uf.crop_p0_3D(
+                out,
+                [cfg['crop_p0_3d_size'], cfg['kwave_grid_size'][1], cfg['crop_p0_3d_size']]
+            )
+        logging.info(f'pressure saved in {timeit.default_timer() - start} seconds')    
+                                        
+        gc.collect()
+        
+        logging.info('optical stage complete')
+        
+        # delete mcx input and out files, they are not needed anymore
+        simulation.delete_temporary_files()
+        start = timeit.default_timer()
+        # overwrite mcx simulation to save memory
+        simulation = acoustic_forward_simulation.kwave_forward_adapter(
+            cfg, 
+            transducer_model=cfg['forward_model']
+        )
+        simulation.configure_simulation()
+        logging.info(f'kwave forward initialised in {timeit.default_timer() - start} seconds')
+            
+        gc.collect()
+            
+        logging.info(f'k-wave forward simulation {i+1}/{args.niter}')
+        start = timeit.default_timer()
+        with h5py.File(cfg['save_dir']+'temp.h5', 'r') as f:
+            out = uf.pad_p0_3D(
+                f['p0_3D'],
+                cfg['kwave_grid_size'][0]
+            )
+        logging.info(f'p0 loaded in {timeit.default_timer() - start} seconds')
+        
+        start = timeit.default_timer()
+        # run also saves the sensor data to data.h5 as float16
+        out = simulation.run_kwave_forward(out)
+        logging.info(f'kwave forward run in {timeit.default_timer() - start} seconds')
+        if not np.any(out):
+            logging.error('sensor data is all zeros')
+            exit(1)                        
+        #start = timeit.default_timer()
+        #with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
+        #    f[h5_group].create_dataset(
+        #        'sensor_data',
+        #        data=out.astype(np.float16)
+        #    )
+        #logging.info(f'sensor data saved in {timeit.default_timer() - start} seconds')
+        
+        

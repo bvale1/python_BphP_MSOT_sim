@@ -283,7 +283,7 @@ if __name__ == '__main__':
             f.seek(0)  # Go back to the start of the file
             f.truncate()  # Truncate the file to remove old content
             json.dump(ckpt_dict, f, indent='\t')
-            fcntl.flock(f.fileno(), fcntl.LOCK_UN)  
+            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
     
         with h5py.File(cfg['save_dir']+'data.h5', 'w') as f:
             logging.info('creating data.h5')
@@ -302,15 +302,15 @@ if __name__ == '__main__':
         logging.info('bandpass filter initialised')
     
     with h5py.File(cfg['save_dir']+'temp.h5', 'w') as f:
-            logging.info('allocating storage for p0_3d temp.h5')
-            f.create_dataset(
-                'p0_3D',
-                shape=(
-                    cfg['crop_p0_3d_size'],
-                    cfg['kwave_grid_size'][1],
-                    cfg['crop_p0_3d_size']
-                ), dtype=np.float32
-            )
+        logging.info('allocating storage for p0_3d temp.h5')
+        f.create_dataset(
+            'p0_3D',
+            shape=(
+                cfg['crop_p0_3d_size'],
+                cfg['kwave_grid_size'][1],
+                cfg['crop_p0_3d_size']
+            ), dtype=np.float32
+        )
     
     # get files in use by this simulation but not yet completed
     ckpt_dict = uf.load_json(args.in_progress_file)
@@ -343,6 +343,7 @@ if __name__ == '__main__':
                     volume[1,:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size']
                 ), dtype=np.float32
             )
+            f[h5_group].create_dataset('bg_mask', data=bg_mask, dtype=np.float32)
  
         if cfg['stage'] == 'optical':
             # optical simulation
