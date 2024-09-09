@@ -1,5 +1,6 @@
 import numpy as np
 from phantoms.fluence_correction_phantom import fluence_correction_phantom
+from scipy.ndimage import convolve1d
 import json, h5py, os, timeit, logging, argparse, gc
 import func.geometry_func as gf
 import func.utility_func as uf
@@ -9,7 +10,7 @@ import acoustic_inverse_simulation
 
 
 # same function as in https://github.com/bvale1/MSOT_Diffusion.git
-def load_sim(path : str, args='all', verbose=False) -> list:
+def load_sim(path : str, args : list | str='all', verbose=False) -> list:
     data = {}
     with h5py.File(os.path.join(path, 'data.h5'), 'r') as f:
         images = list(f.keys())
@@ -52,6 +53,12 @@ if __name__ == '__main__':
         action='store',
         help='directory to save simulation data'
     )
+    parser.add_argument(
+        '--irf_path', type=str,
+        default='/mnt/fast/nobackup/users/wv00017/invision_irf.npy',
+        action='store',
+        help='path to the impulse response function of the invision transducer'
+    )
     parser.add_argument('--dataset', type=str, help='path to dataset')
     parser.add_argument('--niter', type=int, help='Number of iterations', default=10)
     parser.add_argument('--crop_size', type=int, default=256, action='store')
@@ -87,6 +94,9 @@ if __name__ == '__main__':
     mu_a = p0_recon.copy() * 0.01 # [m^-1] starting guess for absorption coefficient
     mu_s = 10000 # [m^-1] assumed scattering coefficient
     phantom = fluence_correction_phantom(bg_mask, wavelengths_m=cfg['wavelengths'])
+    
+    # load impulse response function
+    irf = np.load(args.irf_path)
     
     with h5py.File(cfg['save_dir']+'temp.h5', 'w') as f:
         logging.info('allocating storage for p0_3d temp.h5')
@@ -157,7 +167,6 @@ if __name__ == '__main__':
         )
         simulation.configure_simulation()
         logging.info(f'kwave forward initialised in {timeit.default_timer() - start} seconds')
-            
         gc.collect()
             
         logging.info(f'k-wave forward simulation {i+1}/{args.niter}')
@@ -184,4 +193,55 @@ if __name__ == '__main__':
         #    )
         #logging.info(f'sensor data saved in {timeit.default_timer() - start} seconds')
         
+        logging.info('acoustic forward stage complete')
         
+        start = timeit.default_timer()
+        simulation = acoustic_inverse_simulation.kwave_inverse_adapter(
+            cfg,
+            transducer_model=cfg['inverse_model']
+        )
+        simulation.configure_simulation()
+        logging.info(f'kwave inverse initialised in {timeit.default_timer() - start} seconds')
+        gc.collect()
+            
+        # load sensor data
+        #start = timeit.default_timer()
+        #with h5py.File(cfg['save_dir']+'data.h5', 'r') as f:
+        #    out = f[h5_group]['sensor_data'][()].astype(np.float32)
+        #logging.info(f'sensor data loaded in {timeit.default_timer() - start} seconds')
+        
+        start = timeit.default_timer()
+        # apply convolution with the impulse response function
+        out = convolve1d(out, irf, mode='nearest', axis=-1)
+        # apply bandpass filter to the noisy sensor data
+        if args.bandpass_filter:
+            out = np.fft.ifft(np.fft.fft(out, axis=-1) * filter, axis=-1).real.astype(np.float32)
+        logging.info(f'noise added in {timeit.default_timer() - start} seconds')
+
+        start = timeit.default_timer()
+        tr = simulation.run_time_reversal(out)
+        logging.info(f'time reversal run in {timeit.default_timer() - start} seconds')
+
+        #start = timeit.default_timer()
+        #with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
+        #    f[h5_group].create_dataset(
+        #        'p0_tr',
+        #        data=uf.square_centre_crop(tr, cfg['crop_size']),
+        #        dtype=np.float32
+        #    )
+        #logging.info(f'p0_recon saved in {timeit.default_timer() - start} seconds')
+        
+        
+    # compute metrics
+    RMSE = np.sqrt(np.mean(((mu_a - mu_a_true)**2)[bg_mask]))
+    
+    logging.info(f'RMSE: {RMSE}')
+        
+    # delete temp p0_3D dataset
+    if cfg['delete_p0_3d'] is True:
+        try:
+            start = timeit.default_timer()
+            os.remove(cfg['save_dir']+'temp.h5')
+            logging.info(f'temp.h5 (p0_3D) deleted in {timeit.default_timer() - start} seconds')
+        except:
+            logging.debug('unable to delete temp.h5, (p0_3D) not found')

@@ -330,7 +330,7 @@ if __name__ == '__main__':
         # save 2D slice of the volume to HDF5 file
         h5_group = image_file.replace('/', '__')
         with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
-            f.create_group(h5_group)
+            f.require_group(h5_group)
             f[h5_group].create_dataset(
                 'mu_a',
                 data=uf.square_centre_crop(
