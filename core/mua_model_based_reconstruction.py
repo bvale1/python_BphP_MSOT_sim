@@ -50,7 +50,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--save_dir', type=str,
-        default='unnamed_fluence_correction',
+        default='unnamed_mua_recovery',
         action='store',
         help='directory to save simulation data'
     )
@@ -73,9 +73,9 @@ if __name__ == '__main__':
     parser.add_argument('--crop_size', type=int, default=256, action='store')
     parser.add_argument('--sim_git_hash', type=str, default=None, action='store')
     parser.add_argument('--recon_iterations', type=int, default=5, action='store')
-    parser.add_argument('--recon_alpha', type=float, default=1.0, action='store')
-    parser.add_argument('--forward_model', type=str, default='invision', action='store')
-    parser.add_argument('--inverse_model', type=str, default='invision', action='store')
+    parser.add_argument('--recon_alpha', type=float, default=1.0, action='store', )
+    parser.add_argument('--forward_model', choices=['invision', 'point'], default='invision', action='store')
+    parser.add_argument('--inverse_model', choices=['invision', 'point'], default='invision', action='store')
     parser.add_argument('--crop_p0_3d_size', type=int, default=512, action='store')
     parser.add_argument('--delete_p0_3d', action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument('-v', type=str, help='verbose level', default='INFO')
@@ -93,6 +93,9 @@ if __name__ == '__main__':
         logging.info(f'{args.v} not a recognised verbose level, using INFO instead')
     
     data, cfg = load_sim(args.save_dir, args='all', verbose=False)
+    
+    with open(os.path.join(args.save_dir, 'config.json'), 'w') as f:
+        json.dump(vars(args), f, indent='\t')
     
     images = list(data.keys())
     p0_recon = data[images[0]]['p0_tr']
@@ -281,7 +284,7 @@ if __name__ == '__main__':
             cmap='viridis',
             rowmax=4
         )
-        fig.savefig(os.strcat(cfg['save_dir'], 'mu_a.png'))
+        fig.savefig(os.path.join(cfg['save_dir'], 'mu_a.png'))
         residuals = mu_a_plots[2:] - mu_a_true
         labels = []
         for n in range(1, args.niter+1):
@@ -297,7 +300,7 @@ if __name__ == '__main__':
             vmin=np.minimum(-np.max(mu_a_true), residuals),
             vmax=np.maximum(np.max(mu_a_true), residuals)
         )
-        fig.savefig(os.strcat(cfg['save_dir'], 'mu_a_residuals.png'))
+        fig.savefig(os.path.join(cfg['save_dir'], 'mu_a_residuals.png'))
         labels = [r'$\mu_{a}$ (m$^{-1}$)', r'$\mu_{s}$ (m$^{-1}$)',
                   r'$\Phi$ (J m$^{-2}$)', r'$p_{0}$ initial pressure (Pa)',
                   r'$\hat{p}_{0}$ reconstructed (Pa)']
@@ -305,7 +308,7 @@ if __name__ == '__main__':
                   data[images[0]]['Phi'], 
                   data[images[0]]['mu_a']*data[images[0]]['Phi'], p0_recon]
         (fig, ax, frames) = pf.heatmap(images, dx=cfg['dx'], rowmax=5, labels=labels)
-        fig.savefig(os.strcat(cfg['save_dir'], 'images.png'))
+        fig.savefig(os.path.join(cfg['save_dir'], 'images.png'))
         
     # delete temp p0_3D dataset
     if cfg['delete_p0_3d'] is True:
