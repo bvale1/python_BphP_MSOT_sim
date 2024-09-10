@@ -1,8 +1,9 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from phantoms.fluence_correction_phantom import fluence_correction_phantom
 from scipy.ndimage import convolve1d
 import json, h5py, os, timeit, logging, argparse, gc
-import func.geometry_func as gf
+import func.plot_func as pf
 import func.utility_func as uf
 import optical_simulation
 import acoustic_forward_simulation
@@ -49,7 +50,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--save_dir', type=str,
-        default='unnamed_sim',
+        default='unnamed_fluence_correction',
         action='store',
         help='directory to save simulation data'
     )
@@ -58,6 +59,14 @@ if __name__ == '__main__':
         default='/mnt/fast/nobackup/users/wv00017/invision_irf.npy',
         action='store',
         help='path to the impulse response function of the invision transducer'
+    )
+    parser.add_argument(
+        '--mu_s_guess', type=float, default=10000, action='store',
+        help='Guess for scattering coefficient (m^-1)'
+    )
+    parser.add_argument(
+        '--mu_a_guess', type=float, default=30, action='store', 
+        help='Guess for absorption coefficient (m^-1)'
     )
     parser.add_argument('--dataset', type=str, help='path to dataset')
     parser.add_argument('--niter', type=int, help='Number of iterations', default=10)
@@ -71,7 +80,7 @@ if __name__ == '__main__':
     parser.add_argument('--delete_p0_3d', action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument('-v', type=str, help='verbose level', default='INFO')
     parser.add_argument('--Gamma', type=float, default=1.0, action='store', help='Gruneisen parameter')
-    parser.add_argument('--mu_s_guess', type=float, default=10000, action='store', help='Guess for scattering coefficient')
+    parser.add_argument('--plot', action=argparse.BooleanOptionalAction, default=False, help='plot results')
     
     args = parser.parse_args()
     
@@ -91,8 +100,11 @@ if __name__ == '__main__':
     mu_a_true = data[images[0]]['mu_a']
     bg_mask = data[images[0]]['bg_mask']
     
-    mu_a = p0_recon.copy() * 0.01 # [m^-1] starting guess for absorption coefficient
-    mu_s = 10000 # [m^-1] assumed scattering coefficient
+    mu_a = args.mu_a_guess * np.ones( # [m^-1] starting guess for absorption coefficient
+        (cfg['mcx_grid_size'][0], cfg['mcx_grid_size'][2]),
+        dtype=np.float32
+    )
+    mu_s = args.mu_s_guess # [m^-1] assumed scattering coefficient
     phantom = fluence_correction_phantom(bg_mask, wavelengths_m=cfg['wavelengths'])
     
     # load impulse response function
@@ -109,8 +121,13 @@ if __name__ == '__main__':
             ), dtype=np.float32
         )
     
-    for i in range(args.niter):
-        logging.info(f'iteration {i+1}/{args.niter}')
+    if args.plot:
+        mu_a_plots = [mu_a_true, mu_a.copy()]
+    
+    # metrics are computed for each iteration
+    metrics = {'RMSE': [], 'PSNR': []}
+    for n in range(args.niter):
+        logging.info(f'iteration {n+1}/{args.niter}')
         volume = phantom.create_volume(mu_a, mu_s, cfg)
         # optical simulation
         simulation = optical_simulation.MCX_adapter(cfg, source='invision')
@@ -129,7 +146,10 @@ if __name__ == '__main__':
         
         # convert from normalised fluence [mm^-2] -> [J m^-2]
         start = timeit.default_timer()
-        out *= cfg['LaserEnergy'][i] * 1e6
+        out *= cfg['LaserEnergy'][0] * 1e6
+        Phi = uf.square_centre_crop(
+            out[0,:,(cfg['mcx_grid_size'][1]//2)-1,:].copy(), cfg['crop_size']
+        )
         
         # save fluence, to data HDF5 file
         #with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
@@ -231,11 +251,61 @@ if __name__ == '__main__':
         #    )
         #logging.info(f'p0_recon saved in {timeit.default_timer() - start} seconds')
         
+        # update scheme for model absorption coefficient,
+        # small number added to denominator to improve numerical stability
+        mu_a += (p0_recon - tr) / (cfg['gruneisen'] * Phi + 1e3)
+        # non-negativity constraint
+        mu_a = np.maximum(mu_a, 0)
+        # segmentation mask used as boundary condition
+        mu_a *= bg_mask
         
-    # compute metrics
-    RMSE = np.sqrt(np.mean(((mu_a - mu_a_true)**2)[bg_mask]))
+        # compute metrics
+        metrics['RMSE'].append(np.sqrt(np.mean(((mu_a - mu_a_true)**2)[bg_mask])))
+        metrics['PSNR'].append(20 * np.log10(np.max(mu_a_true) / np.sqrt(metrics['RMSE'][-1])))
     
-    logging.info(f'RMSE: {RMSE}')
+        if args.plot:
+            mu_a_plots.append(mu_a.copy())
+    
+    logging.info(metrics)
+    if args.plot:
+        mu_a_plots = np.asarray(mu_a_plots)
+        labels=['ground truth', 'initial guess n=0']
+        for n in range(1, args.niter+1):
+            labels.append(f'n={n}')
+        (fig, ax, frames) = pf.heatmap(
+            mu_a_plots, 
+            labels=labels,
+            title=r'$\mu_{a}$',
+            dx=cfg['dx'],
+            sharescale=True,
+            cmap='viridis',
+            rowmax=4
+        )
+        fig.savefig(os.strcat(cfg['save_dir'], 'mu_a.png'))
+        residuals = mu_a_plots[2:] - mu_a_true
+        labels = []
+        for n in range(1, args.niter+1):
+            labels.append(f'n={n}, RMSE={metrics["RMSE"][n-1]:.2f}')
+        (fig, ax, frames) = pf.heatmap(
+            residuals, 
+            labels=(1+np.arange(args.niter)).astype(str).tolist(),
+            title=r'$\mu_{a}$ residuals',
+            dx=cfg['dx'],
+            sharescale=True,
+            cmap='viridis',
+            rowmax=4,
+            vmin=np.minimum(-np.max(mu_a_true), residuals),
+            vmax=np.maximum(np.max(mu_a_true), residuals)
+        )
+        fig.savefig(os.strcat(cfg['save_dir'], 'mu_a_residuals.png'))
+        labels = [r'$\mu_{a}$ (m$^{-1}$)', r'$\mu_{s}$ (m$^{-1}$)',
+                  r'$\Phi$ (J m$^{-2}$)', r'$p_{0}$ initial pressure (Pa)',
+                  r'$\hat{p}_{0}$ reconstructed (Pa)']
+        images = [mu_a_true, data[images[0]]['mu_s'], 
+                  data[images[0]]['Phi'], 
+                  data[images[0]]['mu_a']*data[images[0]]['Phi'], p0_recon]
+        (fig, ax, frames) = pf.heatmap(images, dx=cfg['dx'], rowmax=5, labels=labels)
+        fig.savefig(os.strcat(cfg['save_dir'], 'images.png'))
         
     # delete temp p0_3D dataset
     if cfg['delete_p0_3d'] is True:

@@ -15,6 +15,7 @@ class fluence_correction_phantom(phantom):
         
     def create_volume(self, mu_a : np.ndarray, mu_s : float, cfg: dict):
         assert len(mu_a.shape) == 2, 'mu_a must be a 2D numpy array'
+        assert np.all(mu_a >= 0.0), 'mu_a must be non-negative'
         # the 3d phantom is assumed to be an extrusion from the 2d imaging plane
         # mu_s is assumed to be constant throughout the phantom
         
