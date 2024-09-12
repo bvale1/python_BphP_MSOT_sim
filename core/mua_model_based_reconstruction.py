@@ -62,6 +62,12 @@ if __name__ == '__main__':
         help='path to the impulse response function of the invision transducer'
     )
     parser.add_argument(
+        '--weights_dir', type=str, 
+        default='/home/wv00017/python_BphP_MSOT_sim/invision_weights/',
+        action='store',
+        help='directory containing integration weights for combining sensor data'
+    )
+    parser.add_argument(
         '--mu_s_guess', type=float, default=10000, action='store',
         help='Guess for scattering coefficient (m^-1)'
     )
@@ -101,6 +107,9 @@ if __name__ == '__main__':
         logging.info(f'{args.v} not a recognised verbose level, using INFO instead')
     
     data, cfg = load_sim(args.save_dir, args='all', verbose=False)
+    cfg['mcx_bin_path'] = args.mcx_bin_path
+    cfg['weights_dir'] = args.weights_dir
+    cfg['irf_path'] = args.irf_path
     
     with open(os.path.join(args.save_dir, 'config.json'), 'w') as f:
         json.dump(vars(args), f, indent='\t')
