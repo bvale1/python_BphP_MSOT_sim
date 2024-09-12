@@ -128,7 +128,7 @@ if __name__ == '__main__':
     bg_mask = data[images[0]]['bg_mask'].astype(bool)
     bg_mask = uf.square_centre_pad(bg_mask, cfg['mcx_grid_size'][0])
     
-    mu_a = args.mu_a_guess * bg_mask # [m^-1] starting guess for absorption coefficient
+    mu_a = args.mu_a_guess * bg_mask.astype(np.float32) # [m^-1] starting guess for absorption coefficient
     mu_s = args.mu_s_guess # [m^-1] assumed scattering coefficient
     wavelengths_m = [float(images[0].split('_')[-1]) * 1e-9] # [m]
     phantom = fluence_correction_phantom(bg_mask, wavelengths_m=wavelengths_m)
@@ -146,7 +146,7 @@ if __name__ == '__main__':
         )
         logging.info('bandpass filter initialised')
     
-    with h5py.File(os.path.join(cfg['save_dir'], 'temp.h5'), 'w') as f:
+    with h5py.File(os.path.join(args.save_dir, 'temp.h5'), 'w') as f:
         logging.info('allocating storage for p0_3d temp.h5')
         f.create_dataset(
             'p0_3D',
@@ -200,7 +200,7 @@ if __name__ == '__main__':
         out *= cfg['gruneisen'] * volume[0]
         
         # save 3D p0 to temp.h5
-        with h5py.File(os.path.join(cfg['save_dir'], 'temp.h5'), 'r+') as f:
+        with h5py.File(os.path.join(args.save_dir, 'temp.h5'), 'r+') as f:
             f['p0_3D'][()] =  uf.crop_p0_3D(
                 out,
                 [cfg['crop_p0_3d_size'], cfg['kwave_grid_size'][1], cfg['crop_p0_3d_size']]
@@ -225,7 +225,7 @@ if __name__ == '__main__':
             
         logging.info(f'k-wave forward simulation {n+1}/{args.niter}')
         start = timeit.default_timer()
-        with h5py.File(os.path.join(cfg['save_dir'], 'temp.h5'), 'r') as f:
+        with h5py.File(os.path.join(args.save_dir, 'temp.h5'), 'r') as f:
             out = uf.pad_p0_3D(
                 f['p0_3D'],
                 cfg['kwave_grid_size'][0]
@@ -287,14 +287,7 @@ if __name__ == '__main__':
         
         # update scheme for model absorption coefficient,
         # small number added to denominator to improve numerical stability
-        logging.info(f'p0_recon {p0_recon.dtype} {p0_recon.shape}')
-        logging.info(f'tr {tr.dtype} {tr.shape}')
-        logging.info(f'Phi {Phi.dtype} {Phi.shape}')
         logging.info(f'mu_a {mu_a.dtype} {mu_a.shape}')
-        logging.info(f'Gruniesen {cfg["gruneisen"]} {type(cfg["gruneisen"])}')
-        p0_recon = p0_recon.astype(np.float32)
-        tr = tr.astype(np.float32)
-        Phi = Phi.astype(np.float32)
         mu_a = mu_a.astype(np.float32)
         mu_a += (p0_recon - tr) / (cfg['gruneisen'] * Phi + 1e3)
         # non-negativity constraint
@@ -311,7 +304,7 @@ if __name__ == '__main__':
             mu_a = np.minimum(mu_a, 150)
         
         # compute metrics
-        metrics['RMSE'].append(np.sqrt(np.mean(((mu_a - mu_a_true)**2)[bg_mask])))
+        metrics['RMSE'].append(np.sqrt(np.mean(((mu_a[bg_mask] - mu_a_true[bg_mask])**2))))
         metrics['PSNR'].append(20 * np.log10(np.max(mu_a_true[bg_mask]) / 
                                              np.sqrt(metrics['RMSE'][-1])))
     
@@ -320,7 +313,7 @@ if __name__ == '__main__':
     
     logging.info(metrics)
     if args.plot:
-        mu_a_plots = np.asarray(mu_a_plots)
+        mu_a_plots = uf.square_centre_crop(np.asarray(mu_a_plots), cfg['crop_size'])
         labels=['ground truth', 'initial guess n=0']
         for n in range(1, args.niter+1):
             labels.append(f'n={n}')
@@ -333,8 +326,8 @@ if __name__ == '__main__':
             cmap='viridis',
             rowmax=4
         )
-        fig.savefig(os.path.join(cfg['save_dir'], 'mu_a.png'))
-        residuals = mu_a_plots[2:] - mu_a_true
+        fig.savefig(os.path.join(args.save_dir, 'mu_a.png'))
+        residuals = mu_a_plots[2:] - uf.square_centre_crop(mu_a_true, cfg['crop_size'])
         labels = []
         for n in range(1, args.niter+1):
             labels.append(f'n={n}, RMSE={metrics["RMSE"][n-1]:.2f}')
@@ -344,20 +337,20 @@ if __name__ == '__main__':
             title=r'$\mu_{a}$ residuals',
             dx=cfg['dx'],
             sharescale=True,
-            cmap='viridis',
+            cmap='plasma',
             rowmax=4,
-            vmin=np.minimum(-np.max(mu_a_true), residuals),
-            vmax=np.maximum(np.max(mu_a_true), residuals)
+            vmin=np.maximum(-np.max(mu_a_true), np.min(residuals)),
+            vmax=np.minimum(np.max(mu_a_true), np.max(residuals))
         )
-        fig.savefig(os.path.join(cfg['save_dir'], 'mu_a_residuals.png'))
+        fig.savefig(os.path.join(args.save_dir, 'mu_a_residuals.png'))
         labels = [r'$\mu_{a}$ (m$^{-1}$)', r'$\mu_{s}$ (m$^{-1}$)',
                   r'$\Phi$ (J m$^{-2}$)', r'$p_{0}$ initial pressure (Pa)',
                   r'$\hat{p}_{0}$ reconstructed (Pa)']
-        images = [mu_a_true, data[images[0]]['mu_s'], 
+        images = [data[images[0]]['mu_a'], data[images[0]]['mu_s'], 
                   data[images[0]]['Phi'], 
                   data[images[0]]['mu_a']*data[images[0]]['Phi'], p0_recon]
         (fig, ax, frames) = pf.heatmap(images, dx=cfg['dx'], rowmax=5, labels=labels)
-        fig.savefig(os.path.join(cfg['save_dir'], 'images.png'))
+        fig.savefig(os.path.join(args.save_dir, 'images.png'))
         
     # delete temp p0_3D dataset
     if cfg['delete_p0_3d'] is True:
