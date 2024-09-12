@@ -168,7 +168,7 @@ if __name__ == '__main__':
         start = timeit.default_timer()
         out *= cfg['LaserEnergy'][0] * 1e6
         Phi = uf.square_centre_crop(
-            out[0,:,(cfg['mcx_grid_size'][1]//2)-1,:].copy(), cfg['crop_size']
+            out[:,(cfg['mcx_grid_size'][1]//2)-1,:].copy(), cfg['crop_size']
         )
         
         # save fluence, to data HDF5 file
