@@ -191,8 +191,8 @@ class phantom:
         # very low in this wavelength range (mu_s < 1e-3 m^-1 for wavelengths > 600nm)
         # see Hendrik Buiteveld 1998 for scattering
         
-        if any(self.wavelengths_interp > 400) or any(self.wavelengths_interp < 1300):
-            logging.info('Warning: H2O optical data is only 400nm and 1300nm')
+        if any(self.wavelengths_interp < 400) or any(self.wavelengths_interp > 1300):
+            logging.info(f'Warning: H2O optical data is only from 400nm to 1300nm, wavelengths requested:{self.wavelengths_interp}')
             
         with open(self.path+'/Chromophores/hale_and_querry_h20.txt', 'r') as f:
             data = np.genfromtxt(f, skip_header=1, dtype=np.float32, delimiter='\t')

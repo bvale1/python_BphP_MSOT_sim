@@ -41,7 +41,9 @@ def load_sim(path : str, args : list | str='all', verbose=False) -> list:
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Iterative model-based fluence correction')
+    parser = argparse.ArgumentParser(
+        description='Iterative model-based reconstruction of absorption coefficient'
+    )
     parser.add_argument(
         '--mcx_bin_path', type=str,
         default='/home/wv00017/mcx/bin/mcx',
@@ -50,7 +52,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--save_dir', type=str,
-        default='unnamed_mua_recovery',
+        default='mua_recovery_test',
         action='store',
         help='directory to save simulation data'
     )
