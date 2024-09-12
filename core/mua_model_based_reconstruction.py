@@ -121,6 +121,7 @@ if __name__ == '__main__':
     
     images = list(data.keys())
     p0_recon = data[images[0]]['p0_tr']
+    p0_recon = uf.square_centre_pad(p0_recon, cfg['mcx_grid_size'][0])
     Phi_true = data[images[0]]['Phi']
     mu_a_true = data[images[0]]['mu_a']
     bg_mask = data[images[0]]['bg_mask'].astype(bool)
@@ -181,9 +182,7 @@ if __name__ == '__main__':
         # convert from normalised fluence [mm^-2] -> [J m^-2]
         start = timeit.default_timer()
         out *= cfg['LaserEnergy'][0] * 1e6
-        Phi = uf.square_centre_crop(
-            out[:,(cfg['mcx_grid_size'][1]//2)-1,:].copy(), cfg['crop_size']
-        )
+        Phi = out[:,(cfg['mcx_grid_size'][1]//2)-1,:].copy()
         
         # save fluence, to data HDF5 file
         #with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
@@ -303,7 +302,8 @@ if __name__ == '__main__':
         
         # compute metrics
         metrics['RMSE'].append(np.sqrt(np.mean(((mu_a - mu_a_true)**2)[bg_mask])))
-        metrics['PSNR'].append(20 * np.log10(np.max(mu_a_true) / np.sqrt(metrics['RMSE'][-1])))
+        metrics['PSNR'].append(20 * np.log10(np.max(mu_a_true[bg_mask]) / 
+                                             np.sqrt(metrics['RMSE'][-1])))
     
         if args.plot:
             mu_a_plots.append(mu_a.copy())
