@@ -1,5 +1,6 @@
 import numpy as np
 from phantoms.fluence_correction_phantom import fluence_correction_phantom
+from add_noise import make_filter
 from scipy.ndimage import convolve1d
 import json, h5py, os, timeit, logging, argparse, gc
 import func.plot_func as pf
@@ -95,6 +96,10 @@ if __name__ == '__main__':
     parser.add_argument('-v', type=str, help='verbose level', default='INFO')
     parser.add_argument('--Gamma', type=float, default=1.0, action='store', help='Gruneisen parameter')
     parser.add_argument('--plot', action=argparse.BooleanOptionalAction, default=False, help='plot results')
+    parser.add_argument(
+        '--bandpass_filter', default=False, action=argparse.BooleanOptionalAction,
+        help='apply bandpass filter to sensor data'
+    )
     
     args = parser.parse_args()
     
@@ -129,6 +134,15 @@ if __name__ == '__main__':
     
     # load impulse response function
     irf = np.load(args.irf_path)
+    
+    # intialise bandpass filter
+    if args.bandpass_filter:
+        filter = make_filter(
+            n_samples=cfg['Nt'], fs=1/cfg['dt'], irf=irf,
+            hilbert=True, lp_filter=6.5e6, hp_filter=50e3, rise=0.2,
+            n_filter=512, window='hann'
+        )
+        logging.info('bandpass filter initialised')
     
     with h5py.File(os.path.join(cfg['save_dir'], 'temp.h5'), 'w') as f:
         logging.info('allocating storage for p0_3d temp.h5')
