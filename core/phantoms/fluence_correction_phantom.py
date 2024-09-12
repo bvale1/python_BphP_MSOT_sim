@@ -11,7 +11,7 @@ class fluence_correction_phantom(phantom):
                  *args,
                  **kwargs):
         super(fluence_correction_phantom, self).__init__(*args, **kwargs)
-        assert len(bg_mask.shape) == 2, f'bg_mask must be a 2D numpy array not shape {bg_mask.shape}'
+        assert len(bg_mask.shape) == 2, f'bg_mask must be 2D not shape {bg_mask.shape}'
         assert bg_mask.dtype == bool, 'bg_mask must be a boolean numpy array'
         self.bg_mask = bg_mask[:,np.newaxis,:] # add dimension to broadcast along y-axis
         
@@ -20,6 +20,7 @@ class fluence_correction_phantom(phantom):
         assert np.all(mu_a >= 0.0), 'mu_a must be non-negative'
         # the 3d phantom is assumed to be an extrusion from the 2d imaging plane
         # mu_s is assumed to be constant throughout the phantom
+        mu_a = mu_a[:,np.newaxis,:]
         
         # volume[0] = absorption coefficient [m^-1]
         # volume[1] = scattering coefficient [m^-1]
