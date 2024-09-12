@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from phantoms.fluence_correction_phantom import fluence_correction_phantom
 from scipy.ndimage import convolve1d
 import json, h5py, os, timeit, logging, argparse, gc
@@ -11,7 +10,7 @@ import acoustic_inverse_simulation
 
 
 # same function as in https://github.com/bvale1/MSOT_Diffusion.git
-def load_sim(path : str, args : list | str='all', verbose=False) -> list:
+def load_sim(path : str, args='all', verbose=False) -> list:
     data = {}
     with h5py.File(os.path.join(path, 'data.h5'), 'r') as f:
         images = list(f.keys())
@@ -69,6 +68,13 @@ if __name__ == '__main__':
     parser.add_argument(
         '--mu_a_guess', type=float, default=30, action='store', 
         help='Guess for absorption coefficient (m^-1)'
+    )
+    parser.add_argument(
+        '--update_scheme', choices=['adjoint', 'gradient'], default='adjoint', 
+        action='store', help='adjoint minimises the error between the forward model \
+            reconstructed pressure and the pressure reconstructed from the "observed" data, \
+            gradient minimises the error between the forward model initial pressure and the \
+            pressure reconstructed from the "observed" data'
     )
     parser.add_argument('--dataset', type=str, help='path to dataset')
     parser.add_argument('--niter', type=int, help='Number of iterations', default=10)
