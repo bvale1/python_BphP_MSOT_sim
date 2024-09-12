@@ -118,7 +118,7 @@ if __name__ == '__main__':
     p0_recon = data[images[0]]['p0_tr']
     Phi_true = data[images[0]]['Phi']
     mu_a_true = data[images[0]]['mu_a']
-    bg_mask = data[images[0]]['bg_mask']
+    bg_mask = data[images[0]]['bg_mask'].astype(bool)
     
     mu_a = args.mu_a_guess * np.ones( # [m^-1] starting guess for absorption coefficient
         (cfg['mcx_grid_size'][0], cfg['mcx_grid_size'][2]),
@@ -127,7 +127,7 @@ if __name__ == '__main__':
     mu_s = args.mu_s_guess # [m^-1] assumed scattering coefficient
     wavelengths_m = [float(images[0].split('_')[-1]) * 1e-9] # [m]
     phantom = fluence_correction_phantom(bg_mask, wavelengths_m=wavelengths_m)
-    phantom.define_H2O()
+    H2O = phantom.define_H2O()
     
     # load impulse response function
     irf = np.load(args.irf_path)

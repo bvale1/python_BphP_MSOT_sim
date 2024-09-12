@@ -344,7 +344,7 @@ if __name__ == '__main__':
                     ), dtype=np.float32
                 )
             if 'bg_mask' not in f[h5_group]:
-                f[h5_group].create_dataset('bg_mask', data=bg_mask, dtype=np.float32)
+                f[h5_group].create_dataset('bg_mask', data=bg_mask, dtype=bool)
                 
  
         if cfg['stage'] == 'optical':

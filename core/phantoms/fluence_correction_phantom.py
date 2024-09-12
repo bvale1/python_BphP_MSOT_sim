@@ -11,6 +11,7 @@ class fluence_correction_phantom(phantom):
                  *args,
                  **kwargs):
         super(fluence_correction_phantom, self).__init__(*args, **kwargs)
+        assert bg_mask.type == bool, 'bg_mask must be a boolean numpy array'
         self.bg_mask = bg_mask[:,np.newaxis,:] # add dimension to broadcast along y-axis
         
     def create_volume(self, mu_a : np.ndarray, mu_s : float, cfg: dict):
