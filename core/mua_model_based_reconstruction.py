@@ -127,6 +127,7 @@ if __name__ == '__main__':
     mu_s = args.mu_s_guess # [m^-1] assumed scattering coefficient
     wavelengths_m = [float(images[0].split('_')[-1]) * 1e-9] # [m]
     phantom = fluence_correction_phantom(bg_mask, wavelengths_m=wavelengths_m)
+    phantom.define_H2O()
     
     # load impulse response function
     irf = np.load(args.irf_path)
