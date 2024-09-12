@@ -122,8 +122,9 @@ if __name__ == '__main__':
     images = list(data.keys())
     p0_recon = data[images[0]]['p0_tr']
     p0_recon = uf.square_centre_pad(p0_recon, cfg['mcx_grid_size'][0])
-    Phi_true = data[images[0]]['Phi']
+    #Phi_true = data[images[0]]['Phi']
     mu_a_true = data[images[0]]['mu_a']
+    mu_a_true = uf.square_centre_pad(mu_a_true, cfg['mcx_grid_size'][0])
     bg_mask = data[images[0]]['bg_mask'].astype(bool)
     bg_mask = uf.square_centre_pad(bg_mask, cfg['mcx_grid_size'][0])
     
@@ -286,6 +287,15 @@ if __name__ == '__main__':
         
         # update scheme for model absorption coefficient,
         # small number added to denominator to improve numerical stability
+        logging.info(f'p0_recon {p0_recon.dtype} {p0_recon.shape}')
+        logging.info(f'tr {tr.dtype} {tr.shape}')
+        logging.info(f'Phi {Phi.dtype} {Phi.shape}')
+        logging.info(f'mu_a {mu_a.dtype} {mu_a.shape}')
+        logging.info(f'Gruniesen {cfg["gruneisen"]} {type(cfg["gruneisen"])}')
+        p0_recon = p0_recon.astype(np.float32)
+        tr = tr.astype(np.float32)
+        Phi = Phi.astype(np.float32)
+        mu_a = mu_a.astype(np.float32)
         mu_a += (p0_recon - tr) / (cfg['gruneisen'] * Phi + 1e3)
         # non-negativity constraint
         mu_a = np.maximum(mu_a, 0)
