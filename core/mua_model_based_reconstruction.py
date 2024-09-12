@@ -264,6 +264,14 @@ if __name__ == '__main__':
         # segmentation mask used as boundary condition
         mu_a *= bg_mask
         
+        if np.any(np.isnan(mu_a)):
+            logging.info(f'{np.sum(~np.isfinite(mu_a)) / np.prod(mu_a.shape)}% of mu_a is not finite')
+            exit(1)
+        if np.any(mu_a > 150):
+            logging.info(f'mu_a is possibly diverging, {np.sum(mu_a > 150) / np.prod(mu_a.shape)}% \
+                of mu_a is greater than 150 m^-1, truncating mu_a to 150 m^-1')
+            mu_a = np.minimum(mu_a, 150)
+        
         # compute metrics
         metrics['RMSE'].append(np.sqrt(np.mean(((mu_a - mu_a_true)**2)[bg_mask])))
         metrics['PSNR'].append(20 * np.log10(np.max(mu_a_true) / np.sqrt(metrics['RMSE'][-1])))
