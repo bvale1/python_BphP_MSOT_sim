@@ -28,7 +28,7 @@ class fluence_correction_phantom(phantom):
         
         volume[0] += self.H2O['mu_a'][0] * (~self.bg_mask)
         volume[1] += self.H2O['mu_s'][0] * (~self.bg_mask)
-        volume[0] + mu_a * self.bg_mask
-        volume[1] + mu_s * self.bg_mask
+        volume[0] += mu_a * self.bg_mask
+        volume[1] += mu_s * self.bg_mask
         
         return volume
