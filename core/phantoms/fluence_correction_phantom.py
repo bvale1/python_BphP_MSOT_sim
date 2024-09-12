@@ -11,6 +11,7 @@ class fluence_correction_phantom(phantom):
                  *args,
                  **kwargs):
         super(fluence_correction_phantom, self).__init__(*args, **kwargs)
+        assert len(bg_mask.shape) == 2, f'bg_mask must be a 2D numpy array not shape {bg_mask.shape}'
         assert bg_mask.dtype == bool, 'bg_mask must be a boolean numpy array'
         self.bg_mask = bg_mask[:,np.newaxis,:] # add dimension to broadcast along y-axis
         
