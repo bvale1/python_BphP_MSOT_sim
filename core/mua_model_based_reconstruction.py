@@ -106,7 +106,7 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
         logging.info(f'{args.v} not a recognised verbose level, using INFO instead')
     
-    data, cfg = load_sim(args.save_dir, args='all', verbose=False)
+    data, cfg = load_sim(args.dataset, args='all', verbose=False)
     cfg['mcx_bin_path'] = args.mcx_bin_path
     cfg['weights_dir'] = args.weights_dir
     cfg['irf_path'] = args.irf_path
@@ -130,7 +130,7 @@ if __name__ == '__main__':
     # load impulse response function
     irf = np.load(args.irf_path)
     
-    with h5py.File(cfg['save_dir']+'temp.h5', 'w') as f:
+    with h5py.File(os.path.join(cfg['save_dir'], 'temp.h5'), 'w') as f:
         logging.info('allocating storage for p0_3d temp.h5')
         f.create_dataset(
             'p0_3D',
@@ -186,7 +186,7 @@ if __name__ == '__main__':
         out *= cfg['gruneisen'] * volume[0]
         
         # save 3D p0 to temp.h5
-        with h5py.File(cfg['save_dir']+'temp.h5', 'r+') as f:
+        with h5py.File(os.path.join(cfg['save_dir'], 'temp.h5'), 'r+') as f:
             f['p0_3D'][()] =  uf.crop_p0_3D(
                 out,
                 [cfg['crop_p0_3d_size'], cfg['kwave_grid_size'][1], cfg['crop_p0_3d_size']]
@@ -209,9 +209,9 @@ if __name__ == '__main__':
         logging.info(f'kwave forward initialised in {timeit.default_timer() - start} seconds')
         gc.collect()
             
-        logging.info(f'k-wave forward simulation {i+1}/{args.niter}')
+        logging.info(f'k-wave forward simulation {n+1}/{args.niter}')
         start = timeit.default_timer()
-        with h5py.File(cfg['save_dir']+'temp.h5', 'r') as f:
+        with h5py.File(os.path.join(cfg['save_dir'], 'temp.h5'), 'r') as f:
             out = uf.pad_p0_3D(
                 f['p0_3D'],
                 cfg['kwave_grid_size'][0]
@@ -339,7 +339,7 @@ if __name__ == '__main__':
     if cfg['delete_p0_3d'] is True:
         try:
             start = timeit.default_timer()
-            os.remove(cfg['save_dir']+'temp.h5')
+            os.remove(os.path.join(cfg['save_dir'], 'temp.h5'))
             logging.info(f'temp.h5 (p0_3D) deleted in {timeit.default_timer() - start} seconds')
         except:
             logging.debug('unable to delete temp.h5, (p0_3D) not found')
