@@ -191,116 +191,121 @@ if __name__ == '__main__':
         out *= cfg['LaserEnergy'][0] * 1e6
         Phi = out[:,(cfg['mcx_grid_size'][1]//2)-1,:].copy()
         
-        # save fluence, to data HDF5 file
-        #with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
-        #    f[h5_group].create_dataset(
-        #        'Phi',
-        #        data=uf.square_centre_crop(
-        #            out[:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size']
-        #        ), dtype=np.float32
-        #    )
-        #logging.info(f'fluence saved in {timeit.default_timer() - start} seconds')
+        if args.update_scheme == 'gradient':
+            mu_a = p0_recon / (cfg['gruneisen'] * Phi + 1e-3)
         
-        start = timeit.default_timer()
-        # calculate initial pressure [J m^-2] * [m^-1] -> [J m^-3] = [Pa]
-        out *= cfg['gruneisen'] * volume[0]
-        
-        # save 3D p0 to temp.h5
-        with h5py.File(os.path.join(args.save_dir, 'temp.h5'), 'r+') as f:
-            f['p0_3D'][()] =  uf.crop_p0_3D(
-                out,
-                [cfg['crop_p0_3d_size'], cfg['kwave_grid_size'][1], cfg['crop_p0_3d_size']]
-            )
-        logging.info(f'pressure saved in {timeit.default_timer() - start} seconds')    
-                                        
-        gc.collect()
-        
-        logging.info('optical stage complete')
-        
-        # delete mcx input and out files, they are not needed anymore
-        simulation.delete_temporary_files()
-        start = timeit.default_timer()
-        # overwrite mcx simulation to save memory
-        simulation = acoustic_forward_simulation.kwave_forward_adapter(
-            cfg, 
-            transducer_model=cfg['forward_model']
-        )
-        simulation.configure_simulation()
-        logging.info(f'kwave forward initialised in {timeit.default_timer() - start} seconds')
-        gc.collect()
+        else: # adjoint
+            # save fluence, to data HDF5 file
+            #with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
+            #    f[h5_group].create_dataset(
+            #        'Phi',
+            #        data=uf.square_centre_crop(
+            #            out[:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size']
+            #        ), dtype=np.float32
+            #    )
+            #logging.info(f'fluence saved in {timeit.default_timer() - start} seconds')
             
-        logging.info(f'k-wave forward simulation {n+1}/{args.niter}')
-        start = timeit.default_timer()
-        with h5py.File(os.path.join(args.save_dir, 'temp.h5'), 'r') as f:
-            out = uf.pad_p0_3D(
-                f['p0_3D'],
-                cfg['kwave_grid_size'][0]
-            )
-        logging.info(f'p0 loaded in {timeit.default_timer() - start} seconds')
-        
-        start = timeit.default_timer()
-        # run also saves the sensor data to data.h5 as float16
-        out = simulation.run_kwave_forward(out)
-        logging.info(f'kwave forward run in {timeit.default_timer() - start} seconds')
-        if not np.any(out):
-            logging.error('sensor data is all zeros')
-            exit(1)                        
-        #start = timeit.default_timer()
-        #with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
-        #    f[h5_group].create_dataset(
-        #        'sensor_data',
-        #        data=out.astype(np.float16)
-        #    )
-        #logging.info(f'sensor data saved in {timeit.default_timer() - start} seconds')
-        
-        logging.info('acoustic forward stage complete')
-        
-        start = timeit.default_timer()
-        simulation = acoustic_inverse_simulation.kwave_inverse_adapter(
-            cfg,
-            transducer_model=cfg['inverse_model']
-        )
-        simulation.configure_simulation()
-        logging.info(f'kwave inverse initialised in {timeit.default_timer() - start} seconds')
-        gc.collect()
+            start = timeit.default_timer()
+            # calculate initial pressure [J m^-2] * [m^-1] -> [J m^-3] = [Pa]
+            out *= cfg['gruneisen'] * volume[0]
             
-        # load sensor data
-        #start = timeit.default_timer()
-        #with h5py.File(cfg['save_dir']+'data.h5', 'r') as f:
-        #    out = f[h5_group]['sensor_data'][()].astype(np.float32)
-        #logging.info(f'sensor data loaded in {timeit.default_timer() - start} seconds')
-        
-        start = timeit.default_timer()
-        # apply convolution with the impulse response function
-        out = convolve1d(out, irf, mode='nearest', axis=-1)
-        # apply bandpass filter to the noisy sensor data
-        if args.bandpass_filter:
-            out = np.fft.ifft(np.fft.fft(out, axis=-1) * filter, axis=-1).real.astype(np.float32)
-        logging.info(f'noise added in {timeit.default_timer() - start} seconds')
+            # save 3D p0 to temp.h5
+            with h5py.File(os.path.join(args.save_dir, 'temp.h5'), 'r+') as f:
+                f['p0_3D'][()] =  uf.crop_p0_3D(
+                    out,
+                    [cfg['crop_p0_3d_size'], cfg['kwave_grid_size'][1], cfg['crop_p0_3d_size']]
+                )
+            logging.info(f'pressure saved in {timeit.default_timer() - start} seconds')    
+                                            
+            gc.collect()
+            
+            logging.info('optical stage complete')
+            
+            # delete mcx input and out files, they are not needed anymore
+            simulation.delete_temporary_files()
+            start = timeit.default_timer()
+            
+            # overwrite mcx simulation to save memory
+            simulation = acoustic_forward_simulation.kwave_forward_adapter(
+                cfg, 
+                transducer_model=cfg['forward_model']
+            )
+            simulation.configure_simulation()
+            logging.info(f'kwave forward initialised in {timeit.default_timer() - start} seconds')
+            gc.collect()
+                
+            logging.info(f'k-wave forward simulation {n+1}/{args.niter}')
+            start = timeit.default_timer()
+            with h5py.File(os.path.join(args.save_dir, 'temp.h5'), 'r') as f:
+                out = uf.pad_p0_3D(
+                    f['p0_3D'],
+                    cfg['kwave_grid_size'][0]
+                )
+            logging.info(f'p0 loaded in {timeit.default_timer() - start} seconds')
+            
+            start = timeit.default_timer()
+            # run also saves the sensor data to data.h5 as float16
+            out = simulation.run_kwave_forward(out)
+            logging.info(f'kwave forward run in {timeit.default_timer() - start} seconds')
+            if not np.any(out):
+                logging.error('sensor data is all zeros')
+                exit(1)                        
+            #start = timeit.default_timer()
+            #with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
+            #    f[h5_group].create_dataset(
+            #        'sensor_data',
+            #        data=out.astype(np.float16)
+            #    )
+            #logging.info(f'sensor data saved in {timeit.default_timer() - start} seconds')
+            
+            logging.info('acoustic forward stage complete')
+            
+            start = timeit.default_timer()
+            simulation = acoustic_inverse_simulation.kwave_inverse_adapter(
+                cfg,
+                transducer_model=cfg['inverse_model']
+            )
+            simulation.configure_simulation()
+            logging.info(f'kwave inverse initialised in {timeit.default_timer() - start} seconds')
+            gc.collect()
+                
+            # load sensor data
+            #start = timeit.default_timer()
+            #with h5py.File(cfg['save_dir']+'data.h5', 'r') as f:
+            #    out = f[h5_group]['sensor_data'][()].astype(np.float32)
+            #logging.info(f'sensor data loaded in {timeit.default_timer() - start} seconds')
+            
+            start = timeit.default_timer()
+            # apply convolution with the impulse response function
+            out = convolve1d(out, irf, mode='nearest', axis=-1)
+            # apply bandpass filter to the noisy sensor data
+            if args.bandpass_filter:
+                out = np.fft.ifft(np.fft.fft(out, axis=-1) * filter, axis=-1).real.astype(np.float32)
+            logging.info(f'noise added in {timeit.default_timer() - start} seconds')
 
-        start = timeit.default_timer()
-        tr = simulation.run_time_reversal(out)
-        logging.info(f'time reversal run in {timeit.default_timer() - start} seconds')
+            start = timeit.default_timer()
+            tr = simulation.run_time_reversal(out)
+            logging.info(f'time reversal run in {timeit.default_timer() - start} seconds')
 
-        #start = timeit.default_timer()
-        #with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
-        #    f[h5_group].create_dataset(
-        #        'p0_tr',
-        #        data=uf.square_centre_crop(tr, cfg['crop_size']),
-        #        dtype=np.float32
-        #    )
-        #logging.info(f'p0_recon saved in {timeit.default_timer() - start} seconds')
-        
-        # update scheme for model absorption coefficient,
-        # small number added to denominator to improve numerical stability
-        logging.info(f'mu_a {mu_a.dtype} {mu_a.shape}')
-        mu_a = mu_a.astype(np.float32)
-        mu_a += (p0_recon - tr) / (cfg['gruneisen'] * Phi + 1e3)
-        # non-negativity constraint
-        mu_a = np.maximum(mu_a, 0)
-        # segmentation mask used as boundary condition
-        mu_a *= bg_mask
-        
+            #start = timeit.default_timer()
+            #with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
+            #    f[h5_group].create_dataset(
+            #        'p0_tr',
+            #        data=uf.square_centre_crop(tr, cfg['crop_size']),
+            #        dtype=np.float32
+            #    )
+            #logging.info(f'p0_recon saved in {timeit.default_timer() - start} seconds')
+            
+            # update scheme for model absorption coefficient,
+            # small number added to denominator to improve numerical stability
+            logging.info(f'mu_a {mu_a.dtype} {mu_a.shape}')
+            mu_a = mu_a.astype(np.float32)
+            mu_a += (p0_recon - tr) / (cfg['gruneisen'] * Phi + 1e-3)
+            # non-negativity constraint
+            mu_a = np.maximum(mu_a, 0)
+            # segmentation mask used as boundary condition
+            mu_a *= bg_mask
+            
         if np.any(np.isnan(mu_a)):
             logging.info(f'{np.sum(~np.isfinite(mu_a)) / np.prod(mu_a.shape)}% of mu_a is not finite')
             exit(1)
@@ -311,13 +316,14 @@ if __name__ == '__main__':
         
         # compute metrics
         metrics['RMSE'].append(np.sqrt(np.mean(((mu_a[bg_mask] - mu_a_true[bg_mask])**2))))
-        metrics['PSNR'].append(20 * np.log10(np.max(mu_a_true[bg_mask]) / 
+        metrics['PSNR'].append(20 * np.log10(np.max(mu_a_true[bg_mask]) /
                                              np.sqrt(metrics['RMSE'][-1])))
     
         if args.plot:
             mu_a_plots.append(uf.square_centre_crop(mu_a.copy(), cfg['crop_size']))
-            recon_plots.append(uf.square_centre_crop(tr.copy(), cfg['crop_size']))
             Phi_plots.append(uf.square_centre_crop(Phi.copy(), cfg['crop_size']))
+            if args.update_scheme == 'adjoint':
+                recon_plots.append(uf.square_centre_crop(tr.copy(), cfg['crop_size']))
     
     logging.info(metrics)
     if args.plot:
@@ -354,16 +360,17 @@ if __name__ == '__main__':
         labels=['ground truth']
         for n in range(1, args.niter+1):
             labels.append(f'n={n}')
-        (fig, ax, frames) = pf.heatmap(
-            recon_plots, 
-            labels=labels,
-            title=r'$\hat{p}_{0}$',
-            dx=cfg['dx'],
-            sharescale=True,
-            cmap='viridis',
-            rowmax=4
-        )
-        fig.savefig(os.path.join(args.save_dir, 'p0_recon.png'))
+        if args.update_scheme == 'adjoint':
+            (fig, ax, frames) = pf.heatmap(
+                recon_plots, 
+                labels=labels,
+                title=r'$\hat{p}_{0}$',
+                dx=cfg['dx'],
+                sharescale=True,
+                cmap='viridis',
+                rowmax=4
+            )
+            fig.savefig(os.path.join(args.save_dir, 'p0_recon.png'))
         (fig, ax, frames) = pf.heatmap(
             Phi_plots, 
             labels=labels,
