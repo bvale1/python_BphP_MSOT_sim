@@ -119,13 +119,16 @@ if __name__ == '__main__':
     with open(os.path.join(args.save_dir, 'config.json'), 'w') as f:
         json.dump(vars(args), f, indent='\t')
     
+    # for now only one image is used
     images = list(data.keys())
-    p0_recon = data[images[0]]['p0_tr']
+    data = {images[0]: data[images[0]]}
+    p0_recon = data[images[0]]['p0_tr'].copy()
     p0_recon = uf.square_centre_pad(p0_recon, cfg['mcx_grid_size'][0])
-    #Phi_true = data[images[0]]['Phi']
-    mu_a_true = data[images[0]]['mu_a']
+    mu_a_true = data[images[0]]['mu_a'].copy()
     mu_a_true = uf.square_centre_pad(mu_a_true, cfg['mcx_grid_size'][0])
-    bg_mask = data[images[0]]['bg_mask'].astype(bool)
+    Phi_true = data[images[0]]['Phi'].copy()
+    Phi_true = uf.square_centre_pad(Phi_true, cfg['mcx_grid_size'][0])
+    bg_mask = data[images[0]]['bg_mask'].copy().astype(bool)
     bg_mask = uf.square_centre_pad(bg_mask, cfg['mcx_grid_size'][0])
     
     mu_a = args.mu_a_guess * bg_mask.astype(np.float32) # [m^-1] starting guess for absorption coefficient
@@ -158,7 +161,10 @@ if __name__ == '__main__':
         )
     
     if args.plot:
-        mu_a_plots = [mu_a_true, mu_a.copy()]
+        mu_a_plots = [uf.square_centre_crop(mu_a_true.copy(), cfg['crop_size']),
+                      uf.square_centre_crop(mu_a.copy(), cfg['crop_size'])]
+        recon_plots = [uf.square_centre_crop(p0_recon.copy(), cfg['crop_size'])]
+        Phi_plots = [uf.square_centre_crop(Phi_true.copy(), cfg['crop_size'])]
     
     # metrics are computed for each iteration
     metrics = {'RMSE': [], 'PSNR': []}
@@ -309,7 +315,9 @@ if __name__ == '__main__':
                                              np.sqrt(metrics['RMSE'][-1])))
     
         if args.plot:
-            mu_a_plots.append(mu_a.copy())
+            mu_a_plots.append(uf.square_centre_crop(mu_a.copy(), cfg['crop_size']))
+            recon_plots.append(uf.square_centre_crop(tr.copy(), cfg['crop_size']))
+            Phi_plots.append(uf.square_centre_crop(Phi.copy(), cfg['crop_size']))
     
     logging.info(metrics)
     if args.plot:
@@ -333,7 +341,7 @@ if __name__ == '__main__':
             labels.append(f'n={n}, RMSE={metrics["RMSE"][n-1]:.2f}')
         (fig, ax, frames) = pf.heatmap(
             residuals, 
-            labels=(1+np.arange(args.niter)).astype(str).tolist(),
+            labels=labels,
             title=r'$\mu_{a}$ residuals',
             dx=cfg['dx'],
             sharescale=True,
@@ -343,12 +351,35 @@ if __name__ == '__main__':
             vmax=np.minimum(np.max(mu_a_true), np.max(residuals))
         )
         fig.savefig(os.path.join(args.save_dir, 'mu_a_residuals.png'))
+        labels=['ground truth']
+        for n in range(1, args.niter+1):
+            labels.append(f'n={n}')
+        (fig, ax, frames) = pf.heatmap(
+            recon_plots, 
+            labels=labels,
+            title=r'$\hat{p}_{0}$',
+            dx=cfg['dx'],
+            sharescale=True,
+            cmap='viridis',
+            rowmax=4
+        )
+        fig.savefig(os.path.join(args.save_dir, 'p0_recon.png'))
+        (fig, ax, frames) = pf.heatmap(
+            Phi_plots, 
+            labels=labels,
+            title=r'$\Phi$',
+            dx=cfg['dx'],
+            sharescale=True,
+            cmap='viridis',
+            rowmax=4
+        )
+        fig.savefig(os.path.join(args.save_dir, 'Phi.png'))
         labels = [r'$\mu_{a}$ (m$^{-1}$)', r'$\mu_{s}$ (m$^{-1}$)',
                   r'$\Phi$ (J m$^{-2}$)', r'$p_{0}$ initial pressure (Pa)',
                   r'$\hat{p}_{0}$ reconstructed (Pa)']
         images = [data[images[0]]['mu_a'], data[images[0]]['mu_s'], 
                   data[images[0]]['Phi'], 
-                  data[images[0]]['mu_a']*data[images[0]]['Phi'], p0_recon]
+                  data[images[0]]['mu_a']*data[images[0]]['Phi'], data[images[0]]['p0_tr']]
         (fig, ax, frames) = pf.heatmap(images, dx=cfg['dx'], rowmax=5, labels=labels)
         fig.savefig(os.path.join(args.save_dir, 'images.png'))
         
