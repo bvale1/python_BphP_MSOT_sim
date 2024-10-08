@@ -114,8 +114,6 @@ def heatmap(img,
             ax[frame].set_xlabel('x (mm)')
             if labels:
                 ax[frame].set(title=labels[frame])
-            elif nframes > 1:
-                ax[frame].set(title='pulse '+str(frame))
             if not sharescale:
                 divider = make_axes_locatable(ax[frame])
                 cbar_ax = divider.append_axes('right', size='5%', pad=0.05)

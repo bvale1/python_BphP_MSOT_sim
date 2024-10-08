@@ -1,18 +1,57 @@
-import os, json, fcntl
+import os, json, logging, time
 import numpy as np
 from typing import Union
 
+def create_lock_dir(
+        file : str, # file to lock
+        wait_time : int=60) -> bool: # time to wait for lock in seconds
+    '''A simple solution to lock a file is to create a directory with the same
+       name, works across different platforms and machines with access
+       the same files'''    
+    # remove file extension
+    file = file.split('.') 
+    if len(file) == 1:
+        file = file[0]
+    else:
+        file[:-1].join('.')
+    
+    while wait_time > 0:
+        if not os.path.exists(file.str):
+            os.makedirs(file)
+            return True
+        else:
+            time.sleep(0.1)
+            wait_time -= 0.1
+    # if the lock is still active after the wait time, the process with the lock
+    # has almost certainly crashed, so we remove the lock
+    logging.info(f'still locked after {wait_time} seconds, taking over lock')
+    return False 
+    
+def delete_lock_dir(file : str):
+    file = file.split('.')
+    if len(file) == 1:
+        file = file[0]
+    else:
+        file[:-1].join('.')
+    try:
+        os.rmdir(file)
+        logging.info(f'removed lock on {file}')
+        return True
+    except Exception as e:
+        logging.info(f'could not remove lock on {file}, {e}')    
+        return False
+
 def save_json(file : str, dictionary : dict):
     with open(file, 'w') as f:
-        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+        create_lock_dir(file)
         json.dump(dictionary, f, indent='\t')
-        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+        delete_lock_dir(file)
 
 def load_json(file : str) -> dict:
     with open(file, 'r') as f:
-        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+        create_lock_dir(file)
         dictionary = json.load(f)
-        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+        delete_lock_dir(file)
     return dictionary
 
 def create_dir(path : str):

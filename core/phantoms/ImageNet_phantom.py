@@ -19,7 +19,7 @@ class ImageNet_phantom(phantom):
             image = f.resize((256*ppw, 256*ppw))
             image = image.convert('RGB')
             image = np.array(image, dtype=np.float32)
-            image /= 255.0
+            image = np.clip(image / 255, 0, 1)
             image = np.transpose(image, (2, 0, 1))
         
         mu_s_min = self.rng.uniform(2000, 8000) # [m^-1]

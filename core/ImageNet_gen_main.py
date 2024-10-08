@@ -2,7 +2,7 @@ import numpy as np
 from phantoms.ImageNet_phantom import ImageNet_phantom
 from add_noise import make_filter, add_noise
 from scipy.ndimage import convolve1d
-import json, h5py, os, timeit, logging, argparse, gc, glob, fcntl
+import json, h5py, os, timeit, logging, argparse, gc, glob
 import func.geometry_func as gf
 import func.utility_func as uf
 import optical_simulation
@@ -255,7 +255,7 @@ if __name__ == '__main__':
         with open(args.in_progress_file, 'r+') as f:
             # select nimages from ImageNet dataset
             
-            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            uf.create_lock_dir(args.in_progress_file)
             # do not use the same image twice
             try:
                 ckpt_dict = json.load(f)
@@ -283,7 +283,7 @@ if __name__ == '__main__':
             f.seek(0)  # Go back to the start of the file
             f.truncate()  # Truncate the file to remove old content
             json.dump(ckpt_dict, f, indent='\t')
-            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+            uf.delete_lock_dir(args.in_progress_file)
     
         with h5py.File(cfg['save_dir']+'data.h5', 'w') as f:
             logging.info('creating data.h5')
