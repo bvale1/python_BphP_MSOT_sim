@@ -13,7 +13,7 @@ def create_lock_dir(
     if len(file) == 1:
         file = file[0]
     else:
-        file[:-1].join('.')
+        '.'.join(file[:-1])
     
     while wait_time > 0:
         if not os.path.exists(file.str):
