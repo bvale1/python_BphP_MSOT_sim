@@ -32,7 +32,7 @@ def delete_lock_dir(file : str):
     if len(file) == 1:
         file = file[0]
     else:
-        file[:-1].join('.')
+        file = '.'.join(file[:-1])
     try:
         os.rmdir(file)
         logging.info(f'removed lock on {file}')
