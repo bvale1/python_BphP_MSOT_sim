@@ -5,6 +5,7 @@ from scipy.ndimage import convolve1d
 import json, h5py, os, timeit, logging, argparse, gc
 import func.plot_func as pf
 import func.utility_func as uf
+import matplotlib.pyplot as plt
 import optical_simulation
 import acoustic_forward_simulation
 import acoustic_inverse_simulation
@@ -166,6 +167,9 @@ if __name__ == '__main__':
                       uf.square_centre_crop(mu_a.copy(), cfg['crop_size'])]
         recon_plots = [uf.square_centre_crop(p0_recon.copy(), cfg['crop_size'])]
         Phi_plots = [uf.square_centre_crop(Phi_true.copy(), cfg['crop_size'])]
+        mu_a_line_profiles = [mu_a_plots[0][mu_a_plots[0].shape//2,:],
+                              mu_a_plots[1][mu_a_plots[1].shape//2,:]]
+        recon_line_profiles = [recon_plots[0][recon_plots[0].shape//2,:]]
     
     # metrics are computed for each iteration
     metrics = {'RMSE': [], 'PSNR': []}
@@ -323,8 +327,10 @@ if __name__ == '__main__':
         if args.plot:
             mu_a_plots.append(uf.square_centre_crop(mu_a.copy(), cfg['crop_size']))
             Phi_plots.append(uf.square_centre_crop(Phi.copy(), cfg['crop_size']))
+            mu_a_line_profiles.append(mu_a_plots[-1][mu_a_plots[-1].shape//2,:])
             if args.update_scheme == 'adjoint':
                 recon_plots.append(uf.square_centre_crop(tr.copy(), cfg['crop_size']))
+                recon_line_profiles.append(recon_plots[-1][recon_plots[-1].shape//2,:])
     
     logging.info(metrics)
     if args.plot:
@@ -361,7 +367,46 @@ if __name__ == '__main__':
         labels=['ground truth']
         for n in range(1, args.niter+1):
             labels.append(f'n={n}')
+            
+        (fig, ax) = plt.subplots(1, 1, figsize=(5, 5))
+        labels = ['ground truth', 'initial guess n=0']
+        for n in range(1, args.niter+1):
+            labels.append(f'n={n}, RMSE={metrics["RMSE"][n-1]:.2f}')
+        linestyle = ['solid', 'dotted', 'dashed', 'dashdot', (0, (3, 5, 1, 5)),
+                     (0, (3, 1, 1, 1)), (0, (3, 5, 1, 5, 1, 5)), (0, (3, 1, 1, 1, 1, 1)),
+                     (0, (3, 5, 1, 5, 1, 5, 1, 5)), (0, (3, 1, 1, 1, 1, 1, 1, 1)),
+                     (0, (5, 10)), (0, (3, 10, 1, 10)), (0, (10, 3))]
+        line_profile_axis = np.arange(
+            -cfg['dx']*cfg['crop_size']/2,
+            cfg['dx']*cfg['crop_size']/2, 
+            cfg['dx']
+        )
+        for i in range(len(mu_a_line_profiles)):
+            ax.plot(line_profile_axis, mu_a_line_profiles[i], label=labels[i], linestyle=linestyle[i])
+        ax.set_title('Line profile')
+        ax.set_xlabel('x (mm)')
+        ax.set_ylabel(r'$\mu_{a}$ (m$^{-1}$)')
+        ax.grid(True)
+        ax.set_axisbelow(True)
+        ax.set_xlim(np.min(line_profile_axis), np.max(line_profile_axis))
+        ax.legend()
+        fig.tight_layout()
+        fig.savefig(os.path.join(args.save_dir, 'mu_a_line_profile.png'))
+            
         if args.update_scheme == 'adjoint':
+            (fig, ax) = plt.subplots(1, 1, figsize=(5, 5))
+            for i in range(len(recon_line_profiles)):
+                ax.plot(line_profile_axis, recon_line_profiles[i], label=labels[i], linestyle=linestyle[i])
+            ax.set_title('Line profile')
+            ax.set_xlabel('x (mm)')
+            ax.set_ylabel(r'$\mu_{a}$ (m$^{-1}$)')
+            ax.grid(True)
+            ax.set_axisbelow(True)
+            ax.set_xlim(np.min(line_profile_axis), np.max(line_profile_axis))
+            ax.legend()
+            fig.tight_layout()
+            fig.savefig(os.path.join(args.save_dir, 'mu_a_line_profile.png'))
+            
             (fig, ax, frames) = pf.heatmap(
                 recon_plots, 
                 labels=labels,
