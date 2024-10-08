@@ -1,8 +1,6 @@
 import numpy as np
 from phantoms.phantom import phantom
-import func.geometry_func as gf
-import func.utility_func as uf
-
+from typing import Union
 
 class fluence_correction_phantom(phantom):
     
@@ -15,12 +13,16 @@ class fluence_correction_phantom(phantom):
         assert bg_mask.dtype == bool, 'bg_mask must be a boolean numpy array'
         self.bg_mask = bg_mask[:,np.newaxis,:] # add dimension to broadcast along y-axis
         
-    def create_volume(self, mu_a : np.ndarray, mu_s : float, cfg: dict):
+    def create_volume(self, mu_a : np.ndarray, mu_s : Union[float, np.ndarray], cfg: dict):
         assert len(mu_a.shape) == 2, 'mu_a must be a 2D numpy array'
         assert np.all(mu_a >= 0.0), 'mu_a must be non-negative'
         # the 3d phantom is assumed to be an extrusion from the 2d imaging plane
-        # mu_s is assumed to be constant throughout the phantom
         mu_a = mu_a[:,np.newaxis,:]
+        if type(mu_s) == np.ndarray:
+            assert mu_s >= 0.0, 'mu_s must be a 2D numpy array'
+            assert np.all(mu_s >= 0.0), 'mu_s must be non-negative'
+            mu_s = mu_s[:,np.newaxis,:]
+        
         
         # volume[0] = absorption coefficient [m^-1]
         # volume[1] = scattering coefficient [m^-1]

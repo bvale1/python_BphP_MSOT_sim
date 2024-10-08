@@ -69,12 +69,12 @@ if __name__ == '__main__':
         help='directory containing integration weights for combining sensor data'
     )
     parser.add_argument(
-        '--mu_s_guess', type=float, default=10000, action='store',
+        '--mu_s_guess', type=float, default=None, action='store',
         help='Guess for scattering coefficient (m^-1)'
     )
     parser.add_argument(
         '--mu_a_guess', type=float, default=30, action='store', 
-        help='Guess for absorption coefficient (m^-1)'
+        help='Guess for absorption coefficient (m^-1), if None assume mu_s is known exactly'
     )
     parser.add_argument(
         '--update_scheme', choices=['adjoint', 'gradient'], default='adjoint', 
@@ -129,7 +129,11 @@ if __name__ == '__main__':
     bg_mask = uf.square_centre_pad(bg_mask, cfg['mcx_grid_size'][0])
     
     mu_a = args.mu_a_guess * bg_mask.astype(np.float32) # [m^-1] starting guess for absorption coefficient
-    mu_s = args.mu_s_guess # [m^-1] assumed scattering coefficient
+    if args.mu_a_guess:
+        mu_s = args.mu_s_guess # [m^-1] assumed scattering coefficient
+    else: # mu_s is known exactly
+        mu_s = data[images[0]]['mu_s'].copy()
+        mu_s = uf.square_centre_pad(mu_s, cfg['mcx_grid_size'][0])
     wavelengths_m = [float(images[0].split('_')[-1]) * 1e-9] # [m]
     phantom = fluence_correction_phantom(bg_mask, wavelengths_m=wavelengths_m)
     H2O = phantom.define_H2O()
