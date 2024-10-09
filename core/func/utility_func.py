@@ -9,7 +9,7 @@ def create_lock_dir(
        name, works across different platforms and machines with access
        the same files'''    
     # remove file extension
-    file = file.split('.') 
+    file = file.split('.')
     if len(file) == 1:
         file = file[0]
     else:
@@ -18,6 +18,7 @@ def create_lock_dir(
     while wait_time > 0:
         if not os.path.exists(file):
             os.makedirs(file)
+            logging.info(f'created lock on {file}')
             return True
         else:
             time.sleep(0.1)
@@ -33,6 +34,7 @@ def delete_lock_dir(file : str):
         file = file[0]
     else:
         file = '.'.join(file[:-1])
+
     try:
         os.rmdir(file)
         logging.info(f'removed lock on {file}')
@@ -42,16 +44,16 @@ def delete_lock_dir(file : str):
         return False
 
 def save_json(file : str, dictionary : dict):
+    create_lock_dir(file)
     with open(file, 'w') as f:
-        create_lock_dir(file)
         json.dump(dictionary, f, indent='\t')
-        delete_lock_dir(file)
+    delete_lock_dir(file)
 
 def load_json(file : str) -> dict:
+    create_lock_dir(file)
     with open(file, 'r') as f:
-        create_lock_dir(file)
         dictionary = json.load(f)
-        delete_lock_dir(file)
+    delete_lock_dir(file)
     return dictionary
 
 def create_dir(path : str):
