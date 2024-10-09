@@ -167,9 +167,9 @@ if __name__ == '__main__':
                       uf.square_centre_crop(mu_a.copy(), cfg['crop_size'])]
         recon_plots = [uf.square_centre_crop(p0_recon.copy(), cfg['crop_size'])]
         Phi_plots = [uf.square_centre_crop(Phi_true.copy(), cfg['crop_size'])]
-        mu_a_line_profiles = [mu_a_plots[0][mu_a_plots[0].shape//2,:],
-                              mu_a_plots[1][mu_a_plots[1].shape//2,:]]
-        recon_line_profiles = [recon_plots[0][recon_plots[0].shape//2,:]]
+        mu_a_line_profiles = [mu_a_plots[0][mu_a_plots[0].shape[0]//2,:],
+                              mu_a_plots[1][mu_a_plots[1].shape[0]//2,:]]
+        recon_line_profiles = [recon_plots[0][recon_plots[0].shape[0]//2,:]]
     
     # metrics are computed for each iteration
     metrics = {'RMSE': [], 'PSNR': []}
@@ -327,10 +327,10 @@ if __name__ == '__main__':
         if args.plot:
             mu_a_plots.append(uf.square_centre_crop(mu_a.copy(), cfg['crop_size']))
             Phi_plots.append(uf.square_centre_crop(Phi.copy(), cfg['crop_size']))
-            mu_a_line_profiles.append(mu_a_plots[-1][mu_a_plots[-1].shape//2,:])
+            mu_a_line_profiles.append(mu_a_plots[-1][mu_a_plots[-1].shape[0]//2,:])
             if args.update_scheme == 'adjoint':
                 recon_plots.append(uf.square_centre_crop(tr.copy(), cfg['crop_size']))
-                recon_line_profiles.append(recon_plots[-1][recon_plots[-1].shape//2,:])
+                recon_line_profiles.append(recon_plots[-1][recon_plots[-1].shape[0]//2,:])
     
     logging.info(metrics)
     if args.plot:
