@@ -331,24 +331,27 @@ if __name__ == '__main__':
         h5_group = image_file.replace('/', '__')
         with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
             f.require_group(h5_group)
-            f[h5_group].create_dataset(
-                'mu_a',
-                data=uf.square_centre_crop(
-                    volume[0,:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size']
-                ), dtype=np.float32
-            )
-            f[h5_group].create_dataset(
-                'mu_s',
-                data=uf.square_centre_crop(
-                    volume[1,:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size']
-                ), dtype=np.float32
-            )
-            f[h5_group].create_dataset(
-                'bg_mask', data=uf.square_centre_crop(
-                    bg_mask, cfg['crop_size']
-                ), dtype=bool
-            )
- 
+            if 'mu_a' not in f[h5_group]:
+                f[h5_group].create_dataset(
+                    'mu_a',
+                    data=uf.square_centre_crop(
+                        volume[0,:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size']
+                    ), dtype=np.float32
+                )
+            if 'mu_s' not in f[h5_group]:
+                f[h5_group].create_dataset(
+                    'mu_s',
+                    data=uf.square_centre_crop(
+                        volume[1,:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size']
+                    ), dtype=np.float32
+                )
+            if 'bg_mask' not in f[h5_group]:
+                f[h5_group].create_dataset(
+                    'bg_mask', data=uf.square_centre_crop(
+                        bg_mask, cfg['crop_size']
+                    ), dtype=bool
+                )
+    
         if cfg['stage'] == 'optical':
             # optical simulation
             simulation = optical_simulation.MCX_adapter(cfg, source='invision')
