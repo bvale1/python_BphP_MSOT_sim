@@ -18,6 +18,7 @@ def create_lock_dir(
     while wait_time > 0:
         if not os.path.exists(file):
             os.makedirs(file)
+            logging.info(f'created lock on {file}')
             return True
         else:
             time.sleep(0.1)

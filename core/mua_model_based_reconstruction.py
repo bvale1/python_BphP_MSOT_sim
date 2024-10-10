@@ -382,7 +382,8 @@ if __name__ == '__main__':
             cfg['dx']
         )
         for i in range(len(mu_a_line_profiles)):
-            ax.plot(line_profile_axis, mu_a_line_profiles[i], label=labels[i], linestyle=linestyle[i])
+            ax.plot(line_profile_axis, mu_a_line_profiles[i],
+                    label=labels[i], linestyle=linestyle[i])
         ax.set_title('Line profile')
         ax.set_xlabel('x (mm)')
         ax.set_ylabel(r'$\mu_{a}$ (m$^{-1}$)')
@@ -396,7 +397,8 @@ if __name__ == '__main__':
         if args.update_scheme == 'adjoint':
             (fig, ax) = plt.subplots(1, 1, figsize=(5, 5))
             for i in range(len(recon_line_profiles)):
-                ax.plot(line_profile_axis, recon_line_profiles[i], label=labels[i], linestyle=linestyle[i])
+                ax.plot(line_profile_axis, recon_line_profiles[i], 
+                        label=labels[i], linestyle=linestyle[i])
             ax.set_title('Line profile')
             ax.set_xlabel('x (mm)')
             ax.set_ylabel(r'$\mu_{a}$ (m$^{-1}$)')
