@@ -22,7 +22,7 @@ class fluence_correction_phantom(phantom):
         # the 3d phantom is assumed to be an extrusion from the 2d imaging plane
         mu_a = mu_a[:,np.newaxis,:]
         if type(mu_s) == np.ndarray:
-            assert len(mu_a.shape) == 2, 'mu_s must be a 2D numpy array'
+            assert len(mu_s.shape) == 2, 'mu_s must be a 2D numpy array'
             assert np.all(mu_s >= 0.0), 'mu_s must be non-negative'
             mu_s = mu_s[:,np.newaxis,:]
         
