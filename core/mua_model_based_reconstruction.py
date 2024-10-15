@@ -131,6 +131,7 @@ if __name__ == '__main__':
     bg_mask = uf.square_centre_pad(bg_mask, cfg['mcx_grid_size'][0])
     
     mu_a = args.mu_a_guess * bg_mask.astype(np.float32) # [m^-1] starting guess for absorption coefficient
+    mu_a += data[images[0]]['mu_a'] * (~bg_mask).astype(np.float32) # [m^-1] H2O outside of segmentation mask
     if args.mu_s_guess:
         mu_s = args.mu_s_guess # [m^-1] assumed scattering coefficient
     else: # mu_s is known exactly
@@ -306,18 +307,18 @@ if __name__ == '__main__':
             # small number added to denominator to improve numerical stability
             logging.info(f'mu_a {mu_a.dtype} {mu_a.shape}')
             mu_a = mu_a.astype(np.float32)
-            mu_a += (p0_recon - tr) / (cfg['gruneisen'] * Phi + 1e-3)
+            mu_a += (p0_recon - tr) / (cfg['gruneisen'] * Phi + 1e-8)
             # non-negativity constraint
             mu_a = np.maximum(mu_a, 0)
             # segmentation mask used as boundary condition
-            mu_a *= bg_mask
+            mu_a *= bg_mask.astype(np.float32)
+            mu_a += H2O['mu_a'][0] * (~bg_mask).astype(np.float32) # [m^-1] H2O outside of segmentation mask
             
         if np.any(np.isnan(mu_a)):
             logging.info(f'{np.sum(~np.isfinite(mu_a)) / np.prod(mu_a.shape)}% of mu_a is not finite')
             exit(1)
         if np.any(mu_a > 150):
-            logging.info(f'mu_a is possibly diverging, {np.sum(mu_a > 150) / np.prod(mu_a.shape)}% \
-                of mu_a is greater than 150 m^-1, truncating mu_a to 150 m^-1')
+            logging.info(f'mu_a is possibly diverging, {np.sum(mu_a > 150) / np.prod(mu_a.shape)}% of mu_a is greater than 150 m^-1, truncating mu_a to 150 m^-1')
             mu_a = np.minimum(mu_a, 150)
         
         # compute metrics
@@ -411,7 +412,7 @@ if __name__ == '__main__':
             fig.savefig(os.path.join(args.save_dir, 'mu_a_line_profile.png'))
             
             (fig, ax, frames) = pf.heatmap(
-                recon_plots, 
+                np.asarray(recon_plots), 
                 labels=labels,
                 title=r'$\hat{p}_{0}$',
                 dx=cfg['dx'],
@@ -421,7 +422,7 @@ if __name__ == '__main__':
             )
             fig.savefig(os.path.join(args.save_dir, 'p0_recon.png'))
         (fig, ax, frames) = pf.heatmap(
-            Phi_plots, 
+            np.asarray(Phi_plots), 
             labels=labels,
             title=r'$\Phi$',
             dx=cfg['dx'],
@@ -433,10 +434,14 @@ if __name__ == '__main__':
         labels = [r'$\mu_{a}$ (m$^{-1}$)', r'$\mu_{s}$ (m$^{-1}$)',
                   r'$\Phi$ (J m$^{-2}$)', r'$p_{0}$ initial pressure (Pa)',
                   r'$\hat{p}_{0}$ reconstructed (Pa)']
-        images = [data[images[0]]['mu_a'], data[images[0]]['mu_s'], 
+        images = [data[images[0]]['mu_a'], 
+                  data[images[0]]['mu_s'], 
                   data[images[0]]['Phi'], 
-                  data[images[0]]['mu_a']*data[images[0]]['Phi'], data[images[0]]['p0_tr']]
-        (fig, ax, frames) = pf.heatmap(images, dx=cfg['dx'], rowmax=5, labels=labels)
+                  data[images[0]]['mu_a']*data[images[0]]['Phi'],
+                  data[images[0]]['p0_tr']]
+        (fig, ax, frames) = pf.heatmap(
+            np.asarray(images), dx=cfg['dx'], rowmax=5, labels=labels
+        )
         fig.savefig(os.path.join(args.save_dir, 'images.png'))
         
     # delete temp p0_3D dataset

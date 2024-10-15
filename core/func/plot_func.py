@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import logging
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from typing import Union
 
 # plots 4D data as a 3D scatter plot
 def plot4D(data,
@@ -38,16 +39,16 @@ def plot4D(data,
     plt.close(fig)
     
 
-def heatmap(img, 
-            title='', 
-            cmap='binary_r', 
-            vmax=None,
-            vmin=None,
-            dx=0.0001, 
-            rowmax=6,
-            labels=None,
-            sharescale=False,
-            cbar_label=None):
+def heatmap(img : np.ndarray, 
+            title : str='', 
+            cmap : str='binary_r', 
+            vmax : float=None,
+            vmin : float=None,
+            dx : float=0.0001, 
+            rowmax : int=6,
+            labels : Union[list, tuple]=None,
+            sharescale : bool=False,
+            cbar_label : str=None) -> tuple:
     # TODO: heatmap should use a list to plot images of different resolution
     logging.basicConfig(level=logging.INFO)    
     # use cmap = 'cool' for feature extraction
@@ -58,7 +59,7 @@ def heatmap(img,
         
     shape = np.shape(img)
     if sharescale or len(shape) == 2:
-        mask = np.logical_not(np.isnan(img))
+        mask = np.isfinite(img)
         if not vmin:
             vmin = np.min(img[mask])
         if not vmax:
@@ -66,7 +67,7 @@ def heatmap(img,
     
     extent = [-dx*shape[-2]/2, dx*shape[-2]/2, -dx*shape[-1]/2, dx*shape[-1]/2]
     
-    if len(shape) == 2: # one pulse
+    if len(shape) == 2: # one image
         nframes = 1
         fig, ax = plt.subplots(nrows=1, ncols=nframes, figsize=(6,8))
         ax = np.array([ax])
@@ -84,7 +85,7 @@ def heatmap(img,
         cbar_ax = divider.append_axes('right', size='5%', pad=0.05)
         cbar = fig.colorbar(frames[0], cax=cbar_ax, orientation='vertical')
         
-    else: # multiple pulses
+    else: # multiple images
         nframes = shape[0]
         nrows = int(np.ceil(nframes/rowmax))
         rowmax = nframes if nframes < rowmax else rowmax
