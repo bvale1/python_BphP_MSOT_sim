@@ -175,7 +175,7 @@ if __name__ == '__main__':
         recon_line_profiles = [recon_plots[0][recon_plots[0].shape[0]//2,:]]
     
     # metrics are computed for each iteration
-    metrics = {'RMSE': [], 'PSNR': []}
+    metrics = {'RMSE_mu_a': [], 'RMSE_p0_tr': [], 'PSNR_mu_a': []}
     for n in range(args.niter):
         logging.info(f'iteration {n+1}/{args.niter}')
         volume = phantom.create_volume(mu_a, mu_s, cfg)
@@ -323,9 +323,10 @@ if __name__ == '__main__':
             mu_a = np.minimum(mu_a, 150)
         
         # compute metrics
-        metrics['RMSE'].append(np.sqrt(np.mean(((mu_a[bg_mask] - mu_a_true[bg_mask])**2))))
-        metrics['PSNR'].append(20 * np.log10(np.max(mu_a_true[bg_mask]) /
-                                             np.sqrt(metrics['RMSE'][-1])))
+        metrics['RMSE_mu_a'].append(np.sqrt(np.mean(((mu_a[bg_mask] - mu_a_true[bg_mask])**2))))
+        metrics['RMSE_p0_tr'].append(np.sqrt(np.mean(((tr[bg_mask] - p0_recon[bg_mask])**2))))
+        metrics['PSNR_mu_a'].append(20 * np.log10(np.max(mu_a_true[bg_mask]) /
+                                             np.sqrt(metrics['RMSE_mu_a'][-1])))
     
         if args.plot:
             mu_a_plots.append(uf.square_centre_crop(mu_a.copy(), cfg['crop_size']))
@@ -354,7 +355,7 @@ if __name__ == '__main__':
         residuals = mu_a_plots[2:] - uf.square_centre_crop(mu_a_true, cfg['crop_size'])
         labels = []
         for n in range(1, args.niter+1):
-            labels.append(f'n={n}, RMSE={metrics["RMSE"][n-1]:.2f}')
+            labels.append(f'n={n}, RMSE_mu_a={metrics["RMSE_mu_a"][n-1]:.2f}')
         (fig, ax, frames) = pf.heatmap(
             residuals, 
             labels=labels,
@@ -374,11 +375,12 @@ if __name__ == '__main__':
         (fig, ax) = plt.subplots(1, 1, figsize=(5, 5))
         labels = ['ground truth', 'initial guess n=0']
         for n in range(1, args.niter+1):
-            labels.append(f'n={n}, RMSE={metrics["RMSE"][n-1]:.2f}')
+            labels.append(f'n={n}')
         linestyle = ['solid', 'dotted', 'dashed', 'dashdot', (0, (3, 5, 1, 5)),
                      (0, (3, 1, 1, 1)), (0, (3, 5, 1, 5, 1, 5)), (0, (3, 1, 1, 1, 1, 1)),
                      (0, (3, 5, 1, 5, 1, 5, 1, 5)), (0, (3, 1, 1, 1, 1, 1, 1, 1)),
                      (0, (5, 10)), (0, (3, 10, 1, 10)), (0, (10, 3))]
+        colors = ['black', 'red', 'blue', 'green', 'orange', 'purple', 'brown', 'pink', 'gray', 'cyan']
         line_profile_axis = np.arange(
             -cfg['dx']*cfg['crop_size']/2,
             cfg['dx']*cfg['crop_size']/2, 
@@ -386,10 +388,10 @@ if __name__ == '__main__':
         )
         for i in range(len(mu_a_line_profiles)):
             ax.plot(line_profile_axis, mu_a_line_profiles[i],
-                    label=labels[i], linestyle=linestyle[i])
+                    label=labels[i], linestyle=linestyle[i], color=colors[i])
         ax.set_title('Line profile')
         ax.set_xlabel('x (mm)')
-        ax.set_ylabel(r'$\mu_{a}$ (m$^{-1}$)')
+        ax.set_ylabel(r'$\hat{p}_{0}$ (m$^{-1}$)')
         ax.grid(True)
         ax.set_axisbelow(True)
         ax.set_xlim(np.min(line_profile_axis), np.max(line_profile_axis))
@@ -401,7 +403,7 @@ if __name__ == '__main__':
             (fig, ax) = plt.subplots(1, 1, figsize=(5, 5))
             for i in range(len(recon_line_profiles)):
                 ax.plot(line_profile_axis, recon_line_profiles[i], 
-                        label=labels[i], linestyle=linestyle[i])
+                        label=labels[i], linestyle=linestyle[i], color=colors[i])
             ax.set_title('Line profile')
             ax.set_xlabel('x (mm)')
             ax.set_ylabel(r'$\mu_{a}$ (m$^{-1}$)')
@@ -410,7 +412,7 @@ if __name__ == '__main__':
             ax.set_xlim(np.min(line_profile_axis), np.max(line_profile_axis))
             ax.legend()
             fig.tight_layout()
-            fig.savefig(os.path.join(args.save_dir, 'mu_a_line_profile.png'))
+            fig.savefig(os.path.join(args.save_dir, 'reconstructions_line_profile.png'))
             
             (fig, ax, frames) = pf.heatmap(
                 np.asarray(recon_plots), 
