@@ -375,12 +375,13 @@ if __name__ == '__main__':
             
             # save fluence, to data HDF5 file
             with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
-                f[h5_group].create_dataset(
-                    'Phi',
-                    data=uf.square_centre_crop(
-                        out[:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size']
-                    ), dtype=np.float32
-                )
+                if 'Phi' not in f[h5_group]:
+                    f[h5_group].create_dataset(
+                        'Phi',
+                        data=uf.square_centre_crop(
+                            out[:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size']
+                        ), dtype=np.float32
+                    )
             logging.info(f'fluence saved in {timeit.default_timer() - start} seconds')
             
             start = timeit.default_timer()
@@ -442,10 +443,11 @@ if __name__ == '__main__':
             
             start = timeit.default_timer()
             with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
-                f[h5_group].create_dataset(
-                    'sensor_data',
-                    data=out.astype(np.float16)
-                )
+                if 'sensor_data' not in f[h5_group]:
+                    f[h5_group].create_dataset(
+                        'sensor_data',
+                        data=out.astype(np.float16)
+                    )
             logging.info(f'sensor data saved in {timeit.default_timer() - start} seconds')
             
         if cfg['stage'] == 'acoustic':
@@ -494,11 +496,12 @@ if __name__ == '__main__':
 
             start = timeit.default_timer()
             with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
-                f[h5_group].create_dataset(
-                    'p0_tr',
-                    data=uf.square_centre_crop(tr, cfg['crop_size']),
-                    dtype=np.float32
-                )
+                if 'p0_tr' not in f[h5_group]:
+                    f[h5_group].create_dataset(
+                        'p0_tr',
+                        data=uf.square_centre_crop(tr, cfg['crop_size']),
+                        dtype=np.float32
+                    )
             logging.info(f'p0_recon saved in {timeit.default_timer() - start} seconds')
             
             ckpt_dict = uf.load_json(args.in_progress_file)
