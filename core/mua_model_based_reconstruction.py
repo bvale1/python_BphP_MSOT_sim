@@ -380,7 +380,8 @@ if __name__ == '__main__':
                      (0, (3, 1, 1, 1)), (0, (3, 5, 1, 5, 1, 5)), (0, (3, 1, 1, 1, 1, 1)),
                      (0, (3, 5, 1, 5, 1, 5, 1, 5)), (0, (3, 1, 1, 1, 1, 1, 1, 1)),
                      (0, (5, 10)), (0, (3, 10, 1, 10)), (0, (10, 3))]
-        colors = ['black', 'red', 'blue', 'green', 'orange', 'purple', 'brown', 'pink', 'gray', 'cyan']
+        colors = ['black', 'red', 'blue', 'green', 'orange', 'purple', 'brown',
+                  'pink', 'gray', 'cyan', 'magenta', 'yellow', 'lime', 'teal']
         line_profile_axis = np.arange(
             -cfg['dx']*cfg['crop_size']/2,
             cfg['dx']*cfg['crop_size']/2, 
