@@ -85,6 +85,7 @@ if __name__ == '__main__':
             gradient minimises the error between the forward model initial pressure and the \
             pressure reconstructed from the "observed" data'
     )
+    parser.add_argument('--step_size', type=str, default=0.01, action='store', help='learning rate/step size')
     parser.add_argument('--dataset', type=str, help='path to dataset')
     parser.add_argument('--niter', type=int, help='Number of iterations', default=10)
     parser.add_argument('--sim_git_hash', type=str, default=None, action='store')
@@ -308,7 +309,7 @@ if __name__ == '__main__':
             # small number added to denominator to improve numerical stability
             logging.info(f'mu_a {mu_a.dtype} {mu_a.shape}')
             mu_a = mu_a.astype(np.float32)
-            mu_a += (p0_recon - tr) / (cfg['gruneisen'] * Phi + 1e-8)
+            mu_a += args.step_size * (p0_recon - tr) / (cfg['gruneisen'] * Phi + 1e-8)
             # non-negativity constraint
             mu_a = np.maximum(mu_a, 0)
             # segmentation mask used as boundary condition
