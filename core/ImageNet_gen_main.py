@@ -2,7 +2,15 @@ import numpy as np
 from phantoms.ImageNet_phantom import ImageNet_phantom
 from add_noise import make_filter, add_noise
 from scipy.ndimage import convolve1d
-import json, h5py, os, timeit, logging, argparse, gc, glob
+import json
+import h5py
+import os
+import timeit
+import logging
+import argparse
+import gc
+import glob
+import time
 import func.geometry_func as gf
 import func.utility_func as uf
 import optical_simulation
@@ -504,7 +512,13 @@ if __name__ == '__main__':
                     )
             logging.info(f'p0_recon saved in {timeit.default_timer() - start} seconds')
             
-            ckpt_dict = uf.load_json(args.in_progress_file)
+            for attempt in range(10):
+                ckpt_dict = uf.load_json(args.in_progress_file)
+                if not ckpt_dict:
+                    logging.info('checkpoint file is empty, retrying after 1 second')
+                    time.sleep(1)
+                if attempt == 9:
+                    logging.error('checkpoint file is empty after 10 attempts')
             ckpt_dict[image_file]['sim_complete'] = True
             uf.save_json(args.in_progress_file, ckpt_dict)
             cfg['stage'] = 'optical'
