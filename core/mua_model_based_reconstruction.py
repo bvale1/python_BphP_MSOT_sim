@@ -85,7 +85,7 @@ if __name__ == '__main__':
             gradient minimises the error between the forward model initial pressure and the \
             pressure reconstructed from the "observed" data'
     )
-    parser.add_argument('--step_size', type=str, default=0.01, action='store', help='learning rate/step size')
+    parser.add_argument('--step_size', type=float, default=0.01, action='store', help='learning rate/step size')
     parser.add_argument('--dataset', type=str, help='path to dataset')
     parser.add_argument('--niter', type=int, help='Number of iterations', default=10)
     parser.add_argument('--sim_git_hash', type=str, default=None, action='store')
