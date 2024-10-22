@@ -85,7 +85,7 @@ if __name__ == '__main__':
             gradient minimises the error between the forward model initial pressure and the \
             pressure reconstructed from the "observed" data'
     )
-    parser.add_argument('--step_size', type=float, default=0.01, action='store', help='learning rate/step size')
+    parser.add_argument('--step_size', type=float, default=0.5, action='store', help='learning rate/step size')
     parser.add_argument('--dataset', type=str, help='path to dataset')
     parser.add_argument('--niter', type=int, help='Number of iterations', default=10)
     parser.add_argument('--sim_git_hash', type=str, default=None, action='store')
@@ -142,6 +142,10 @@ if __name__ == '__main__':
     else: # mu_s is known exactly
         mu_s = data[images[0]]['mu_s'].copy()
         mu_s = uf.square_centre_pad(mu_s, cfg['mcx_grid_size'][0])
+        
+    mu_a = np.rot90(mu_a, k=1, axes=(-2,-1))
+    mu_s = np.rot90(mu_s, k=1, axes=(-2,-1))
+    bg_mask = np.rot90(bg_mask, k=1, axes=(-2,-1))
     
     # load impulse response function
     irf = np.load(args.irf_path)
@@ -168,7 +172,9 @@ if __name__ == '__main__':
     
     if args.plot:
         mu_a_plots = [uf.square_centre_crop(mu_a_true.copy(), cfg['crop_size']),
-                      uf.square_centre_crop(mu_a.copy(), cfg['crop_size'])]
+                      uf.square_centre_crop(
+                          np.rot90(mu_a.copy(), k=-1, axes=(-2,-1)), cfg['crop_size']
+                      )]
         recon_plots = [uf.square_centre_crop(p0_recon.copy(), cfg['crop_size'])]
         Phi_plots = [uf.square_centre_crop(Phi_true.copy(), cfg['crop_size'])]
         mu_a_line_profiles = [mu_a_plots[0][mu_a_plots[0].shape[0]//2,:],
@@ -176,7 +182,7 @@ if __name__ == '__main__':
         recon_line_profiles = [recon_plots[0][recon_plots[0].shape[0]//2,:]]
     
     # metrics are computed for each iteration
-    metrics = {'RMSE_mu_a': [], 'RMSE_p0_tr': [], 'PSNR_mu_a': []}
+    metrics = {'RMSE_mu_a': [], 'RMSE_p0_tr': []}
     for n in range(args.niter):
         logging.info(f'iteration {n+1}/{args.niter}')
         volume = phantom.create_volume(mu_a, mu_s, cfg)
@@ -289,7 +295,9 @@ if __name__ == '__main__':
             out = convolve1d(out, irf, mode='nearest', axis=-1)
             # apply bandpass filter to the noisy sensor data
             if args.bandpass_filter:
-                out = np.fft.ifft(np.fft.fft(out, axis=-1) * filter, axis=-1).real.astype(np.float32)
+                out = np.fft.ifft(
+                    np.fft.fft(out, axis=-1) * filter, axis=-1
+                ).real.astype(np.float32)
             logging.info(f'noise added in {timeit.default_timer() - start} seconds')
 
             start = timeit.default_timer()
@@ -324,17 +332,27 @@ if __name__ == '__main__':
             mu_a = np.minimum(mu_a, 150)
         
         # compute metrics
-        metrics['RMSE_mu_a'].append(np.sqrt(np.mean(((mu_a[bg_mask] - mu_a_true[bg_mask])**2))))
-        metrics['RMSE_p0_tr'].append(np.sqrt(np.mean(((tr[bg_mask] - p0_recon[bg_mask])**2))))
-        metrics['PSNR_mu_a'].append(20 * np.log10(np.max(mu_a_true[bg_mask]) /
-                                             np.sqrt(metrics['RMSE_mu_a'][-1])))
+        metrics['RMSE_mu_a'].append(
+            np.sqrt(np.mean(((np.rot90(mu_a[bg_mask], k=-1, axis=(-2,-1))
+                              - mu_a_true[bg_mask])**2)))
+        )
+        metrics['RMSE_p0_tr'].append(
+            np.sqrt(np.mean(((np.rot90(tr[bg_mask], k=-1, axes=(-2,-1)) 
+                              - p0_recon[bg_mask])**2)))
+        )
     
         if args.plot:
-            mu_a_plots.append(uf.square_centre_crop(mu_a.copy(), cfg['crop_size']))
-            Phi_plots.append(uf.square_centre_crop(Phi.copy(), cfg['crop_size']))
+            mu_a_plots.append(uf.square_centre_crop(
+                np.rot90(mu_a.copy(), k=-1, axes=(-2,-1)), cfg['crop_size']
+            ))
+            Phi_plots.append(uf.square_centre_crop(
+                np.rot90(Phi.copy(), k=-1, axes=(-2,-1)), cfg['crop_size']
+            ))
             mu_a_line_profiles.append(mu_a_plots[-1][mu_a_plots[-1].shape[0]//2,:])
             if args.update_scheme == 'adjoint':
-                recon_plots.append(uf.square_centre_crop(tr.copy(), cfg['crop_size']))
+                recon_plots.append(uf.square_centre_crop(
+                    np.rot90(tr.copy(), k=-1, axes=(-1,-2)), cfg['crop_size']
+                ))
                 recon_line_profiles.append(recon_plots[-1][recon_plots[-1].shape[0]//2,:])
     
     logging.info(metrics)
@@ -346,11 +364,12 @@ if __name__ == '__main__':
         (fig, ax, frames) = pf.heatmap(
             mu_a_plots, 
             labels=labels,
-            title=r'$\mu_{a}$',
+            title=r'$\mu_{\textrm{a}}$',
             dx=cfg['dx'],
             sharescale=True,
             cmap='viridis',
-            rowmax=4
+            rowmax=4,
+            cbar_label=r'm$^{-1}$'
         )
         fig.savefig(os.path.join(args.save_dir, 'mu_a.png'))
         residuals = mu_a_plots[2:] - uf.square_centre_crop(mu_a_true, cfg['crop_size'])
@@ -360,7 +379,7 @@ if __name__ == '__main__':
         (fig, ax, frames) = pf.heatmap(
             residuals, 
             labels=labels,
-            title=r'$\mu_{a}$ residuals',
+            title=r'$\mu_{\textrm{a}}$ residuals',
             dx=cfg['dx'],
             sharescale=True,
             cmap='plasma',
@@ -381,19 +400,27 @@ if __name__ == '__main__':
                      (0, (3, 1, 1, 1)), (0, (3, 5, 1, 5, 1, 5)), (0, (3, 1, 1, 1, 1, 1)),
                      (0, (3, 5, 1, 5, 1, 5, 1, 5)), (0, (3, 1, 1, 1, 1, 1, 1, 1)),
                      (0, (5, 10)), (0, (3, 10, 1, 10)), (0, (10, 3))]
-        colors = ['black', 'red', 'blue', 'green', 'orange', 'purple', 'brown',
-                  'pink', 'gray', 'cyan', 'magenta', 'yellow', 'lime', 'teal']
+        #colors = ['black', 'red', 'blue', 'green', 'orange', 'purple', 'brown',
+        #          'pink', 'gray', 'cyan', 'magenta', 'yellow', 'lime', 'teal']
+        # create a palette of colors equally spaced between (26, 133, 255) and (212, 17, 89)
+        colors = ['black'] # ground truth is black
+        for x in np.linspace(0, 1, len(mu_a_line_profiles)-1):
+            colors.append(
+                (26/256)*x + (212/256)*(1-x), # r [0.0 to 1.0]
+                (133/256)*x + (17/256)*(1-x), # g [0.0 to 1.0]
+                (255/256)*x + (89/256)*(1-x)  # b [0.0 to 1.0]
+            )
         line_profile_axis = np.arange(
             -cfg['dx']*cfg['crop_size']/2,
             cfg['dx']*cfg['crop_size']/2, 
             cfg['dx']
         )
         for i in range(len(mu_a_line_profiles)):
-            ax.plot(line_profile_axis, mu_a_line_profiles[i],
-                    label=labels[i], linestyle=linestyle[i], color=colors[i])
+            ax.plot(line_profile_axis, mu_a_line_profiles[i], label=labels[i],
+                    color=colors[i], alpha=0.8)
         ax.set_title('Line profile')
         ax.set_xlabel('x (mm)')
-        ax.set_ylabel(r'$\hat{p}_{0}$ (m$^{-1}$)')
+        ax.set_ylabel(r'$\mu_{\textrm{a}$ (m$^{-1}$)')
         ax.grid(True)
         ax.set_axisbelow(True)
         ax.set_xlim(np.min(line_profile_axis), np.max(line_profile_axis))
@@ -405,10 +432,10 @@ if __name__ == '__main__':
             (fig, ax) = plt.subplots(1, 1, figsize=(5, 5))
             for i in range(len(recon_line_profiles)):
                 ax.plot(line_profile_axis, recon_line_profiles[i], 
-                        label=labels[i], linestyle=linestyle[i], color=colors[i])
+                        label=labels[i], color=colors[i], alpha=0.8)
             ax.set_title('Line profile')
             ax.set_xlabel('x (mm)')
-            ax.set_ylabel(r'$\mu_{a}$ (m$^{-1}$)')
+            ax.set_ylabel(r'$\hat{p}_{0}$ (Pa)')
             ax.grid(True)
             ax.set_axisbelow(True)
             ax.set_xlim(np.min(line_profile_axis), np.max(line_profile_axis))
@@ -423,7 +450,8 @@ if __name__ == '__main__':
                 dx=cfg['dx'],
                 sharescale=True,
                 cmap='viridis',
-                rowmax=4
+                rowmax=4,
+                cbar_label='Pa'
             )
             fig.savefig(os.path.join(args.save_dir, 'p0_recon.png'))
         (fig, ax, frames) = pf.heatmap(
@@ -433,7 +461,8 @@ if __name__ == '__main__':
             dx=cfg['dx'],
             sharescale=True,
             cmap='viridis',
-            rowmax=4
+            rowmax=4,
+            cbar_label=r'J m$^{-2}$'
         )
         fig.savefig(os.path.join(args.save_dir, 'Phi.png'))
         labels = [r'$\mu_{a}$ (m$^{-1}$)', r'$\mu_{s}$ (m$^{-1}$)',
