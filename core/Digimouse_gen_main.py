@@ -279,6 +279,17 @@ if __name__ == '__main__':
         with h5py.File(cfg['save_dir']+'data.h5', 'w') as f:
             logging.info('creating data.h5')
             pass
+        
+        with h5py.File(cfg['save_dir']+'temp.h5', 'w') as f:
+            logging.info('allocating storage for p0_3d temp.h5')
+            f.create_dataset(
+                'p0_3D',
+                shape=(
+                    cfg['crop_p0_3d_size'],
+                    cfg['kwave_grid_size'][1],
+                    cfg['crop_p0_3d_size']
+                ), dtype=np.float32
+            )
     
     # load impulse response function
     irf = np.load(args.irf_path)
@@ -291,17 +302,6 @@ if __name__ == '__main__':
             n_filter=512, window='hann'
         )
         logging.info('bandpass filter initialised')
-    
-    with h5py.File(cfg['save_dir']+'temp.h5', 'w') as f:
-        logging.info('allocating storage for p0_3d temp.h5')
-        f.create_dataset(
-            'p0_3D',
-            shape=(
-                cfg['crop_p0_3d_size'],
-                cfg['kwave_grid_size'][1],
-                cfg['crop_p0_3d_size']
-            ), dtype=np.float32
-        )
 
     # get files in use by this simulation but not yet completed
     ckpt_dict = uf.load_json(args.in_progress_file)
@@ -428,6 +428,9 @@ if __name__ == '__main__':
                     f['p0_3D'],
                     cfg['kwave_grid_size'][0]
                 )
+            if not np.any(out):
+                logging.error('p0_3D is all zeros')
+                exit(1)
             logging.info(f'p0 loaded in {timeit.default_timer() - start} seconds')
             
             start = timeit.default_timer()

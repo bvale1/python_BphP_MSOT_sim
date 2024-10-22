@@ -51,6 +51,7 @@ def save_json(file : str, dictionary : dict):
 
 def load_json(file : str) -> dict:
     create_lock_dir(file)
+    logging.info(f'loading {file}')
     with open(file, 'r') as f:
         dictionary = json.load(f)
     delete_lock_dir(file)

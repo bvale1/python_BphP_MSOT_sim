@@ -333,7 +333,7 @@ if __name__ == '__main__':
         
         # compute metrics
         metrics['RMSE_mu_a'].append(
-            np.sqrt(np.mean(((np.rot90(mu_a[bg_mask], k=-1, axis=(-2,-1))
+            np.sqrt(np.mean(((np.rot90(mu_a[bg_mask], k=-1, axes=(-2,-1))
                               - mu_a_true[bg_mask])**2)))
         )
         metrics['RMSE_p0_tr'].append(
@@ -479,7 +479,7 @@ if __name__ == '__main__':
         fig.savefig(os.path.join(args.save_dir, 'images.png'))
         
     # delete temp p0_3D dataset
-    if cfg['delete_p0_3d'] is True:
+    if args.delete_p0_3d is True:
         try:
             start = timeit.default_timer()
             os.remove(os.path.join(cfg['save_dir'], 'temp.h5'))
