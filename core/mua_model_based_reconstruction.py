@@ -142,7 +142,10 @@ if __name__ == '__main__':
     else: # mu_s is known exactly
         mu_s = data[images[0]]['mu_s'].copy()
         mu_s = uf.square_centre_pad(mu_s, cfg['mcx_grid_size'][0])
-        
+    
+    # simulation is orientated at 90 deg anticlockwise
+    p0_recon = np.rot90(p0_recon, k=1, axes=(-2,-1))
+    mu_a_true = np.rot90(mu_a_true, k=1, axes=(-2,-1))
     mu_a = np.rot90(mu_a, k=1, axes=(-2,-1))
     mu_s = np.rot90(mu_s, k=1, axes=(-2,-1))
     bg_mask = np.rot90(bg_mask, k=1, axes=(-2,-1))
@@ -171,11 +174,15 @@ if __name__ == '__main__':
         )
     
     if args.plot:
-        mu_a_plots = [uf.square_centre_crop(mu_a_true.copy(), cfg['crop_size']),
+        mu_a_plots = [uf.square_centre_crop(
+                          np.rot90(mu_a_true.copy(), k=-1, axes=(-2,-1)), cfg['crop_size']
+                      ),
                       uf.square_centre_crop(
                           np.rot90(mu_a.copy(), k=-1, axes=(-2,-1)), cfg['crop_size']
                       )]
-        recon_plots = [uf.square_centre_crop(p0_recon.copy(), cfg['crop_size'])]
+        recon_plots = [uf.square_centre_crop(
+                           np.rot90(p0_recon.copy(), k=-1, axes=(-2,-1)), cfg['crop_size']
+                       )]
         Phi_plots = [uf.square_centre_crop(Phi_true.copy(), cfg['crop_size'])]
         mu_a_line_profiles = [mu_a_plots[0][mu_a_plots[0].shape[0]//2,:],
                               mu_a_plots[1][mu_a_plots[1].shape[0]//2,:]]
@@ -333,12 +340,10 @@ if __name__ == '__main__':
         
         # compute metrics
         metrics['RMSE_mu_a'].append(
-            np.sqrt(np.mean(((np.rot90(mu_a[bg_mask], k=-1, axes=(-2,-1))
-                              - mu_a_true[bg_mask])**2)))
+            np.sqrt(np.mean(((mu_a - mu_a_true)*bg_mask.astype(np.float32))**2))
         )
         metrics['RMSE_p0_tr'].append(
-            np.sqrt(np.mean(((np.rot90(tr[bg_mask], k=-1, axes=(-2,-1)) 
-                              - p0_recon[bg_mask])**2)))
+            np.sqrt(np.mean(((tr - p0_recon)*bg_mask.astype(np.float32))**2))
         )
     
         if args.plot:
@@ -351,7 +356,7 @@ if __name__ == '__main__':
             mu_a_line_profiles.append(mu_a_plots[-1][mu_a_plots[-1].shape[0]//2,:])
             if args.update_scheme == 'adjoint':
                 recon_plots.append(uf.square_centre_crop(
-                    np.rot90(tr.copy(), k=-1, axes=(-1,-2)), cfg['crop_size']
+                    np.rot90(tr.copy(), k=-1, axes=(-2,-1)), cfg['crop_size']
                 ))
                 recon_line_profiles.append(recon_plots[-1][recon_plots[-1].shape[0]//2,:])
     
