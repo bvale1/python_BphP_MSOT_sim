@@ -1,4 +1,8 @@
-import os, json, logging, time
+import os
+import json
+import logging
+import time
+import h5py
 import numpy as np
 from typing import Union
 
@@ -134,3 +138,65 @@ def pad_p0_3D(p0 : np.ndarray, size : int) -> np.ndarray:
         y = (size - height) // 2
         padded_p0[..., x:x+width, :, y:y+height] = p0
         return padded_p0
+    
+def masked_RMSE(y_true : np.ndarray, y_pred : np.ndarray, mask : np.ndarray) -> float:
+    # calculate root mean squared error of y_true and y_pred only where mask is 1
+    mask = mask.astype(bool)
+    return np.sqrt(np.mean((y_true[mask] - y_pred[mask])**2))
+
+def masked_PSNR(y_true : np.ndarray, y_pred : np.ndarray, mask : np.ndarray) -> float:
+    # calculate peak signal to noise ratio of y_true and y_pred only where mask is 1
+    mask = mask.astype(bool)
+    RMSE = masked_RMSE(y_true, y_pred, mask)
+    return 20*np.log10(np.max(y_true[mask]) / RMSE)
+
+def masked_SSIM(y_true : np.ndarray,
+                y_pred : np.ndarray,
+                mask : np.ndarray,
+                k1 : float=0.01,
+                k2 : float=0.03) -> float:
+    # calculate structural similarity index of y_true and y_pred only where mask is 1
+    mask = mask.astype(bool)
+    y_true = y_true[mask]
+    y_pred = y_pred[mask]
+    mean_true = np.mean(y_true)
+    mean_pred = np.mean(y_pred)
+    var_true = np.var(y_true)
+    var_pred = np.var(y_pred)
+    covar = np.cov(y_true, y_pred)[0, 1]
+    L = np.max(y_true) - np.min(y_true) # dynamic range of the image
+    c1 = (k1*L)**2
+    c2 = (k2*L)**2
+    numerator = (2*mean_true*mean_pred + c1)*(2*covar + c2)
+    denominator = (mean_true**2 + mean_pred**2 + c1)*(var_true + var_pred + c2)
+    return numerator / denominator
+    
+# same function as in https://github.com/bvale1/MSOT_Diffusion.git
+def load_sim(path : str, args='all', verbose=False) -> list:
+    data = {}
+    with h5py.File(os.path.join(path, 'data.h5'), 'r') as f:
+        images = list(f.keys())
+        if verbose:
+            print(f'images found {images}')
+        if args == 'all':
+            args = f[images[0]].keys()
+            if verbose:
+                print(f'args found in images[0] {args}')
+        for image in images:
+            data[image] = {}
+            for arg in args:
+                if arg not in f[image].keys():
+                    print(f'arg {arg} not found in {image}')
+                    pass
+                # include 90 deg anticlockwise rotation
+                elif arg != 'sensor_data':
+                    data[image][arg] = np.rot90(
+                        np.array(f[image][arg][()]), k=1, axes=(-2,-1)
+                    ).copy()
+                else:
+                    data[image][arg] = np.array(f[image][arg][()])
+            
+    with open(path+'/config.json', 'r') as f:
+        cfg = json.load(f)
+        
+    return [data, cfg]

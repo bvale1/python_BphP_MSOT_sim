@@ -2,44 +2,19 @@ import numpy as np
 from phantoms.fluence_correction_phantom import fluence_correction_phantom
 from add_noise import make_filter
 from scipy.ndimage import convolve1d
-import json, h5py, os, timeit, logging, argparse, gc
+import json
+import h5py
+import os
+import timeit
+import logging
+import argparse
+import gc
 import func.plot_func as pf
 import func.utility_func as uf
 import matplotlib.pyplot as plt
 import optical_simulation
 import acoustic_forward_simulation
 import acoustic_inverse_simulation
-
-
-# same function as in https://github.com/bvale1/MSOT_Diffusion.git
-def load_sim(path : str, args='all', verbose=False) -> list:
-    data = {}
-    with h5py.File(os.path.join(path, 'data.h5'), 'r') as f:
-        images = list(f.keys())
-        if verbose:
-            print(f'images found {images}')
-        if args == 'all':
-            args = f[images[0]].keys()
-            if verbose:
-                print(f'args found in images[0] {args}')
-        for image in images:
-            data[image] = {}
-            for arg in args:
-                if arg not in f[image].keys():
-                    print(f'arg {arg} not found in {image}')
-                    pass
-                # include 90 deg anticlockwise rotation
-                elif arg != 'sensor_data':
-                    data[image][arg] = np.rot90(
-                        np.array(f[image][arg][()]), k=1, axes=(-2,-1)
-                    ).copy()
-                else:
-                    data[image][arg] = np.array(f[image][arg][()])
-            
-    with open(path+'/config.json', 'r') as f:
-        cfg = json.load(f)
-        
-    return [data, cfg]
 
 
 if __name__ == '__main__':
@@ -111,7 +86,7 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
         logging.info(f'{args.v} not a recognised verbose level, using INFO instead')
     
-    data, cfg = load_sim(args.dataset, args='all', verbose=False)
+    data, cfg = uf.load_sim(args.dataset, args='all', verbose=False)
     cfg['mcx_bin_path'] = args.mcx_bin_path
     cfg['weights_dir'] = args.weights_dir
     cfg['irf_path'] = args.irf_path
@@ -189,7 +164,9 @@ if __name__ == '__main__':
         recon_line_profiles = [recon_plots[0][recon_plots[0].shape[0]//2,:]]
     
     # metrics are computed for each iteration
-    metrics = {'RMSE_mu_a': [], 'RMSE_p0_tr': []}
+    metrics = {'RMSE_mu_a': [], 'RMSE_p0_tr': [],
+               'PSNR_mu_a': [], 'PSNR_p0_tr': [],
+               'SSIM_mu_a': [], 'SSIM_p0_tr': []}
     for n in range(args.niter):
         logging.info(f'iteration {n+1}/{args.niter}')
         volume = phantom.create_volume(mu_a, mu_s, cfg)
@@ -339,13 +316,13 @@ if __name__ == '__main__':
             mu_a = np.minimum(mu_a, 150)
         
         # compute metrics
-        metrics['RMSE_mu_a'].append(
-            np.sqrt(np.mean(((mu_a - mu_a_true)*bg_mask.astype(np.float32))**2))
-        )
-        metrics['RMSE_p0_tr'].append(
-            np.sqrt(np.mean(((tr - p0_recon)*bg_mask.astype(np.float32))**2))
-        )
-    
+        metrics['RMSE_mu_a'].append(uf.masked_RMSE(mu_a_true, mu_a, bg_mask))
+        metrics['RMSE_p0_tr'].append(uf.masked_RMSE(p0_recon, tr, bg_mask))
+        metrics['PSNR_mu_a'].append(uf.masked_PSNR(mu_a_true, mu_a, bg_mask))
+        metrics['PSNR_p0_tr'].append(uf.masked_PSNR(p0_recon, tr, bg_mask))
+        metrics['SSIM_mu_a'].append(uf.masked_SSIM(mu_a_true, mu_a, bg_mask))
+        metrics['SSIM_p0_tr'].append(uf.masked_SSIM(p0_recon, tr, bg_mask))
+            
         if args.plot:
             mu_a_plots.append(uf.square_centre_crop(
                 np.rot90(mu_a.copy(), k=-1, axes=(-2,-1)), cfg['crop_size']
