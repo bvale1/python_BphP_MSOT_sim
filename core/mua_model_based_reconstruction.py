@@ -346,7 +346,7 @@ if __name__ == '__main__':
         (fig, ax, frames) = pf.heatmap(
             mu_a_plots, 
             labels=labels,
-            title=r'$\mu_{\textrm{a}}$',
+            title=r'$\mu_{\mathrm{a}}$',
             dx=cfg['dx'],
             sharescale=True,
             cmap='viridis',
@@ -361,7 +361,7 @@ if __name__ == '__main__':
         (fig, ax, frames) = pf.heatmap(
             residuals, 
             labels=labels,
-            title=r'$\mu_{\textrm{a}}$ residuals',
+            title=r'$\mu_{\mathrm{a}}$ residuals',
             dx=cfg['dx'],
             sharescale=True,
             cmap='plasma',
@@ -402,7 +402,7 @@ if __name__ == '__main__':
                     color=colors[i], alpha=0.8)
         ax.set_title('Line profile')
         ax.set_xlabel('x (mm)')
-        ax.set_ylabel(r'$\mu_{\textrm{a}$ (m$^{-1}$)')
+        ax.set_ylabel(r'$\mu_{\mathrm{a}}$ (m$^{-1}$)')
         ax.grid(True)
         ax.set_axisbelow(True)
         ax.set_xlim(np.min(line_profile_axis), np.max(line_profile_axis))
