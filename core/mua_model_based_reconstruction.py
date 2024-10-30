@@ -106,6 +106,11 @@ if __name__ == '__main__':
     bg_mask = data[images[0]]['bg_mask'].copy().astype(bool)
     bg_mask = uf.square_centre_pad(bg_mask, cfg['mcx_grid_size'][0])
     
+    # simulation is orientated at 90 deg anticlockwise
+    p0_recon = np.rot90(p0_recon, k=1, axes=(-2,-1))
+    mu_a_true = np.rot90(mu_a_true, k=1, axes=(-2,-1))
+    bg_mask = np.rot90(bg_mask, k=1, axes=(-2,-1))
+    
     wavelengths_m = [float(images[0].split('_')[-1]) * 1e-9] # [m]
     phantom = fluence_correction_phantom(bg_mask, wavelengths_m=wavelengths_m)
     H2O = phantom.define_H2O()
@@ -115,15 +120,8 @@ if __name__ == '__main__':
     if args.mu_s_guess:
         mu_s = args.mu_s_guess # [m^-1] assumed scattering coefficient
     else: # mu_s is known exactly
-        mu_s = data[images[0]]['mu_s'].copy()
+        mu_s = np.rot90(data[images[0]]['mu_s'].copy(), k=1, axes=(-2,-1))
         mu_s = uf.square_centre_pad(mu_s, cfg['mcx_grid_size'][0])
-    
-    # simulation is orientated at 90 deg anticlockwise
-    p0_recon = np.rot90(p0_recon, k=1, axes=(-2,-1))
-    mu_a_true = np.rot90(mu_a_true, k=1, axes=(-2,-1))
-    mu_a = np.rot90(mu_a, k=1, axes=(-2,-1))
-    mu_s = np.rot90(mu_s, k=1, axes=(-2,-1))
-    bg_mask = np.rot90(bg_mask, k=1, axes=(-2,-1))
     
     # load impulse response function
     irf = np.load(args.irf_path)
@@ -354,7 +352,9 @@ if __name__ == '__main__':
             cbar_label=r'm$^{-1}$'
         )
         fig.savefig(os.path.join(args.save_dir, 'mu_a.png'))
-        residuals = mu_a_plots[2:] - uf.square_centre_crop(mu_a_true, cfg['crop_size'])
+        residuals = mu_a_plots[2:] - uf.square_centre_crop(
+            np.rot90(mu_a_true.copy(), k=-1, axes=(-2,-1)), cfg['crop_size']
+        )
         labels = []
         for n in range(1, args.niter+1):
             labels.append(f'n={n}, RMSE_mu_a={metrics["RMSE_mu_a"][n-1]:.2f}')
@@ -387,11 +387,11 @@ if __name__ == '__main__':
         # create a palette of colors equally spaced between (26, 133, 255) and (212, 17, 89)
         colors = ['black'] # ground truth is black
         for x in np.linspace(0, 1, len(mu_a_line_profiles)-1):
-            colors.append(
+            colors.append((
                 (26/256)*x + (212/256)*(1-x), # r [0.0 to 1.0]
                 (133/256)*x + (17/256)*(1-x), # g [0.0 to 1.0]
                 (255/256)*x + (89/256)*(1-x)  # b [0.0 to 1.0]
-            )
+            ))
         line_profile_axis = np.arange(
             -cfg['dx']*cfg['crop_size']/2,
             cfg['dx']*cfg['crop_size']/2, 
