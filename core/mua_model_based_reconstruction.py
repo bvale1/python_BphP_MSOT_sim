@@ -60,7 +60,7 @@ if __name__ == '__main__':
             gradient minimises the error between the forward model initial pressure and the \
             pressure reconstructed from the "observed" data'
     )
-    parser.add_argument('--step_size', type=float, default=0.5, action='store', help='learning rate/step size')
+    parser.add_argument('--step_size', type=float, default=1.0, action='store', help='learning rate/step size')
     parser.add_argument('--dataset', type=str, help='path to dataset')
     parser.add_argument('--niter', type=int, help='Number of iterations', default=10)
     parser.add_argument('--sim_git_hash', type=str, default=None, action='store')
@@ -168,6 +168,7 @@ if __name__ == '__main__':
     for n in range(args.niter):
         logging.info(f'iteration {n+1}/{args.niter}')
         volume = phantom.create_volume(mu_a, mu_s, cfg)
+        volume = np.rot90(volume, k=2, axes=(-3,-1))
         # optical simulation
         simulation = optical_simulation.MCX_adapter(cfg, source='invision')
     
@@ -284,6 +285,7 @@ if __name__ == '__main__':
 
             start = timeit.default_timer()
             tr = simulation.run_time_reversal(out)
+            tr = np.rot90(tr, k=2, axes=(-2,-1))
             logging.info(f'time reversal run in {timeit.default_timer() - start} seconds')
 
             #start = timeit.default_timer()
