@@ -61,6 +61,7 @@ if __name__ == '__main__':
             pressure reconstructed from the "observed" data'
     )
     parser.add_argument('--step_size', type=float, default=1.0, action='store', help='learning rate/step size')
+    parser.add_argument('--epsilon', type=float, default=1e-8, action='store', help='small number to prevent division by zero')
     parser.add_argument('--dataset', type=str, help='path to dataset')
     parser.add_argument('--niter', type=int, help='Number of iterations', default=10)
     parser.add_argument('--sim_git_hash', type=str, default=None, action='store')
@@ -188,9 +189,10 @@ if __name__ == '__main__':
         start = timeit.default_timer()
         out *= cfg['LaserEnergy'][0] * 1e6
         Phi = out[:,(cfg['mcx_grid_size'][1]//2)-1,:].copy()
+        Phi = np.rot90(Phi, k=2, axes=(-2,-1))
         
         if args.update_scheme == 'gradient':
-            mu_a = p0_recon / (cfg['gruneisen'] * Phi + 1e-3)
+            mu_a = p0_recon / (cfg['gruneisen'] * Phi + args.epsilon)
         
         else: # adjoint
             # save fluence, to data HDF5 file
@@ -301,7 +303,7 @@ if __name__ == '__main__':
             # small number added to denominator to improve numerical stability
             logging.info(f'mu_a {mu_a.dtype} {mu_a.shape}')
             mu_a = mu_a.astype(np.float32)
-            mu_a += args.step_size * (p0_recon - tr) / (cfg['gruneisen'] * Phi + 1e-8)
+            mu_a += args.step_size * (p0_recon - tr) / (cfg['gruneisen'] * Phi + args.epsilon)
             # non-negativity constraint
             mu_a = np.maximum(mu_a, 0)
             # segmentation mask used as boundary condition
