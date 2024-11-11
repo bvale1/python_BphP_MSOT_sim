@@ -123,10 +123,10 @@ if __name__ == '__main__':
         if cfg['phantom'] == 'Clara_experiment_phantom':
             phantom = Clara_experiment_phantom()
             water89_gelatin1_intralipid10 = phantom.define_water89_gelatin1_intralipid10(cfg['wavelengths'])
-            ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'], bg_mu_s=cfg['bg_mu_s'])
+            ReBphP_PCM = phantom.define_ReBphP_PCM(cfg['wavelengths'])
             # NOTE: ensure sample is contained within crop_size*crop_size of the centre
             # of the xz plane, all other voxels are background
-            (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(cfg)
+            (volume, ReBphP_PCM_Pr_c, ReBphP_PCM_Pfr_c, bg_mask) = phantom.create_volume(cfg, bg_mu_s=cfg['bg_mu_s'])
         elif cfg['phantom'] == 'plane_cylinder_tumour':
             phantom = plane_cyclinder_tumour()
             H2O = phantom.define_water()
