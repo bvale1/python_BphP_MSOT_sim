@@ -195,6 +195,7 @@ class MCX_adapter():
         :return: None
         """        
         # add the absorption coefficient of BphPs to the volume
+        # (1e3 M) * (M^-1 mm^-1) = (1e3 mm^-1) = (1 m^-1)
         volume[0] += (ReBphP_PCM_Pr_c * ReBphP_PCM['Pr']['epsilon_a'][wavelength_index] + 
                       ReBphP_PCM_Pfr_c * ReBphP_PCM['Pfr']['epsilon_a'][wavelength_index])
         volume *= 1e-3 # [m^-1] -> [mm^-1]
