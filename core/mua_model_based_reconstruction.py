@@ -16,6 +16,77 @@ import optical_simulation
 import acoustic_forward_simulation
 import acoustic_inverse_simulation
 
+class TestMetricCalculator():
+    # class to evaluate test metrics over the entire test set, which is passed
+    # through in batches
+    def __init__(self) -> None:
+        self.metrics = {
+            'RMSE' : [],
+            'MAE' : [],
+            'Rel_Err' : [],
+            'PSNR' : [],
+            'SSIM' : []
+        }        
+    
+    def __call__(self, Y : np.ndarray, Y_hat : np.ndarray, Y_mask=None) -> None:
+        assert Y.shape == Y_hat.shape, f"Y.shape {Y.shape} must equal \
+            Y_hat.shape {Y_hat.shape}"
+        assert Y.dim() == 4, f"Y.dim() {Y.dim()} must be of shape (B, C, H, W)"
+        b = Y.shape[0]
+        Y = Y.reshape(b, -1)
+        Y_hat = Y_hat.reshape(b, -1)
+        if type(Y_mask) == np.ndarray:
+            Y_mask = Y_mask.reshape(b, -1)
+            Y_mask_sum = Y_mask.sum(axis=1, keepdims=True)
+            Y_max = (Y*Y_mask).amax(axis=1, keepdims=True)
+        else:
+            Y_max = Y.amax(axis=1, keepdims=True)
+        
+        if type(Y_mask) == np.ndarray:
+            RMSE = np.sqrt((((Y - Y_hat)*Y_mask)**2).sum(axis=1, keepdims=True) / Y_mask_sum)
+            MAE = np.abs((Y - Y_hat)*Y_mask).sum(axis=1, keepdims=True) / Y_mask_sum
+            Rel_Err = 100 * np.abs((Y - Y_hat)*Y_mask/Y).sum(axis=1, keepdims=True) / Y_mask_sum
+            mean_Y = (Y*Y_mask).sum(axis=1, keepdims=True) / Y_mask_sum
+            mean_Y_hat = (Y_hat*Y_mask).sum(axis=1, keepdims=True) / Y_mask_sum
+            var_Y = (((Y - mean_Y)**2)*Y_mask).sum(axis=1, keepdims=True) / Y_mask_sum
+            var_Y_hat = (((Y_hat - mean_Y_hat)**2)*Y_mask).sum(axis=1, keepdims=True) / Y_mask_sum
+            cov_Y_Y_hat = ((Y - mean_Y)*(Y_hat - mean_Y_hat)*Y_mask).sum(axis=1, keepdims=True) / Y_mask_sum
+        else:
+            RMSE = np.sqrt(np.mean((Y - Y_hat)**2, axis=1, keepdims=True))
+            MAE = np.mean(np.abs(Y - Y_hat), axis=1, keepdims=True)
+            Rel_Err = np.mean(100 * np.abs(Y - Y_hat) / Y, dim=1, keepdims=True)
+            mean_Y = np.mean(Y, axis=1, keepdims=True)
+            mean_Y_hat = np.mean(Y_hat, axis=1, keepdims=True)
+            var_Y = np.var(Y, axis=1, keepdims=True)
+            var_Y_hat = np.var(Y_hat, axis=1, keepdims=True)
+            cov_Y_Y_hat = np.mean(
+                (Y - mean_Y)*(Y_hat - mean_Y_hat), axis=1, keepdims=True
+            )
+        PSNR = 20*np.log10(Y_max / RMSE)
+        c1 = (0.01 * Y_max)**2
+        c2 = (0.03 * Y_max)**2
+        SSIM = (2*mean_Y*mean_Y_hat + c1)*(2*cov_Y_Y_hat + c2) / \
+            ((mean_Y**2 + mean_Y_hat**2 + c1)*(var_Y + var_Y_hat + c2))
+        
+        self.metrics['RMSE'] += np.squeeze(RMSE).tolist()
+        self.metrics['MAE'] += np.squeeze(MAE).tolist()
+        self.metrics['Rel_Err'] += np.squeeze(Rel_Err).tolist()
+        self.metrics['PSNR'] += np.squeeze(PSNR).tolist()
+        self.metrics['SSIM'] += np.squeeze(SSIM).tolist()
+                
+    def get_metrics(self) -> dict:
+        return {
+            'mean_RMSE' : np.mean(np.asarray(self.metrics['RMSE'])),
+            'std_RMSE' : np.std(np.asarray(self.metrics['RMSE'])),
+            'mean_MAE' : np.mean(np.asarray(self.metrics['MAE'])),
+            'std_MAE' : np.std(np.asarray(self.metrics['MAE'])),
+            'mean_Rel_Err' : np.mean(np.asarray(self.metrics['Rel_Err'])),
+            'std_Rel_Err' : np.std(np.asarray(self.metrics['Rel_Err'])),
+            'mean_PSNR' : np.mean(np.asarray(self.metrics['PSNR'])),
+            'std_PSNR' : np.std(np.asarray(self.metrics['PSNR'])),
+            'mean_SSIM' : np.mean(np.asarray(self.metrics['SSIM'])),
+            'std_SSIM' : np.std(np.asarray(self.metrics['SSIM']))
+        }
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -47,20 +118,18 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--mu_s_guess', type=float, default=None, action='store',
-        help='Guess for scattering coefficient (m^-1)'
+        help='Guess for scattering coefficient (m^-1), if None assume mu_s is known exactly'
     )
     parser.add_argument(
         '--mu_a_guess', type=float, default=30, action='store', 
-        help='Guess for absorption coefficient (m^-1), if None assume mu_s is known exactly'
+        help='Guess for absorption coefficient (m^-1)'
     )
     parser.add_argument(
-        '--update_scheme', choices=['adjoint', 'gradient'], default='adjoint', 
-        action='store', help='adjoint minimises the error between the forward model \
-            reconstructed pressure and the pressure reconstructed from the "observed" data, \
-            gradient minimises the error between the forward model initial pressure and the \
-            pressure reconstructed from the "observed" data'
+        '--method', choices=['optical_and_acoustic', 'optical'], default='optical_and_acoustic', 
+        action='store', help='"optical" does not take into account acoustic wave \
+            forward and inverse acoustic wave modelling.'
     )
-    parser.add_argument('--step_size', type=float, default=1.0, action='store', help='learning rate/step size')
+    parser.add_argument('--step_size', type=float, default=0.8, action='store', help='learning rate/step size')
     parser.add_argument('--epsilon', type=float, default=1e-8, action='store', help='small number to prevent division by zero')
     parser.add_argument('--dataset', type=str, help='path to dataset')
     parser.add_argument('--niter', type=int, help='Number of iterations', default=10)
@@ -191,10 +260,10 @@ if __name__ == '__main__':
         Phi = out[:,(cfg['mcx_grid_size'][1]//2)-1,:].copy()
         Phi = np.rot90(Phi, k=2, axes=(-2,-1))
         
-        if args.update_scheme == 'gradient':
+        if args.method == 'gradient':
             mu_a = p0_recon / (cfg['gruneisen'] * Phi + args.epsilon)
         
-        else: # adjoint
+        else: # optical_and_acoustic
             # save fluence, to data HDF5 file
             #with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
             #    f[h5_group].create_dataset(
@@ -333,7 +402,7 @@ if __name__ == '__main__':
                 np.rot90(Phi.copy(), k=-1, axes=(-2,-1)), cfg['crop_size']
             ))
             mu_a_line_profiles.append(mu_a_plots[-1][mu_a_plots[-1].shape[0]//2,:])
-            if args.update_scheme == 'adjoint':
+            if args.method == 'optical_and_acoustic':
                 recon_plots.append(uf.square_centre_crop(
                     np.rot90(tr.copy(), k=-1, axes=(-2,-1)), cfg['crop_size']
                 ))
@@ -414,7 +483,7 @@ if __name__ == '__main__':
         fig.tight_layout()
         fig.savefig(os.path.join(args.save_dir, 'mu_a_line_profile.png'))
             
-        if args.update_scheme == 'adjoint':
+        if args.method == 'optical_and_acoustic':
             (fig, ax) = plt.subplots(1, 1, figsize=(5, 5))
             for i in range(len(recon_line_profiles)):
                 ax.plot(line_profile_axis, recon_line_profiles[i], 
