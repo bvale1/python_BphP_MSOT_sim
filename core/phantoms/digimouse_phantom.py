@@ -102,7 +102,8 @@ class digimouse_phantom(phantom):
                       cfg: dict, 
                       y_idx : int,
                       rotate : int,
-                      extrusion : bool = False
+                      extrusion : bool = False,
+                      bg_mask_2d : bool = True, # whether to return background mask as a 2D cross-section or 3D volume
                       ) -> tuple[np.ndarray, np.ndarray]:
         assert rotate in [0, 1, 2, 3], 'Rotation must be 0, 1, 2 or 3 corresponding to 0, pi/2, pi and 3*pi/2 respectively'
         assert 100 <= y_idx <= 875, 'y_idx must be between 100 and 875' 
@@ -152,7 +153,10 @@ class digimouse_phantom(phantom):
             tissue_types = np.repeat(tissue_types[:, [(ny//2)-1], :], ny, axis=1)
 
         # background mask
-        bg_mask = tissue_types[:,(ny//2)-1,:] != 0
+        if bg_mask_2d:
+            bg_mask = tissue_types[(nx//2)-1, :, :] != 0
+        else:
+            bg_mask = tissue_types[:,:,:] != 0
 
         absorption_coefficients = self.calculate_tissue_absorption_coefficients()
         scattering_coefficients = self.calculate_tissue_scattering_coefficients()

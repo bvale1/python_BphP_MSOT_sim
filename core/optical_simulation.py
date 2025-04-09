@@ -30,6 +30,7 @@ class MCX_adapter():
             raise ValueError(f'source must be "planar" or "invision", not "{source}"')
         
         uf.create_dir('temp')
+        self.cfg = cfg
         
         self.mcx_config_file = 'temp/InVision_BphP_MCX_Simulation.json'
         self.mcx_volume_binary_file = 'temp/InVision_BphP_MCX_Simulation.bin'
