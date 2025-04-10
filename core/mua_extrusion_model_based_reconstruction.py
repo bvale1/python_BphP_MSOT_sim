@@ -170,7 +170,7 @@ if __name__ == '__main__':
     cfg['mcx_bin_path'] = args.mcx_bin_path
     cfg['weights_dir'] = args.weights_dir
     cfg['irf_path'] = args.irf_path
-    image_idx = data.keys().index(args.image_name)
+    image_idx = list(data.keys()).index(args.image_name)
     cfg['image_name'] = args.image_name
     cfg['image_idx'] = image_idx
     cfg['image_LaserEnergy'] = cfg['LaserEnergy'][image_idx]
@@ -469,7 +469,7 @@ if __name__ == '__main__':
             
             with h5py.File(os.path.join(args.save_dir, 'results.h5'), 'w') as f:
                 f.create_group['ground_truth']
-                for key in data.keys():
+                for key in list(data.keys()):
                     f['ground_truth'].create_dataset(
                         key, data=data[key], dtype=np.float32
                     )
