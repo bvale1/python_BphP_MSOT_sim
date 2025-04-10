@@ -475,13 +475,13 @@ if __name__ == '__main__':
                     )
                 f.create_group('results')
                 f['results'].create_dataset(
-                    'mu_a', np.asarray(mu_a_plots), dtype=np.float32
+                    'mu_a', data=np.asarray(mu_a_plots), dtype=np.float32
                 )
                 f['results'].create_dataset(
-                    'Phi', np.asarray(Phi_plots), dtype=np.float32
+                    'Phi', data=np.asarray(Phi_plots), dtype=np.float32
                 )
                 f['results'].create_dataset(
-                    'p0_tr', np.asarray(recon_plots), dtype=np.float32
+                    'p0_tr', data=np.asarray(recon_plots), dtype=np.float32
                 )
     
     logging.info(metrics_mu_a.get_metrics())
