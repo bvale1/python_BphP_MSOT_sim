@@ -468,12 +468,12 @@ if __name__ == '__main__':
                 recon_line_profiles.append(recon_plots[-1][recon_plots[-1].shape[0]//2,:])
             
             with h5py.File(os.path.join(args.save_dir, 'results.h5'), 'w') as f:
-                f.create_group(['ground_truth'])
+                f.create_group('ground_truth')
                 for key in list(data.keys()):
                     f['ground_truth'].create_dataset(
                         key, data=data[key], dtype=np.float32
                     )
-                f.create_group(['results'])
+                f.create_group('results')
                 f['results'].create_dataset(
                     'mu_a', np.asarray(mu_a_plots), dtype=np.float32
                 )
