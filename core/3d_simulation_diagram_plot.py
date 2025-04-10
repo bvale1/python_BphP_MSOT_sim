@@ -43,10 +43,11 @@ volume = meanpool(volume)
 bg_mask = meanpool(bg_mask.astype(np.float32))
 bg_mask = np.round(bg_mask).astype(bool)
 # define voxels
-X, Y, Z = np.indices(volume.shape) * cfg['dx']
-X -= cfg['mcx_grid_size'][0] * cfg['dx'] / 2
-Y -= cfg['mcx_grid_size'][1] * cfg['dx'] / 2
-Z -= cfg['mcx_grid_size'][2] * cfg['dx'] / 2
+X, Y, Z = np.indices(np.asarray(volume.shape) + np.array([1,1,1])) * 2*cfg['dx']
+X -= (cfg['mcx_grid_size'][0]+0.5) * cfg['dx'] / 2
+Y -= (cfg['mcx_grid_size'][1]+0.5) * cfg['dx'] / 2
+Z -= (cfg['mcx_grid_size'][2]+0.5) * cfg['dx'] / 2
+X *= 1e3; Y *= 1e3; Z *= 1e3 # convert to mm
 # define colors
 colors = np.zeros(volume.shape, dtype=np.float32)
 volume /= np.max(volume) # normalize to 1
@@ -116,12 +117,12 @@ for det_idx in range(len(det_elements)):
             detector_positions[1, idx] = np.cos(theta + y_inc) * (radius_mm - 0.5 * element_size)
             detector_positions[2, idx] = np.cos(np.pi/2 + pitch_angle * det_elements[det_idx] + x_inc) * np.sin(theta + y_inc) * (radius_mm - 0.5 * element_size)
     detector_positions = np.matmul(Ry, detector_positions)
-    #ax.scatter(
-    #    detector_positions[0, :],
-    #    detector_positions[1, :],
-    #    detector_positions[2, :],
-    #    s=1
-    #)
+    ax.scatter(
+        detector_positions[0, :],
+        detector_positions[1, :],
+        detector_positions[2, :],
+        s=1
+    )
     
 print('show plot')
 plt.show()
@@ -131,11 +132,16 @@ print('loading p0_3d data')
 with h5py.File(water_sim_path, 'r') as f:
     p0_3d = f['p0_3d'][()]
 # threshold p0_3d to remove values above 90% and below 10% of the max
-p0_3d = np.clip(p0_3d, 0.1 * np.max(p0_3d), 0.9 * np.max(p0_3d))
+p0_mask = np.where(p0_3d > 0.1 * np.max(p0_3d)) | np.where(p0_3d < 0.9 * np.max(p0_3d))
+p0_3d = p0_3d[p0_mask]
 # normalize p0_3d to 1
 p0_3d /= np.max(p0_3d)
 # apply gamma correction to p0_3d
-
+X, Y, Z = np.indices(np.asarray(volume.shape)) * 2*cfg['dx']
+X -= (cfg['mcx_grid_size'][0]) * cfg['dx'] / 2
+Y -= (cfg['mcx_grid_size'][1]) * cfg['dx'] / 2
+Z -= (cfg['mcx_grid_size'][2]) * cfg['dx'] / 2
+X *= 1e3; Y *= 1e3; Z *= 1e3 # convert to mm
 # get x, y, z coordinates of non-zero p0_3d values
 # plot p0_3d
 ax.scatter(X, Y, Z, s=1, color='red', alpha=p0_3d)
