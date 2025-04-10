@@ -294,7 +294,7 @@ if __name__ == '__main__':
     # metrics are computed for each iteration
     metrics_mu_a = TestMetricCalculator()
     metrics_p0_tr = TestMetricCalculator()
-    metrics_mu_a(mu_a_true, mu_a, bg_mask=bg_mask)
+    metrics_mu_a(mu_a_true, mu_a, Y_mask=bg_mask)
     for n in range(args.niter):
         logging.info(f'iteration {n+1}/{args.niter}')
         volume = phantom.create_volume(mu_a, mu_s, cfg)
@@ -450,8 +450,8 @@ if __name__ == '__main__':
             mu_a = np.minimum(mu_a, 150)
         
         # compute metrics
-        metrics_mu_a(mu_a_true, mu_a, bg_mask=bg_mask)
-        metrics_p0_tr(p0_recon, p0_recon, bg_mask=bg_mask)
+        metrics_mu_a(mu_a_true, mu_a, Y_mask=bg_mask)
+        metrics_p0_tr(p0_recon, p0_recon, Y_mask=bg_mask)
             
         if args.plot:
             mu_a_plots.append(uf.square_centre_crop(
