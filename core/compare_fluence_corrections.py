@@ -1,9 +1,13 @@
 import numpy as np
+import h5py
+import os
+import json
 import matplotlib.pyplot as plt
 import func.plot_func as pf
 import func.utility_func as uf
 from scipy.fft import fft, ifft, fftfreq, fftshift
 from scipy.interpolate import interp1d
+#from mua_extrusion_model_based_reconstruction import TestMetricCalculator
 
 # patato filter
 def make_filter(n_samples : int, 
@@ -61,6 +65,8 @@ def make_filter(n_samples : int,
 
 sim_path_3d = '/mnt/f/cluster_MSOT_simulations/digimouse_fluence_correction/3d_digimouse/20241018_digimouse_phantom.c193723.p2'
 sim_path_extrusion = '/mnt/f/cluster_MSOT_simulations/digimouse_fluence_correction/2d_extrusion_digimouse/20250206_digimouse_extrusion_phantom.Naisurrey26.j742887'
+results_path = '/home/wv00017/python_BphP_MSOT_sim/20250409_mua_recon_mus_exact_extrusion.Naisurrey26.j774308/results.h5'
+save_dir = '/home/wv00017/python_BphP_MSOT_sim/20250409_mua_recon_mus_exact_extrusion.Naisurrey26.j774308'
 image_name = '500_750'
 
 data_3d, cfg_3d = uf.load_sim(sim_path_3d, args='all', verbose=False)
@@ -158,3 +164,141 @@ ax.set_axisbelow(True)
 ax.legend()
 fig.tight_layout()
 fig.savefig('digimouse_filters.png')
+
+with h5py.File(results_path, 'r') as f:
+    gt = {}
+    for key in list(f['ground_truth'].keys()):
+        gt[key] = f['ground_truth'][key][()]
+    mu_a = f['results']['mu_a'][()]
+    Phi = f['results']['Phi'][()]
+    p0_tr = f['results']['p0_tr'][()]
+    
+with open (os.path.join(sim_path_extrusion, 'config.json'), 'r') as f:
+    cfg = json.load(f)    
+
+mu_a_true = gt['mu_a']
+
+mu_a_line_profiles = [np.diag(x) for x in mu_a]
+recon_line_profiles = [np.diag(x) for x in p0_tr]
+mu_a_plots = uf.square_centre_crop(np.asarray(mu_a), cfg['crop_size'])
+labels=['ground truth', 'initial guess n=0']
+for n in range(1, 10+1):
+    labels.append(f'n={n}')
+(fig, ax, frames) = pf.heatmap(
+    mu_a_plots, 
+    labels=labels,
+    title=r'$\mu_{\mathrm{a}}$',
+    dx=cfg['dx'],
+    sharescale=True,
+    cmap='viridis',
+    rowmax=4,
+    cbar_label=r'm$^{-1}$'
+)
+fig.savefig(os.path.join(save_dir, 'mu_a.png'))
+residuals = mu_a_plots[2:] - uf.square_centre_crop(
+    np.rot90(mu_a_true.copy(), k=-1, axes=(-2,-1)), cfg['crop_size']
+)
+labels = []
+for n in range(1, 10+1):
+    labels.append(f'n={n}')
+(fig, ax, frames) = pf.heatmap(
+    residuals, 
+    labels=labels,
+    title=r'$\mu_{\mathrm{a}}$ residuals',
+    dx=cfg['dx'],
+    sharescale=True,
+    cmap='plasma',
+    rowmax=4,
+    vmin=np.maximum(-np.max(mu_a_true), np.min(residuals)),
+    vmax=np.minimum(np.max(mu_a_true), np.max(residuals))
+)
+fig.savefig(os.path.join(save_dir, 'mu_a_residuals.png'))
+labels=['ground truth']
+for n in range(1, 10+1):
+    labels.append(f'n={n}')
+    
+(fig, ax) = plt.subplots(1, 1, figsize=(5, 5))
+labels = ['ground truth', 'initial guess n=0']
+for n in range(1, 10+1):
+    labels.append(f'n={n}')
+linestyle = ['solid', 'dotted', 'dashed', 'dashdot', (0, (3, 5, 1, 5)),
+                (0, (3, 1, 1, 1)), (0, (3, 5, 1, 5, 1, 5)), (0, (3, 1, 1, 1, 1, 1)),
+                (0, (3, 5, 1, 5, 1, 5, 1, 5)), (0, (3, 1, 1, 1, 1, 1, 1, 1)),
+                (0, (5, 10)), (0, (3, 10, 1, 10)), (0, (10, 3))]
+#colors = ['black', 'red', 'blue', 'green', 'orange', 'purple', 'brown',
+#          'pink', 'gray', 'cyan', 'magenta', 'yellow', 'lime', 'teal']
+# create a palette of colors equally spaced between (26, 133, 255) and (212, 17, 89)
+colors = ['black'] # ground truth is black
+for x in np.linspace(0, 1, len(mu_a_line_profiles)-1):
+    colors.append((
+        (26/256)*x + (212/256)*(1-x), # r [0.0 to 1.0]
+        (133/256)*x + (17/256)*(1-x), # g [0.0 to 1.0]
+        (255/256)*x + (89/256)*(1-x)  # b [0.0 to 1.0]
+    ))
+line_profile_axis = np.arange(
+    -cfg['dx']*cfg['crop_size']/2,
+    cfg['dx']*cfg['crop_size']/2, 
+    cfg['dx']
+)
+for i in range(len(mu_a_line_profiles)):
+    ax.plot(line_profile_axis, mu_a_line_profiles[i], label=labels[i],
+            color=colors[i], alpha=0.8)
+ax.set_title('Line profile')
+ax.set_xlabel('x (mm)')
+ax.set_ylabel(r'$\mu_{\mathrm{a}}$ (m$^{-1}$)')
+ax.grid(True)
+ax.set_axisbelow(True)
+ax.set_xlim(np.min(line_profile_axis), np.max(line_profile_axis))
+ax.legend()
+fig.tight_layout()
+fig.savefig(os.path.join(save_dir, 'mu_a_line_profile.png'))
+    
+(fig, ax) = plt.subplots(1, 1, figsize=(5, 5))
+for i in range(len(recon_line_profiles)):
+    ax.plot(line_profile_axis, recon_line_profiles[i], 
+            label=labels[i], color=colors[i], alpha=0.8)
+ax.set_title('Line profile')
+ax.set_xlabel('x (mm)')
+ax.set_ylabel(r'$\hat{p}_{0}$ (Pa)')
+ax.grid(True)
+ax.set_axisbelow(True)
+ax.set_xlim(np.min(line_profile_axis), np.max(line_profile_axis))
+ax.legend()
+fig.tight_layout()
+fig.savefig(os.path.join(save_dir, 'reconstructions_line_profile.png'))
+
+(fig, ax, frames) = pf.heatmap(
+    np.asarray(p0_tr), 
+    labels=labels,
+    title=r'$\hat{p}_{0}$',
+    dx=cfg['dx'],
+    sharescale=True,
+    cmap='viridis',
+    rowmax=4,
+    cbar_label='Pa'
+)
+fig.savefig(os.path.join(save_dir, 'p0_recon.png'))
+
+(fig, ax, frames) = pf.heatmap(
+    np.asarray(Phi), 
+    labels=labels,
+    title=r'$\Phi$',
+    dx=cfg['dx'],
+    sharescale=True,
+    cmap='viridis',
+    rowmax=4,
+    cbar_label=r'J m$^{-2}$'
+)
+fig.savefig(os.path.join(save_dir, 'Phi.png'))
+labels = [r'$\mu_{a}$ (m$^{-1}$)', r'$\mu_{s}$ (m$^{-1}$)',
+            r'$\Phi$ (J m$^{-2}$)', r'$p_{0}$ initial pressure (Pa)',
+            r'$\hat{p}_{0}$ reconstructed (Pa)']
+images = [gt['mu_a'], 
+            gt['mu_s'], 
+            gt['Phi'], 
+            gt['mu_a']*gt['Phi'],
+            gt['p0_tr']]
+(fig, ax, frames) = pf.heatmap(
+    np.asarray(images), dx=cfg['dx'], rowmax=5, labels=labels
+)
+fig.savefig(os.path.join(save_dir, 'images.png'))

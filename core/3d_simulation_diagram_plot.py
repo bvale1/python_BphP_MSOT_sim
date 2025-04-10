@@ -21,14 +21,14 @@ digimouse_atlas_path = r'F:\digimouse_atlas\atlas_380x992x208.img'
 
 # config
 cfg = {
-    'mcx_grid_size' : [748, 236, 748],
+    'mcx_grid_size' : [748, 236*4, 748],
     'dx' : 0.00010962566844919787 # 109.62566844919787 microns
 }
 
 # create 3d plot
 ax = plt.figure().add_subplot(projection='3d')
 
-'''
+
 # create digimouse phantom
 print('creating digimouse phantom')
 phantom = digimouse_phantom(digimouse_atlas_path, wavelengths_m=[750e-9])
@@ -36,7 +36,7 @@ H2O = phantom.define_H2O()
 (Hb, HbO2) = phantom.define_Hb()
 #absorption_coefficients = phantom.calculate_tissue_absorption_coefficients()
 (volume, bg_mask) = phantom.create_volume(
-    cfg, 500, rotate=2, extrusion=False, bg_mask_2d=False
+    cfg, 500, rotate=2, extrusion=True, bg_mask_2d=False
 )
 volume = volume[0]
 # downsample
@@ -51,16 +51,18 @@ Z -= (cfg['mcx_grid_size'][2]/4)+0.5
 X *= 2 * cfg['dx'] * 1e3 # convert to mm
 Y *= 2 * cfg['dx'] * 1e3 # convert to mm
 Z *= -2 * cfg['dx'] * 1e3 # convert to mm
+# slice mouse in half
+bg_mask = bg_mask[:,bg_mask.shape[1]//2:,:]
+volume = volume[:,volume.shape[1]//2:,:]
+X = X[:,X.shape[1]//2:,:]
+Y = Y[:,Y.shape[1]//2:,:]
+Z = Z[:,Z.shape[1]//2:,:]
 # define colors
 colors = np.zeros(volume.shape, dtype=np.float32)
 volume /= np.max(volume) # normalize to 1
 colors[bg_mask == 0] = 0.0 # transparent
 colors[bg_mask == 1] = volume[bg_mask==1] # greyscale
 colors = np.repeat(colors[...,np.newaxis], 3, axis=-1)
-#colors = matplotlib.colors.hsv_to_rgb(colors)
-# downsample for faster plotting testing
-#bg_mask = bg_mask[::10, ::10, ::10]
-#colors = colors[::10, ::10, ::10]
 # plot the digimouse phantom
 print('plotting digimouse voxels')
 ax.voxels(X, Y, Z, bg_mask, facecolors=colors)
@@ -74,23 +76,22 @@ X, Y, Z = np.indices(np.asarray(p0_3d.shape), dtype=np.float32)
 # threshold p0_3d to remove values above 90% and below 10% of the max
 p0_mask = (p0_3d > 0.001 * np.max(p0_3d)) & (p0_3d < 0.01 * np.max(p0_3d))
 p0_3d = p0_3d[p0_mask]
-p0_3d = np.log(p0_3d)
+#p0_3d = np.log(p0_3d)
 # normalize p0_3d
-p0_3d = (p0_3d - np.min(p0_3d)) * 0.01 / (np.max(p0_3d) - np.min(p0_3d))
-# apply gamma correction to p0_3d
-p0_3d = p0_3d
+p0_3d = (p0_3d - np.min(p0_3d)) / (np.max(p0_3d) - np.min(p0_3d))
 # mask coordinates
 X = X[p0_mask]
 Y = Y[p0_mask]
 Z = Z[p0_mask]
 X -= (cfg['mcx_grid_size'][0]/4)
-Y -= (cfg['mcx_grid_size'][1]/4)
+Y -= (cfg['mcx_grid_size'][1]/16)
 Z -= (cfg['mcx_grid_size'][2]/4)
 X *= 2 * cfg['dx'] * 1e3 # convert to mm
 Y *= 2 * cfg['dx'] * 1e3 # convert to mm
 Z *= -2 * cfg['dx'] * 1e3 # convert to mm
 # plot p0_3d
-ax.scatter(X, Y, Z, s=0.1, color='red', alpha=p0_3d)
+colors = np.array([np.ones(len(p0_3d)),1-p0_3d,1-p0_3d]).T
+ax.scatter(X, Y, Z, s=0.0001, color=colors, alpha=p0_3d)
 
 # transducer array geometry provided by Janek Gröhl https://github.com/jgroehl
 number_detector_elements = 256
@@ -153,10 +154,11 @@ for det_idx in range(len(det_elements)):
         -detector_positions[2, :],
         s=0.1
     )
-
+'''
 ax.set_xlabel('X (mm)')
 ax.set_ylabel('Y (mm)')
 ax.set_zlabel('Z (mm)')
+ax.set_ylim(0, 40)
 ax.set_aspect('equal')
 print('show plot')
 plt.show()

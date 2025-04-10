@@ -4,6 +4,8 @@ temp/
 
 __pycache__
 
+*aisurrey*
+
 *.bin
 
 *.json

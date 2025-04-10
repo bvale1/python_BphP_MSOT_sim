@@ -79,15 +79,8 @@ class TestMetricCalculator():
         self.metrics['R2'] += [R2]
         
     def get_metrics(self) -> dict:
-        return {
-            'mean_RMSE' : np.mean(np.asarray(self.metrics['RMSE'])),
-            'mean_MAE' : np.mean(np.asarray(self.metrics['MAE'])),
-            'mean_Rel_Err' : np.mean(np.asarray(self.metrics['Rel_Err'])),
-            'mean_PSNR' : np.mean(np.asarray(self.metrics['PSNR'])),
-            'mean_SSIM' : np.mean(np.asarray(self.metrics['SSIM'])),
-            'mean_R2' : np.mean(np.asarray(self.metrics['R2'])),
-        }
-        
+        return self.metrics
+    
     def save_metrics_all_test_samples(self, save_path : str) -> None:
         with open(save_path, 'w') as f:
             json.dump(self.metrics, f)
@@ -154,7 +147,10 @@ if __name__ == '__main__':
     parser.add_argument(
         '--bandpass_filter', default=False, action=argparse.BooleanOptionalAction,
         help='apply bandpass filter to sensor data'
-    )    
+    )
+    parser.add_argument(
+        '--resample_time_array', default=False, action=argparse.BooleanOptionalAction,
+    )
     
     args = parser.parse_args()
     
@@ -236,6 +232,7 @@ if __name__ == '__main__':
     start = timeit.default_timer()
     p0_recon = simulation.run_time_reversal(sensor_data)
     p0_recon = np.rot90(p0_recon, k=2, axes=(-2,-1))
+    data['p0_tr'] = p0_recon.copy()
     logging.info(f'time reversal run in {timeit.default_timer() - start} seconds')
     
     # define numerical phantom for forward model
@@ -280,16 +277,17 @@ if __name__ == '__main__':
     # intialise bandpass filter and acoustic-electric transfer function
     # with new sampling frequency and time step to reduce inverse crime
     irf_fft = np.abs(np.fft.fft(irf))
-    irf = interp1d(
-        np.arange(cfg['Nt'])/(cfg['Nt']*cfg['dt']), irf_fft, kind='linear', fill_value=1.0
-    )(np.arange(1500)/(1500*30e-9))
-    if args.bandpass_filter:
-        filter = make_filter(
-            n_samples=1500, fs=1/30e-9, irf=irf,
-            hilbert=True, lp_filter=6.5e6, hp_filter=50e3, rise=0.2,
-            n_filter=512, window='hann'
-        )
-        logging.info('bandpass filter initialised')
+    if args.resample_time_array:
+        irf = interp1d(
+            np.arange(cfg['Nt'])/(cfg['Nt']*cfg['dt']), irf_fft, kind='linear', fill_value=1.0
+        )(np.arange(1500)/(1500*30e-9))
+        if args.bandpass_filter:
+            filter = make_filter(
+                n_samples=1500, fs=1/30e-9, irf=irf,
+                hilbert=True, lp_filter=6.5e6, hp_filter=50e3, rise=0.2,
+                n_filter=512, window='hann'
+            )
+            logging.info('bandpass filter re-initialised')
     
     # metrics are computed for each iteration
     metrics_mu_a = TestMetricCalculator()
@@ -360,8 +358,9 @@ if __name__ == '__main__':
                 transducer_model=cfg['forward_model']
             )
             simulation.configure_simulation()
-            # change time step size to reduce inverse crime
-            simulation.kgrid.setTime(1500, 30e-9)
+            if args.resample_time_array:
+                # change time step size to reduce inverse crime
+                simulation.kgrid.setTime(1500, 30e-9)
             logging.info(f'kwave forward initialised in {timeit.default_timer() - start} seconds')
             gc.collect()
                 
@@ -397,7 +396,8 @@ if __name__ == '__main__':
                 transducer_model=cfg['inverse_model']
             )
             simulation.configure_simulation()
-            simulation.kgrid.setTime(1500, 30e-9)
+            if args.resample_time_array:
+                simulation.kgrid.setTime(1500, 30e-9)
             logging.info(f'kwave inverse initialised in {timeit.default_timer() - start} seconds')
             gc.collect()
                 
@@ -510,7 +510,7 @@ if __name__ == '__main__':
         )
         labels = []
         for n in range(1, args.niter+1):
-            labels.append(f'n={n}, RMSE_mu_a={metrics_mu_a.get_metrics()["RMSE"][n]:.2f}')
+            labels.append(f'n={n}')
         (fig, ax, frames) = pf.heatmap(
             residuals, 
             labels=labels,
