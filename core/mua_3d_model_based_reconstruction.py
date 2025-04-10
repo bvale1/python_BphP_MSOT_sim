@@ -66,7 +66,7 @@ if __name__ == '__main__':
         '--digimouse_dir', type=str,
         default='/home/wv00017/digimouse_atlas/atlas_380x992x208.img',
         action='store',
-        help='directory containing ImageNet dataset'
+        help='directory containing digimouse atlas'
     )
     parser.add_argument(
         '--irf_path', type=str,
@@ -288,7 +288,7 @@ if __name__ == '__main__':
     phantom = digimouse_phantom(cfg['digimouse_dir'], wavelengths_m=cfg['wavelengths']) 
     H2O = phantom.define_H2O()
     (Hb, HbO2) = phantom.define_Hb()
-    (volume, bg_mask) = phantom.create_volume(cfg, cf['mcx_grid_size']//2, rotate=2, bg_mask_2d=False)
+    (volume, bg_mask) = phantom.create_volume(cfg, cfg['mcx_grid_size']//2, rotate=2, bg_mask_2d=False)
     
     # save volume to HDF5 file
     h5_group = y_idx_wavelength.replace('/', '__')

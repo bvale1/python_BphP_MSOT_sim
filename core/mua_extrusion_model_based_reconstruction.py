@@ -136,7 +136,7 @@ if __name__ == '__main__':
     )
     parser.add_argument('--step_size', type=float, default=0.8, action='store', help='learning rate/step size')
     parser.add_argument('--epsilon', type=float, default=1e-8, action='store', help='small number to prevent division by zero')
-    parser.add_argument('--root_dir', type=str, help='path to dataset')
+    parser.add_argument('--dataset', type=str, help='path to dataset')
     parser.add_argument('--image_name', type=str, help='name of image to reconstruct')
     parser.add_argument('--niter', type=int, help='Number of iterations', default=10)
     parser.add_argument('--sim_git_hash', type=str, default=None, action='store')
@@ -166,16 +166,16 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO)
         logging.info(f'{args.v} not a recognised verbose level, using INFO instead')
     
-    data, cfg = uf.load_sim(args.root_dir, args='all', verbose=False)
+    data, cfg = uf.load_sim(args.dataset, args='all', verbose=False)
     cfg['mcx_bin_path'] = args.mcx_bin_path
     cfg['weights_dir'] = args.weights_dir
     cfg['irf_path'] = args.irf_path
-    image_idx = data.keys().index(args.image_name)
+    image_idx = list(data.keys()).index(args.image_name)
     cfg['image_name'] = args.image_name
     cfg['image_idx'] = image_idx
     cfg['image_LaserEnergy'] = cfg['LaserEnergy'][image_idx]
     cfg['noise_std'] = args.noise_std
-    logging.info(f'loaded simulation data from {args.root_dir}')
+    logging.info(f'loaded simulation data from {args.dataset}')
     logging.info(f'simulation config: {cfg}')
     
     with open(os.path.join(args.save_dir, 'cfg.json'), 'w') as f:
@@ -469,7 +469,7 @@ if __name__ == '__main__':
             
             with h5py.File(os.path.join(args.save_dir, 'results.h5'), 'w') as f:
                 f.create_group['ground_truth']
-                for key in data.keys():
+                for key in list(data.keys()):
                     f['ground_truth'].create_dataset(
                         key, data=data[key], dtype=np.float32
                     )
