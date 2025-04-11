@@ -65,8 +65,8 @@ def make_filter(n_samples : int,
 
 sim_path_3d = '/mnt/f/cluster_MSOT_simulations/digimouse_fluence_correction/3d_digimouse/20241018_digimouse_phantom.c193723.p2'
 sim_path_extrusion = '/mnt/f/cluster_MSOT_simulations/digimouse_fluence_correction/2d_extrusion_digimouse/20250206_digimouse_extrusion_phantom.Naisurrey26.j742887'
-results_path = '/home/wv00017/python_BphP_MSOT_sim/20250409_mua_recon_mus_exact_extrusion.Naisurrey26.j774308/results.h5'
-save_dir = '/home/wv00017/python_BphP_MSOT_sim/20250409_mua_recon_mus_exact_extrusion.Naisurrey26.j774308'
+results_path = '/home/wv00017/python_BphP_MSOT_sim/20250409_mua_recon_mus_exact_extrusion.Naisurrey24.j774342/results.h5'
+save_dir = '/home/wv00017/python_BphP_MSOT_sim/20250409_mua_recon_mus_exact_extrusion.Naisurrey24.j774342'
 image_name = '500_750'
 
 data_3d, cfg_3d = uf.load_sim(sim_path_3d, args='all', verbose=False)
@@ -119,9 +119,11 @@ fig.savefig('digimouse_signals.png')
 
 # compute true signal RMS from 18.75 to 37.5 microseconds (samples 750 to 1450)
 #RMS = np.sqrt(np.mean(data_3d['sensor_data'][:,750:1450]**2))
-#assumed_SNR_dB = 20 # dB
-#noise_std = np.exp(-assumed_SNR_dB / 20) * RMS # RMS = std if mean = 0
-#print(f'RMS_true: {RMS} Pa, SNR: {assumed_SNR_dB} dB, noise_std: {noise_std} Pa')
+# compute true signal RMS from all samples
+RMS = np.sqrt(np.mean(data_3d['sensor_data']**2))
+assumed_SNR_dB = 25 # dB
+noise_std = RMS * (10**(-assumed_SNR_dB / 20)) # RMS = std if mean = 0
+print(f'RMS_true: {RMS} Pa, SNR: {assumed_SNR_dB} dB, noise_std: {noise_std} Pa')
 
 irf = np.load('/home/wv00017/python_BphP_MSOT_sim/invision_irf.npy')
 irf_fft = np.abs(np.fft.fft(irf))
@@ -172,6 +174,14 @@ with h5py.File(results_path, 'r') as f:
     mu_a = f['results']['mu_a'][()]
     Phi = f['results']['Phi'][()]
     p0_tr = f['results']['p0_tr'][()]
+    
+print(f'GT mu_a shape: {gt["mu_a"].shape}')
+print(f'GT mu_s shape: {gt["mu_s"].shape}')
+print(f'GT Phi shape: {gt["Phi"].shape}')
+print(f'GT p0_tr shape: {gt["p0_tr"].shape}')
+print(f'mu_a shape: {mu_a.shape}')
+print(f'Phi shape: {Phi.shape}')
+print(f'p0_tr shape: {p0_tr.shape}')
     
 with open (os.path.join(sim_path_extrusion, 'config.json'), 'r') as f:
     cfg = json.load(f)    

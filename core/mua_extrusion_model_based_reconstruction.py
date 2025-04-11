@@ -192,7 +192,6 @@ if __name__ == '__main__':
         logging.info('bandpass filter initialised')
     
     # for now only one image is used
-    images = list(data.keys())
     data = data[args.image_name]
     p0_recon = data['p0_tr'].copy()
     p0_recon = uf.square_centre_pad(p0_recon, cfg['mcx_grid_size'][0])
@@ -236,7 +235,7 @@ if __name__ == '__main__':
     logging.info(f'time reversal run in {timeit.default_timer() - start} seconds')
     
     # define numerical phantom for forward model
-    wavelengths_m = [float(images[0].split('_')[-1]) * 1e-9] # [m]
+    wavelengths_m = [float(args.image_name.split('_')[-1]) * 1e-9] # [m]
     phantom = fluence_correction_phantom(bg_mask, wavelengths_m=wavelengths_m)
     H2O = phantom.define_H2O()
     
@@ -279,7 +278,7 @@ if __name__ == '__main__':
     irf_fft = np.abs(np.fft.fft(irf))
     if args.resample_time_array:
         irf = interp1d(
-            np.arange(cfg['Nt'])/(cfg['Nt']*cfg['dt']), irf_fft, kind='linear', fill_value=1.0
+            np.arange(cfg['Nt'])/(cfg['Nt']*cfg['dt']), irf_fft, kind='linear', fill_value=0.0
         )(np.arange(1500)/(1500*30e-9))
         if args.bandpass_filter:
             filter = make_filter(
@@ -318,7 +317,7 @@ if __name__ == '__main__':
         Phi = out[:,(cfg['mcx_grid_size'][1]//2)-1,:].copy()
         Phi = np.rot90(Phi, k=2, axes=(-2,-1))
         
-        if args.method == 'gradient':
+        if args.method == 'optical':
             mu_a = p0_recon / (cfg['gruneisen'] * Phi + args.epsilon)
         
         else: # optical_and_acoustic
@@ -451,7 +450,7 @@ if __name__ == '__main__':
         
         # compute metrics
         metrics_mu_a(mu_a_true, mu_a, Y_mask=bg_mask)
-        metrics_p0_tr(p0_recon, p0_recon, Y_mask=bg_mask)
+        metrics_p0_tr(p0_recon, tr, Y_mask=bg_mask)
             
         if args.plot:
             mu_a_plots.append(uf.square_centre_crop(
@@ -466,24 +465,27 @@ if __name__ == '__main__':
                     np.rot90(tr.copy(), k=-1, axes=(-2,-1)), cfg['crop_size']
                 ))
                 recon_line_profiles.append(recon_plots[-1][recon_plots[-1].shape[0]//2,:])
-            
-            with h5py.File(os.path.join(args.save_dir, 'results.h5'), 'w') as f:
-                f.create_group('ground_truth')
-                for key in list(data.keys()):
-                    f['ground_truth'].create_dataset(
-                        key, data=data[key], dtype=np.float32
-                    )
-                f.create_group('results')
-                f['results'].create_dataset(
-                    'mu_a', data=np.asarray(mu_a_plots), dtype=np.float32
-                )
-                f['results'].create_dataset(
-                    'Phi', data=np.asarray(Phi_plots), dtype=np.float32
-                )
-                f['results'].create_dataset(
-                    'p0_tr', data=np.asarray(recon_plots), dtype=np.float32
-                )
     
+    if args.plot:
+        with h5py.File(os.path.join(args.save_dir, 'results.h5'), 'w') as f:
+            f.create_group('ground_truth')
+            data['p0_tr'] = uf.square_centre_crop(data['p0_tr'].copy(), cfg['crop_size'])
+            p0_recon = uf.square_centre_crop(p0_recon.copy(), cfg['crop_size'])
+            for key in list(data.keys()):
+                f['ground_truth'].create_dataset(
+                    key, data=data[key], dtype=np.float32
+                )
+            f.create_group('results')
+            f['results'].create_dataset(
+                'mu_a', data=np.asarray(mu_a_plots), dtype=np.float32
+            )
+            f['results'].create_dataset(
+                'Phi', data=np.asarray(Phi_plots), dtype=np.float32
+            )
+            f['results'].create_dataset(
+                'p0_tr', data=np.asarray(recon_plots), dtype=np.float32
+            )
+
     logging.info(metrics_mu_a.get_metrics())
     logging.info(metrics_p0_tr.get_metrics())
     with open(os.path.join(args.save_dir, 'metrics.json'), 'w') as f:
