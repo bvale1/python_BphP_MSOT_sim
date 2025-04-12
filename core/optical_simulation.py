@@ -29,12 +29,12 @@ class MCX_adapter():
         if source not in ['planar', 'invision']:
             raise ValueError(f'source must be "planar" or "invision", not "{source}"')
         
-        uf.create_dir('temp')
+        uf.create_dir(os.path.join(cfg['save_dir'], 'temp'))
         self.cfg = cfg
         
-        self.mcx_config_file = 'temp/InVision_BphP_MCX_Simulation.json'
-        self.mcx_volume_binary_file = 'temp/InVision_BphP_MCX_Simulation.bin'
-        self.mcx_out_file = 'temp/InVision_BphP_MCX_Simulation_out'
+        self.mcx_config_file = os.path.join(cfg['save_dir'], 'temp', 'InVision_BphP_MCX_Simulation.json')
+        self.mcx_volume_binary_file = os.path.join(cfg['save_dir'], 'temp', 'InVision_BphP_MCX_Simulation.bin')
+        self.mcx_out_file = os.path.join(cfg['save_dir'], 'temp', 'InVision_BphP_MCX_Simulation_out')
         
         # initialize simulation configuration
         self.mcx_cfg = {
@@ -242,7 +242,7 @@ class MCX_adapter():
             os.remove(self.mcx_config_file)
             os.remove(self.mcx_volume_binary_file)
             os.remove(self.mcx_out_file+'.mc2')
-            os.rmdir('temp')
+            os.rmdir(os.path.join(self.cfg['save_dir'], 'temp'))
         except:
             print('could not delete temporary files')
         
