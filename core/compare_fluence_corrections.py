@@ -7,6 +7,7 @@ import func.plot_func as pf
 import func.utility_func as uf
 from scipy.fft import fft, ifft, fftfreq, fftshift
 from scipy.interpolate import interp1d
+from skimage.restoration import denoise_tv_chambolle
 #from mua_extrusion_model_based_reconstruction import TestMetricCalculator
 
 # patato filter
@@ -75,9 +76,10 @@ sim_path_3d = '/mnt/f/cluster_MSOT_simulations/digimouse_fluence_correction/3d_d
 sim_path_extrusion = '/mnt/f/cluster_MSOT_simulations/digimouse_fluence_correction/2d_extrusion_digimouse/20241015_digimouse_extrusion_phantom.c193162.p0'
 image_name = '200_750'
 
-results_path = '/home/wv00017/python_BphP_MSOT_sim/500_750_no_filter_noisestd18_mua_recon_mus_exact_extrusion.Naisurrey23.j774477/results.h5'
-save_dir = '/home/wv00017/python_BphP_MSOT_sim/500_750_no_filter_noisestd18_mua_recon_mus_exact_extrusion.Naisurrey23.j774477'
+results_path = '/home/wv00017/python_BphP_MSOT_sim/no_filter_noise_std_16_20250412_mua_recon_mus_exact_extrusion_200_750.Naisurrey23.j774822/results.h5'
+save_dir = '/home/wv00017/python_BphP_MSOT_sim/no_filter_noise_std_16_20250412_mua_recon_mus_exact_extrusion_200_750.Naisurrey23.j774822'
 
+print(f'saving plots to: {save_dir}')
 
 data_3d, cfg_3d = uf.load_sim(sim_path_3d, args='all', verbose=False)
 data_3d = data_3d[image_name]
@@ -185,6 +187,11 @@ with h5py.File(results_path, 'r') as f:
     Phi = f['results']['Phi'][()]
     p0_tr = f['results']['p0_tr'][()]
     
+# convert m^-1 to cm^-1
+mu_a = mu_a * 1e-2
+gt['mu_a'] = gt['mu_a'] * 1e-2
+gt['mu_s'] = gt['mu_s'] * 1e-2
+    
 print(f'GT mu_a shape: {gt["mu_a"].shape}')
 print(f'GT mu_s shape: {gt["mu_s"].shape}')
 print(f'GT Phi shape: {gt["Phi"].shape}')
@@ -212,7 +219,7 @@ for n in range(1, 10+1):
     sharescale=True,
     cmap='viridis',
     rowmax=4,
-    cbar_label=r'm$^{-1}$'
+    cbar_label=r'cm$^{-1}$'
 )
 fig.savefig(os.path.join(save_dir, 'mu_a.png'))
 residuals = mu_a_plots[2:] - uf.square_centre_crop(mu_a_true.copy(), cfg['crop_size'])
@@ -235,7 +242,6 @@ labels=['ground truth']
 for n in range(1, 10+1):
     labels.append(f'n={n}')
     
-(fig, ax) = plt.subplots(1, 1, figsize=(5, 5))
 labels = ['ground truth', 'initial guess n=0']
 for n in range(1, 10+1):
     labels.append(f'n={n}')
@@ -257,33 +263,63 @@ line_profile_axis = np.arange(
     -cfg['dx']*cfg['crop_size']/2,
     cfg['dx']*cfg['crop_size']/2, 
     cfg['dx']
-)
-for i in range(len(mu_a_line_profiles)):
-    ax.plot(line_profile_axis, mu_a_line_profiles[i], label=labels[i],
-            color=colors[i], alpha=0.8)
-ax.set_title('Line profile')
-ax.set_xlabel('x (mm)')
-ax.set_ylabel(r'$\mu_{\mathrm{a}}$ (m$^{-1}$)')
+) * 1e3 # convert to mm
+# line profiles for all iterations
+(fig, ax) = plt.subplots(1, 1, figsize=(6, 3))
+for i in range(1, len(mu_a_line_profiles)):
+    ax.plot(line_profile_axis, mu_a_line_profiles[i], 
+            label=labels[i], color=colors[i], alpha=0.7)
+ax.plot(line_profile_axis, mu_a_line_profiles[0], 
+            label=labels[0], color=colors[0], linestyle='dashed')
+ax.set_xlabel('distance (mm)')
+ax.set_ylabel(r'$\mu_{\mathrm{a}}$ (cm$^{-1}$)')
 ax.grid(True)
 ax.set_axisbelow(True)
 ax.set_xlim(np.min(line_profile_axis), np.max(line_profile_axis))
-ax.legend()
+ax.legend(bbox_to_anchor=(1.01, 0.5), loc="center left", borderaxespad=0)
 fig.tight_layout()
 fig.savefig(os.path.join(save_dir, 'mu_a_line_profile.png'))
-    
-(fig, ax) = plt.subplots(1, 1, figsize=(5, 5))
-for i in range(len(recon_line_profiles)):
+
+(fig, ax) = plt.subplots(1, 1, figsize=(6, 3))
+for i in range(1, len(recon_line_profiles)):
     ax.plot(line_profile_axis, recon_line_profiles[i], 
-            label=labels[i], color=colors[i], alpha=0.8)
-ax.set_title('Line profile')
-ax.set_xlabel('x (mm)')
+            label=labels[i], color=colors[i], alpha=0.7)
+ax.plot(line_profile_axis, recon_line_profiles[0], 
+            label=labels[0], color=colors[0], linestyle='dashed')
+ax.set_xlabel('distance (mm)')
 ax.set_ylabel(r'$\hat{p}_{0}$ (Pa)')
 ax.grid(True)
 ax.set_axisbelow(True)
 ax.set_xlim(np.min(line_profile_axis), np.max(line_profile_axis))
-ax.legend()
+ax.legend(bbox_to_anchor=(1.01, 0.5), loc="center left", borderaxespad=0)
 fig.tight_layout()
 fig.savefig(os.path.join(save_dir, 'reconstructions_line_profile.png'))
+
+# line profiles for final iteration
+(fig, ax) = plt.subplots(1, 2, figsize=(6, 3))
+ax[0].plot(line_profile_axis, mu_a_line_profiles[0], 
+        label='ground truth', color='black')
+ax[0].plot(line_profile_axis, mu_a_line_profiles[-1],
+        label='10th iteration', color='red', linestyle='dashed')
+ax[0].set_xlabel('distance (mm)')
+ax[0].set_ylabel(r'$\mu_{\mathrm{a}}$ (cm$^{-1}$)')
+ax[0].grid(True)
+ax[0].set_axisbelow(True)
+ax[0].set_xlim(np.min(line_profile_axis), np.max(line_profile_axis))
+ax[0].legend(bbox_to_anchor=(0, 1.01, 1.5, 0.2), loc="lower left",
+               mode="expand", ncol=3)
+
+ax[1].plot(line_profile_axis, recon_line_profiles[0], color='black')
+ax[1].plot(line_profile_axis, recon_line_profiles[-1], color='red',
+             linestyle='dashed')
+ax[1].set_xlabel('distance (mm)')
+ax[1].set_ylabel(r'$\hat{p}_{0}$ (Pa)')
+ax[1].grid(True)
+ax[1].set_axisbelow(True)
+ax[1].set_xlim(np.min(line_profile_axis), np.max(line_profile_axis))
+fig.tight_layout()
+fig.savefig(os.path.join(save_dir, 'final_reconstructions_line_profile.png'))
+
 
 (fig, ax, frames) = pf.heatmap(
     np.asarray(p0_tr), 
@@ -308,7 +344,7 @@ fig.savefig(os.path.join(save_dir, 'p0_recon.png'))
     cbar_label=r'J m$^{-2}$'
 )
 fig.savefig(os.path.join(save_dir, 'Phi.png'))
-labels = [r'$\mu_{a}$ (m$^{-1}$)', r'$\mu_{s}$ (m$^{-1}$)',
+labels = [r'$\mu_{a}$ (cm$^{-1}$)', r'$\mu_{s}$ (cm$^{-1}$)',
             r'$\Phi$ (J m$^{-2}$)', r'$p_{0}$ initial pressure (Pa)',
             r'$\hat{p}_{0}$ reconstructed (Pa)']
 images = [gt['mu_a'], 

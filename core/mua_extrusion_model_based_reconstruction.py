@@ -3,6 +3,7 @@ from phantoms.fluence_correction_phantom import fluence_correction_phantom
 from add_noise import make_filter, add_noise
 from scipy.ndimage import convolve1d
 from scipy.interpolate import interp1d
+from skimage.restoration import denoise_tv_chambolle
 import json
 import h5py
 import os
@@ -154,6 +155,9 @@ if __name__ == '__main__':
     parser.add_argument(
         '--recon_absolute_value', default=False, action=argparse.BooleanOptionalAction,
     )
+    parser.add_argument(
+        '--tv_regularisation', default=False, action=argparse.BooleanOptionalAction,
+    )
     
     args = parser.parse_args()
     
@@ -177,6 +181,7 @@ if __name__ == '__main__':
     cfg['bandpass_filter'] = args.bandpass_filter
     cfg['resample_time_array'] = args.resample_time_array
     cfg['recon_absolute_value'] = args.recon_absolute_value
+    cfg['tv_regularisation'] = args.tv_regularisation
     logging.info(f'loaded simulation data from {args.dataset}')
     logging.info(f'simulation config: {cfg}')
     
@@ -448,6 +453,9 @@ if __name__ == '__main__':
             mu_a += args.step_size * (p0_recon - tr) / (cfg['gruneisen'] * Phi + args.epsilon)
             # non-negativity constraint
             mu_a = np.maximum(mu_a, 0)
+            # total variation regularisation
+            if args.tv_regularisation:
+                mu_a = denoise_tv_chambolle(mu_a, weight=10)
             # segmentation mask used as boundary condition
             mu_a *= bg_mask.astype(np.float32) # [m^-1] absorption coefficient
             mu_a += H2O['mu_a'][0] * (~bg_mask).astype(np.float32) # [m^-1] H2O outside of segmentation mask
