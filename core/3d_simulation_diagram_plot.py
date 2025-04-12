@@ -36,21 +36,21 @@ H2O = phantom.define_H2O()
 (Hb, HbO2) = phantom.define_Hb()
 #absorption_coefficients = phantom.calculate_tissue_absorption_coefficients()
 (volume, bg_mask) = phantom.create_volume(
-    cfg, 500, rotate=2, extrusion=True, bg_mask_2d=False
+    cfg, 500, rotate=2, extrusion=False, bg_mask_2d=False
 )
 volume = volume[0]
 # downsample
-volume = meanpool(volume)
-bg_mask = meanpool(bg_mask.astype(np.float32))
-bg_mask = np.round(bg_mask).astype(bool)
+#volume = meanpool(volume)
+#bg_mask = meanpool(bg_mask.astype(np.float32))
+#bg_mask = np.round(bg_mask).astype(bool)
 # define voxels
 X, Y, Z = np.indices(np.asarray(volume.shape) + np.array([1,1,1]), dtype=np.float32)
-X -= (cfg['mcx_grid_size'][0]/4)+0.5
-Y -= (cfg['mcx_grid_size'][1]/4)+0.5
-Z -= (cfg['mcx_grid_size'][2]/4)+0.5
-X *= 2 * cfg['dx'] * 1e3 # convert to mm
-Y *= 2 * cfg['dx'] * 1e3 # convert to mm
-Z *= -2 * cfg['dx'] * 1e3 # convert to mm
+X -= (cfg['mcx_grid_size'][0]/2)+0.5
+Y -= (cfg['mcx_grid_size'][1]/2)+0.5
+Z -= (cfg['mcx_grid_size'][2]/2)+0.5
+X *= cfg['dx'] * 1e3 # convert to mm
+Y *= cfg['dx'] * 1e3 # convert to mm
+Z *= -1 * cfg['dx'] * 1e3 # convert to mm
 # slice mouse in half
 bg_mask = bg_mask[:,bg_mask.shape[1]//2:,:]
 volume = volume[:,volume.shape[1]//2:,:]
@@ -158,7 +158,7 @@ for det_idx in range(len(det_elements)):
 ax.set_xlabel('X (mm)')
 ax.set_ylabel('Y (mm)')
 ax.set_zlabel('Z (mm)')
-ax.set_ylim(0, 40)
+#ax.set_ylim(0, 40)
 ax.set_aspect('equal')
 print('show plot')
 plt.show()

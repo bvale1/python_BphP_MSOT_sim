@@ -63,11 +63,21 @@ def make_filter(n_samples : int,
     return output
 
 
-sim_path_3d = '/mnt/f/cluster_MSOT_simulations/digimouse_fluence_correction/3d_digimouse/20241018_digimouse_phantom.c193723.p2'
-sim_path_extrusion = '/mnt/f/cluster_MSOT_simulations/digimouse_fluence_correction/2d_extrusion_digimouse/20250206_digimouse_extrusion_phantom.Naisurrey26.j742887'
-results_path = '/home/wv00017/python_BphP_MSOT_sim/20250409_mua_recon_mus_exact_extrusion.Naisurrey24.j774342/results.h5'
-save_dir = '/home/wv00017/python_BphP_MSOT_sim/20250409_mua_recon_mus_exact_extrusion.Naisurrey24.j774342'
-image_name = '500_750'
+# paths for y=500 voxels, wavelength=750 nm
+#sim_path_3d = '/mnt/f/cluster_MSOT_simulations/digimouse_fluence_correction/3d_digimouse/20241018_digimouse_phantom.c193723.p2'
+#sim_path_extrusion = '/mnt/f/cluster_MSOT_simulations/digimouse_fluence_correction/2d_extrusion_digimouse/20250206_digimouse_extrusion_phantom.Naisurrey26.j742887'
+#image_name = '500_750'
+#results_path = '/home/wv00017/python_BphP_MSOT_sim/20250409_mua_recon_mus_exact_extrusion.Naisurrey24.j774342/results.h5'
+#save_dir = '/home/wv00017/python_BphP_MSOT_sim/20250409_mua_recon_mus_exact_extrusion.Naisurrey24.j774342'
+
+# paths for y=200 voxels, wavelength=750 nm
+sim_path_3d = '/mnt/f/cluster_MSOT_simulations/digimouse_fluence_correction/3d_digimouse/20241018_digimouse_phantom.c193723.p0'
+sim_path_extrusion = '/mnt/f/cluster_MSOT_simulations/digimouse_fluence_correction/2d_extrusion_digimouse/20241015_digimouse_extrusion_phantom.c193162.p0'
+image_name = '200_750'
+
+results_path = '/home/wv00017/python_BphP_MSOT_sim/500_750_no_filter_noisestd18_mua_recon_mus_exact_extrusion.Naisurrey23.j774477/results.h5'
+save_dir = '/home/wv00017/python_BphP_MSOT_sim/500_750_no_filter_noisestd18_mua_recon_mus_exact_extrusion.Naisurrey23.j774477'
+
 
 data_3d, cfg_3d = uf.load_sim(sim_path_3d, args='all', verbose=False)
 data_3d = data_3d[image_name]
@@ -121,7 +131,7 @@ fig.savefig('digimouse_signals.png')
 #RMS = np.sqrt(np.mean(data_3d['sensor_data'][:,750:1450]**2))
 # compute true signal RMS from all samples
 RMS = np.sqrt(np.mean(data_3d['sensor_data']**2))
-assumed_SNR_dB = 25 # dB
+assumed_SNR_dB = 20 # dB
 noise_std = RMS * (10**(-assumed_SNR_dB / 20)) # RMS = std if mean = 0
 print(f'RMS_true: {RMS} Pa, SNR: {assumed_SNR_dB} dB, noise_std: {noise_std} Pa')
 
@@ -205,9 +215,7 @@ for n in range(1, 10+1):
     cbar_label=r'm$^{-1}$'
 )
 fig.savefig(os.path.join(save_dir, 'mu_a.png'))
-residuals = mu_a_plots[2:] - uf.square_centre_crop(
-    np.rot90(mu_a_true.copy(), k=-1, axes=(-2,-1)), cfg['crop_size']
-)
+residuals = mu_a_plots[2:] - uf.square_centre_crop(mu_a_true.copy(), cfg['crop_size'])
 labels = []
 for n in range(1, 10+1):
     labels.append(f'n={n}')

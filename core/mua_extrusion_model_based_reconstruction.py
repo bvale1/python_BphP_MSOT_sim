@@ -151,6 +151,9 @@ if __name__ == '__main__':
     parser.add_argument(
         '--resample_time_array', default=False, action=argparse.BooleanOptionalAction,
     )
+    parser.add_argument(
+        '--recon_absolute_value', default=False, action=argparse.BooleanOptionalAction,
+    )
     
     args = parser.parse_args()
     
@@ -171,6 +174,9 @@ if __name__ == '__main__':
     cfg['image_idx'] = image_idx
     cfg['image_LaserEnergy'] = cfg['LaserEnergy'][image_idx]
     cfg['noise_std'] = args.noise_std
+    cfg['bandpass_filter'] = args.bandpass_filter
+    cfg['resample_time_array'] = args.resample_time_array
+    cfg['recon_absolute_value'] = args.recon_absolute_value
     logging.info(f'loaded simulation data from {args.dataset}')
     logging.info(f'simulation config: {cfg}')
     
@@ -230,8 +236,11 @@ if __name__ == '__main__':
 
     start = timeit.default_timer()
     p0_recon = simulation.run_time_reversal(sensor_data)
+    if args.recon_absolute_value:
+        p0_recon = np.abs(p0_recon)
+    data['p0_tr'] = np.rot90(p0_recon.copy(), k=1, axes=(-2,-1))
+    data['p0_tr'] = uf.square_centre_crop(data['p0_tr'].copy(), cfg['crop_size'])
     p0_recon = np.rot90(p0_recon, k=2, axes=(-2,-1))
-    data['p0_tr'] = p0_recon.copy()
     logging.info(f'time reversal run in {timeit.default_timer() - start} seconds')
     
     # define numerical phantom for forward model
@@ -418,6 +427,8 @@ if __name__ == '__main__':
 
             start = timeit.default_timer()
             tr = simulation.run_time_reversal(out)
+            if args.recon_absolute_value:
+                tr = np.abs(tr)
             tr = np.rot90(tr, k=2, axes=(-2,-1))
             logging.info(f'time reversal run in {timeit.default_timer() - start} seconds')
 
@@ -469,8 +480,6 @@ if __name__ == '__main__':
     if args.plot:
         with h5py.File(os.path.join(args.save_dir, 'results.h5'), 'w') as f:
             f.create_group('ground_truth')
-            data['p0_tr'] = uf.square_centre_crop(data['p0_tr'].copy(), cfg['crop_size'])
-            p0_recon = uf.square_centre_crop(p0_recon.copy(), cfg['crop_size'])
             for key in list(data.keys()):
                 f['ground_truth'].create_dataset(
                     key, data=data[key], dtype=np.float32
