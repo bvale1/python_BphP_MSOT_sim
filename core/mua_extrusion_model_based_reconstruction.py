@@ -137,7 +137,7 @@ if __name__ == '__main__':
     parser.add_argument('--recon_iterations', type=int, default=5, action='store')
     parser.add_argument('--forward_model', choices=['invision', 'point'], default='invision', action='store')
     parser.add_argument('--inverse_model', choices=['invision', 'point'], default='invision', action='store')
-    parser.add_argument('--delete_p0_3d', action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument('--delete_p0_3d', action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument('-v', type=str, help='verbose level', default='INFO')
     parser.add_argument('--Gamma', type=float, default=1.0, action='store', help='Gruneisen parameter')
     parser.add_argument('--plot', action=argparse.BooleanOptionalAction, default=False, help='plot results')
@@ -179,6 +179,7 @@ if __name__ == '__main__':
     cfg['image_LaserEnergy'] = cfg['LaserEnergy'][image_idx]
     cfg['noise_std'] = args.noise_std
     cfg['bandpass_filter'] = args.bandpass_filter
+    cfg['delete_p0_3d'] = args.delete_p0_3d
     cfg['resample_time_array'] = args.resample_time_array
     cfg['recon_absolute_value'] = args.recon_absolute_value
     cfg['tv_regularisation'] = args.tv_regularisation

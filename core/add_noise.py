@@ -8,7 +8,6 @@ from scipy.linalg import cholesky
 from copy import deepcopy
 import matplotlib.pyplot as plt
 from typing import Sequence
-from tqdm.auto import tqdm
 
 
 # patato backprojection
@@ -64,8 +63,8 @@ def reconstruct(time_series: np.ndarray,
     # changing in memory)
     output = np.zeros((frames,) + tuple(n_pixels)[::-1])
 
-    for n_frame in tqdm(range(frames), desc="Looping through frames", position=0):
-        for n_detector in tqdm(range(signal.shape[-2]), desc="Looping through detectors", position=1, leave=False):
+    for n_frame in range(frames), desc="Looping through frames", position=0:
+        for n_detector in range(signal.shape[-2]), desc="Looping through detectors", position=1, leave=False:
             detx, dety, detz = geometry[n_detector]
             d = (np.sqrt((detx - X) ** 2 + (dety - Y) ** 2 + (detz - Z) ** 2) / dl).astype(np.int32)
             output[n_frame] += signal[n_frame, n_detector, d]
