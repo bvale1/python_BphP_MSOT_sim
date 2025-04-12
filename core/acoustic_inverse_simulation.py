@@ -77,8 +77,8 @@ class kwave_inverse_adapter():
     def configure_simulation(self):
         self.simulation_options = SimulationOptions(
             data_path=self.cfg['save_dir'],
-            input_filename=f"{datetime.now().strftime("%d-%b-%Y-%H-%M-%S")}_kwave_input.h5",
-            output_filename=f"{datetime.now().strftime("%d-%b-%Y-%H-%M-%S")}_kwave_input.h5",
+            input_filename=f"{datetime.now().strftime('%Y%m%d_%H_%M_%S')}_kwave_input.h5",
+            output_filename=f"{datetime.now().strftime('%Y%m%d_%H_%M_%S')}_kwave_input.h5",
             pml_inside=False,
             pml_size=self.cfg['pml_size'],
             data_cast='single',
@@ -495,7 +495,7 @@ class kwave_inverse_adapter():
         uf.create_dir(self.cfg['weights_dir'])
         if self.save_path is None: # create new directory for weights
             self.save_path = os.path.join(
-                self.cfg['weights_dir'], datetime.utcnow().strftime('%Y%m%d_%H_%M_%S')
+                self.cfg['weights_dir'], datetime.now().strftime('%Y%m%d_%H_%M_%S')
             )
             uf.create_dir(self.save_path)
         

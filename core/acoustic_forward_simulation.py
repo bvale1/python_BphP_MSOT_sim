@@ -175,8 +175,8 @@ class kwave_forward_adapter():
     def configure_simulation(self):
         self.simulation_options = SimulationOptions(
             data_path=self.cfg['save_dir'],
-            input_filename=f"{datetime.now().strftime("%d-%b-%Y-%H-%M-%S")}_kwave_input.h5",
-            output_filename=f"{datetime.now().strftime("%d-%b-%Y-%H-%M-%S")}_kwave_input.h5",
+            input_filename=f"{datetime.now().strftime('%Y%m%d_%H_%M_%S')}_kwave_input.h5",
+            output_filename=f"{datetime.now().strftime('%Y%m%d_%H_%M_%S')}_kwave_input.h5",
             pml_inside=False,
             pml_size=self.cfg['pml_size'],
             data_cast='single',
@@ -284,7 +284,7 @@ class kwave_forward_adapter():
                             sensor_local_ind : list):
         uf.create_dir(self.cfg['weights_dir'])
         save_path = os.path.join(
-            self.cfg['weights_dir'], datetime.utcnow().strftime('%Y%m%d_%H_%M_%S')
+            self.cfg['weights_dir'], datetime.now().strftime('%Y%m%d_%H_%M_%S')
         )
         uf.create_dir(save_path)
 
