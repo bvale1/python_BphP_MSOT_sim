@@ -150,13 +150,13 @@ if __name__ == '__main__':
         help='apply bandpass filter to sensor data'
     )
     parser.add_argument(
-        '--resample_time_array', default=False, action=argparse.BooleanOptionalAction,
+        '--resample_time_array', default=False, action=argparse.BooleanOptionalAction
     )
     parser.add_argument(
-        '--recon_absolute_value', default=False, action=argparse.BooleanOptionalAction,
+        '--recon_absolute_value', default=False, action=argparse.BooleanOptionalAction
     )
     parser.add_argument(
-        '--tv_regularisation', default=False, action=argparse.BooleanOptionalAction,
+        '--tv_regularisation', default=False, action=argparse.BooleanOptionalAction
     )
     
     args = parser.parse_args()
