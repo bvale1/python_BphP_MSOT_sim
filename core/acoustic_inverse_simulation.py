@@ -78,7 +78,7 @@ class kwave_inverse_adapter():
         self.simulation_options = SimulationOptions(
             data_path=self.cfg['save_dir'],
             input_filename=f"{datetime.now().strftime('%Y%m%d_%H_%M_%S')}_kwave_input.h5",
-            output_filename=f"{datetime.now().strftime('%Y%m%d_%H_%M_%S')}_kwave_input.h5",
+            output_filename=f"{datetime.now().strftime('%Y%m%d_%H_%M_%S')}_kwave_ouput.h5",
             pml_inside=False,
             pml_size=self.cfg['pml_size'],
             data_cast='single',

@@ -170,19 +170,10 @@ if __name__ == '__main__':
         logging.info(f'{args.v} not a recognised verbose level, using INFO instead')
     
     data, cfg = uf.load_sim(args.dataset, args='all', verbose=False)
-    cfg['mcx_bin_path'] = args.mcx_bin_path
-    cfg['weights_dir'] = args.weights_dir
-    cfg['irf_path'] = args.irf_path
     image_idx = list(data.keys()).index(args.image_name)
-    cfg['image_name'] = args.image_name
     cfg['image_idx'] = image_idx
     cfg['image_LaserEnergy'] = cfg['LaserEnergy'][image_idx]
-    cfg['noise_std'] = args.noise_std
-    cfg['bandpass_filter'] = args.bandpass_filter
-    cfg['delete_p0_3d'] = args.delete_p0_3d
-    cfg['resample_time_array'] = args.resample_time_array
-    cfg['recon_absolute_value'] = args.recon_absolute_value
-    cfg['tv_regularisation'] = args.tv_regularisation
+    cfg = {**cfg, **vars(args)}
     logging.info(f'loaded simulation data from {args.dataset}')
     logging.info(f'simulation config: {cfg}')
     
