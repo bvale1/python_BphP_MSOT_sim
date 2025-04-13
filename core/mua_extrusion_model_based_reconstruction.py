@@ -156,7 +156,7 @@ if __name__ == '__main__':
         '--recon_absolute_value', default=False, action=argparse.BooleanOptionalAction
     )
     parser.add_argument(
-        '--tv_regularisation', default=False, action=argparse.BooleanOptionalAction
+        '--tv_regularisation', type=float, default=None, action='store'
     )
     
     args = parser.parse_args()
@@ -319,7 +319,7 @@ if __name__ == '__main__':
         
         # convert from normalised fluence [mm^-2] -> [J m^-2]
         start = timeit.default_timer()
-        out *= cfg['LaserEnergy'][0] * 1e6
+        out *= cfg['image_LaserEnergy'] * 1e6
         Phi = out[:,(cfg['mcx_grid_size'][1]//2)-1,:].copy()
         Phi = np.rot90(Phi, k=2, axes=(-2,-1))
         
@@ -447,7 +447,7 @@ if __name__ == '__main__':
             mu_a = np.maximum(mu_a, 0)
             # total variation regularisation
             if args.tv_regularisation:
-                mu_a = denoise_tv_chambolle(mu_a, weight=10)
+                mu_a = denoise_tv_chambolle(mu_a, weight=args.tv_regularisation)
             # segmentation mask used as boundary condition
             mu_a *= bg_mask.astype(np.float32) # [m^-1] absorption coefficient
             mu_a += H2O['mu_a'][0] * (~bg_mask).astype(np.float32) # [m^-1] H2O outside of segmentation mask
@@ -462,7 +462,7 @@ if __name__ == '__main__':
         # compute metrics
         metrics_mu_a(mu_a_true, mu_a, Y_mask=bg_mask)
         metrics_p0_tr(p0_recon, tr, Y_mask=bg_mask)
-            
+        
         if args.plot:
             mu_a_plots.append(uf.square_centre_crop(
                 np.rot90(mu_a.copy(), k=-1, axes=(-2,-1)), cfg['crop_size']
