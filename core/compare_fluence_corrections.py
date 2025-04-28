@@ -10,6 +10,22 @@ from scipy.interpolate import interp1d
 from skimage.restoration import denoise_tv_chambolle
 #from mua_extrusion_model_based_reconstruction import TestMetricCalculator
 
+def plot_line_profiles(line_profile_axis, line_profiles, labels, colors, save_dir, ylabel):
+    (fig, ax) = plt.subplots(1, 1, figsize=(6, 3))
+    for i in range(1, len(line_profiles)):
+        ax.plot(line_profile_axis, line_profiles[i], 
+                label=labels[i], color=colors[i], alpha=0.7)
+    ax.plot(line_profile_axis, line_profiles[0], 
+                label=labels[0], color=colors[0], linestyle='dashed')
+    ax.set_xlabel('distance (mm)')
+    ax.set_ylabel(ylabel)
+    ax.grid(True)
+    ax.set_axisbelow(True)
+    ax.set_xlim(np.min(line_profile_axis), np.max(line_profile_axis))
+    ax.legend(bbox_to_anchor=(1.01, 0.5), loc="center left", borderaxespad=0)
+    fig.tight_layout()
+    fig.savefig(save_dir)
+
 # patato filter
 def make_filter(n_samples : int, 
                 fs : float, # sample rate
@@ -76,11 +92,13 @@ sim_path_3d = '/mnt/f/cluster_MSOT_simulations/digimouse_fluence_correction/3d_d
 sim_path_extrusion = '/mnt/f/cluster_MSOT_simulations/digimouse_fluence_correction/2d_extrusion_digimouse/20241015_digimouse_extrusion_phantom.c193162.p0'
 image_name = '200_750'
 
-results_path = '/home/wv00017/python_BphP_MSOT_sim/no_filter_noise_std_16_20250412_mua_recon_mus_exact_extrusion_200_750.Naisurrey23.j774822/results.h5'
-save_dir = '/home/wv00017/python_BphP_MSOT_sim/no_filter_noise_std_16_20250412_mua_recon_mus_exact_extrusion_200_750.Naisurrey23.j774822'
+#results_path = '/home/wv00017/python_BphP_MSOT_sim/no_filter_noise_std_16_20250412_mua_recon_mus_exact_extrusion_200_750.Naisurrey23.j774822/results.h5'
+#save_dir = '/home/wv00017/python_BphP_MSOT_sim/no_filter_noise_std_16_20250412_mua_recon_mus_exact_extrusion_200_750.Naisurrey23.j774822'
+results_path = '/home/wv00017/20250412_mua_recon_mus_exact_extrusion_200_750_TVreg1.Naisurrey25.j775863/results.h5'
+save_dir = '/home/wv00017/20250412_mua_recon_mus_exact_extrusion_200_750_TVreg1.Naisurrey25.j775863'
 
 print(f'saving plots to: {save_dir}')
-
+'''
 data_3d, cfg_3d = uf.load_sim(sim_path_3d, args='all', verbose=False)
 data_3d = data_3d[image_name]
 data_3d['sensor_data'] = data_3d['sensor_data'].astype(np.float32)
@@ -178,7 +196,7 @@ ax.set_axisbelow(True)
 ax.legend()
 fig.tight_layout()
 fig.savefig('digimouse_filters.png')
-
+'''
 with h5py.File(results_path, 'r') as f:
     gt = {}
     for key in list(f['ground_truth'].keys()):
@@ -200,13 +218,18 @@ print(f'mu_a shape: {mu_a.shape}')
 print(f'Phi shape: {Phi.shape}')
 print(f'p0_tr shape: {p0_tr.shape}')
     
-with open (os.path.join(sim_path_extrusion, 'config.json'), 'r') as f:
+with open (os.path.join(save_dir, 'cfg.json'), 'r') as f:
     cfg = json.load(f)    
 
 mu_a_true = gt['mu_a']
 
 mu_a_line_profiles = [np.diag(x) for x in mu_a]
 recon_line_profiles = [np.diag(x) for x in p0_tr]
+phi_line_profiles = [np.diag(x) for x in Phi]
+p0_line_profiles = [np.diag(x*y) for x, y in zip(mu_a, Phi)]
+recon_err_line_profiles = [np.diag(gt["p0_tr"] - x) for x in (p0_tr)]
+recon_err_over_phi_line_profiles = [np.diag(gt["p0_tr"] - x) / (np.diag(y) + 1e-8) for x, y in zip(p0_tr, Phi)]
+
 mu_a_plots = uf.square_centre_crop(np.asarray(mu_a), cfg['crop_size'])
 labels=['ground truth', 'initial guess n=0']
 for n in range(1, 10+1):
@@ -264,36 +287,31 @@ line_profile_axis = np.arange(
     cfg['dx']*cfg['crop_size']/2, 
     cfg['dx']
 ) * 1e3 # convert to mm
-# line profiles for all iterations
-(fig, ax) = plt.subplots(1, 1, figsize=(6, 3))
-for i in range(1, len(mu_a_line_profiles)):
-    ax.plot(line_profile_axis, mu_a_line_profiles[i], 
-            label=labels[i], color=colors[i], alpha=0.7)
-ax.plot(line_profile_axis, mu_a_line_profiles[0], 
-            label=labels[0], color=colors[0], linestyle='dashed')
-ax.set_xlabel('distance (mm)')
-ax.set_ylabel(r'$\mu_{\mathrm{a}}$ (cm$^{-1}$)')
-ax.grid(True)
-ax.set_axisbelow(True)
-ax.set_xlim(np.min(line_profile_axis), np.max(line_profile_axis))
-ax.legend(bbox_to_anchor=(1.01, 0.5), loc="center left", borderaxespad=0)
-fig.tight_layout()
-fig.savefig(os.path.join(save_dir, 'mu_a_line_profile.png'))
 
-(fig, ax) = plt.subplots(1, 1, figsize=(6, 3))
-for i in range(1, len(recon_line_profiles)):
-    ax.plot(line_profile_axis, recon_line_profiles[i], 
-            label=labels[i], color=colors[i], alpha=0.7)
-ax.plot(line_profile_axis, recon_line_profiles[0], 
-            label=labels[0], color=colors[0], linestyle='dashed')
-ax.set_xlabel('distance (mm)')
-ax.set_ylabel(r'$\hat{p}_{0}$ (Pa)')
-ax.grid(True)
-ax.set_axisbelow(True)
-ax.set_xlim(np.min(line_profile_axis), np.max(line_profile_axis))
-ax.legend(bbox_to_anchor=(1.01, 0.5), loc="center left", borderaxespad=0)
-fig.tight_layout()
-fig.savefig(os.path.join(save_dir, 'reconstructions_line_profile.png'))
+# line profiles for all iterations
+plot_line_profiles(line_profile_axis, mu_a_line_profiles, labels, colors,
+                   os.path.join(save_dir, 'mu_a_line_profile.png'),
+                   ylabel=r'$\mu_{\mathrm{a}}$ (cm$^{-1}$)')
+
+plot_line_profiles(line_profile_axis, recon_line_profiles, labels, colors,
+                   os.path.join(save_dir, 'reconstructions_line_profile.png'),
+                   ylabel=r'$\hat{p}_{0}$ (Pa)')
+
+plot_line_profiles(line_profile_axis, phi_line_profiles, labels, colors,
+                   os.path.join(save_dir, 'phi_line_profile.png'),
+                   ylabel=r'$\Phi$ (J m$^{-2}$)')
+
+plot_line_profiles(line_profile_axis, recon_err_line_profiles, labels, colors,
+                    os.path.join(save_dir, 'recon_err_line_profile.png'),
+                    ylabel=r'$\hat{p}_{0} - p_{0}$ (Pa)')
+
+plot_line_profiles(line_profile_axis, recon_err_over_phi_line_profiles, labels, colors,
+                    os.path.join(save_dir, 'recon_err_over_phi_line_profile.png'),
+                    ylabel=r'$\frac{\hat{p}_{0} - p_{0}}{\Phi}$ (m$^{-1}$)')
+
+plot_line_profiles(line_profile_axis, p0_line_profiles, labels, colors,
+                   os.path.join(save_dir, 'p0_line_profile.png'),
+                   ylabel=r'$p_{0}$ (Pa)')
 
 # line profiles for final iteration
 (fig, ax) = plt.subplots(1, 2, figsize=(6, 3))
