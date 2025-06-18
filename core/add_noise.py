@@ -371,7 +371,9 @@ if __name__ == '__main__':
         #    field_of_view=cfg['dx']*np.array([256, 0, 256]), 
         #    speed_of_sound=cfg['c_0']
         #)[:, 0, :].T
-        noisy_tr[noisy_tr < 0.0] = 0.0
+        
+        # uncomment to apply positivity constraint
+        #noisy_tr[noisy_tr < 0.0] = 0.0
         print(f'noisy_tr {noisy_tr.shape}')
         noisy_tr = uf.square_centre_crop(noisy_tr, cfg['crop_size'])
         logging.info(f'time reversal run in \

@@ -236,8 +236,8 @@ class kwave_inverse_adapter():
                 self.sensor_local_ind
             )
         
-        # apply positivity constraint
-        p0_recon *= (p0_recon > 0.0)
+        # uncomment to apply positivity constraint
+        #p0_recon *= (p0_recon > 0.0)
         
         # uncomment for debugging to save first iteration when ['recon_iterations'] > 1
         '''
@@ -314,7 +314,7 @@ class kwave_inverse_adapter():
                     self.execution_options
                 )['p_final'][pml:-pml, pml:-pml].T
 
-                # apply positivity constraint
+                # uncomment to apply positivity constraint
                 #p0_recon *= (p0_recon > 0.0)
         
                 # uncomment to save each iteration
