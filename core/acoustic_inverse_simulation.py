@@ -74,9 +74,12 @@ class kwave_inverse_adapter():
         #logger.info(f'medium.c_0 = {self.medium.sound_speed}')
         
         
-    def configure_simulation(self):
+    def configure_simulation(self, temp_files_dir=None):
+        if temp_files_dir is None:
+            temp_files_dir = self.cfg['save_dir']
+        
         self.simulation_options = SimulationOptions(
-            data_path=self.cfg['save_dir'],
+            data_path=temp_files_dir,
             input_filename=f"{datetime.now().strftime('%Y%m%d_%H_%M_%S')}_kwave_input.h5",
             output_filename=f"{datetime.now().strftime('%Y%m%d_%H_%M_%S')}_kwave_ouput.h5",
             pml_inside=False,

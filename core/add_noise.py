@@ -348,7 +348,7 @@ if __name__ == '__main__':
         cfg,
         transducer_model=cfg['inverse_model']
     )
-    simulation.configure_simulation()
+    simulation.configure_simulation(temp_files_dir=args.save_dir)
     geometry = np.array([simulation.source_x, np.zeros(256), simulation.source_z]).T
     logging.info(f'kwave inverse initialised in \
                  {timeit.default_timer() - start} seconds')
