@@ -206,6 +206,10 @@ if __name__ == '__main__':
     ============================================================================
     '''
     
+    # disable hdf5 file locking
+    # this avoids issues with accessing files on the scratch file system
+    os.environ["HDF5_USE_FILE_LOCKING"]="FALSE"
+    
     # parse command line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument(
