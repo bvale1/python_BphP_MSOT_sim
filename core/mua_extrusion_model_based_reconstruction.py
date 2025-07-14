@@ -18,6 +18,58 @@ import optical_simulation
 import acoustic_forward_simulation
 import acoustic_inverse_simulation
 
+def TV(X):
+    # This is anisotropic total variation, normalised by the number of partitions ((2*h*w)-h-w)
+    # https://en.wikipedia.org/wiki/Total_variation_denoising 
+    # currently not in use because the gradient with respect to pixel (i,j)
+    # depends only on (i,j), (i+1,j) and (i,j+1)
+    h, w = X.shape
+    TV_i = np.abs(X[1:,:] - X[:-1,:])
+    TV_j = np.abs(X[:,1:] - X[:,:-1])
+    return (TV_i.sum() + TV_j.sum()) / ((2*h*w)-h-w)
+
+
+def masked_TV(X : np.ndarray, mask : np.ndarray) -> float:
+    # In this version of anisotropic total variation, each partition is counted twice
+    # and the gradient with respect to pixel (i,j)
+    h, w = X.shape
+    TV_im1 = np.abs(X[1:,:] - X[:-1,:])
+    TV_ip1 = np.abs(X[1:,:] - X[:-1,:])
+    TV_j = np.abs(X[:,1:] - X[:,:-1])
+    return (TV_i.sum() + TV_j.sum()) / (2*((2*h*w)-h-w))
+
+def masked_grad_TV(X : np.ndarray, mask : np.ndarray) -> np.ndarray:
+    h, w = X.shape
+    grad = np.zeros_like(X, dtype=np.float32)
+    Xij_minus_Xiplus1j = X[:-1,:] - X[1:,:]
+    grad[:-1,:] += Xij_minus_Xiplus1j / np.abs(Xij_minus_Xiplus1j)
+    Xij_minus_Xijplus1 = X[:,:-1] - X[:,1:]
+    grad[:,:-1] = Xij_minus_Xijplus1 / np.abs(Xij_minus_Xijplus1)
+    Xij_minus_Ximinus1j = X[1:,:] - X[:-1,:]
+    grad[1:,:] += Xij_minus_Ximinus1j / np.abs(Xij_minus_Ximinus1j)
+    Xij_minus_Xijminus1 = X[:,1:] - X[:,:-1]
+    grad[:,1:] += Xij_minus_Xijminus1 / np.abs(Xij_minus_Xijminus1)
+    return grad / (2*((2*h*w)-h-w))
+
+def padded_convolution(X, kernel):
+    h, w = X.shape
+    # pad with zeros
+    X = np.pad(X, ((0, 0), (h//2, h//2), (w//2, w//2)), mode='constant') # (x, y)
+    # perform convolution using sliding window view
+    X_window = np.lib.stride_tricks.sliding_window_view(X, (h, w), axis=(1, 2)) # (x, y, i, j)
+    # compute the convolution
+    return np.sum(X_window * kernel, axis=(-1, -2)) # (x, y)
+
+def padded_convolution_gradient(X, kernel):
+    # function to compte d/dXi'j' (padded_convolution(X, kernel))
+    h, w = X.shape
+    I, J = kernel.shape
+    grad = np.zeros((h, w, I, J), dtype=np.float32)
+    for x, y in np.ndindex(h, w):
+        # compute the gradient for each pixel
+        X_window = np.lib.stride_tricks.sliding_window_view(X, (I, J), axis=(0, 1))
+    
+
 class TestMetricCalculator():
     def __init__(self) -> None:
         self.metrics = {

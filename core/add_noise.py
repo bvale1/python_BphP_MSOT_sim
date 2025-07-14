@@ -233,7 +233,7 @@ if __name__ == '__main__':
         help='standard deviation of the white noise to add to the signals'
     )
     parser.add_argument(
-        '--plot_comparison', type=str, default='add_noise_comparison.png',
+        '--plot_comparison', type=str, default=None,
         help='path to save a comparison of the original and noise \
             added signal and reconstructions'
     )
