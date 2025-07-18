@@ -299,7 +299,7 @@ if __name__ == '__main__':
     
     # load impulse response function
     irf = np.load(args.irf_path)
-    with h5py.File(args.PSF_path, 'r') as f:
+    with h5py.File(args.psf_path, 'r') as f:
         PSF = f['PSF'][()]
     
     # intialise bandpass filter
