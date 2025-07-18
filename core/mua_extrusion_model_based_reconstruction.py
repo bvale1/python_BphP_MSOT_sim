@@ -209,7 +209,7 @@ if __name__ == '__main__':
         help='path to the impulse response function of the invision transducer'
     )
     parser.add_argument(
-        '--PSF_path', type=str, 
+        '--psf_path', type=str, 
         default='/home/wv00017/MSOT_Diffusion/20250716_ImageNet_MSOT_Dataset/PSF.h5',
         help='path to the point spread function (PSF) of the imaging system (approximated as a 2D kernel)'
     )
@@ -282,6 +282,7 @@ if __name__ == '__main__':
             'bg_mask' : f['samples'][args.image_name]['bg_mask'][()], # [bool]
             'wavelength_nm' : f['samples'][args.image_name]['wavelength_nm'][()], # [nm]
             'sensor_data' : f['samples'][args.image_name]['sensor_data'][()], # [Pa]
+            'mu_s_true' : f['samples'][args.image_name]['mu_s'][()] # [m^-1]
         }
         
     cfg['image_LaserEnergy'] = laser_energy
@@ -388,7 +389,7 @@ if __name__ == '__main__':
     if args.mu_s_guess:
         mu_s = args.mu_s_guess # [m^-1] assumed scattering coefficient
     else: # mu_s is known exactly
-        mu_s = np.rot90(data['mu_s'].copy(), k=1, axes=(-2,-1))
+        mu_s = np.rot90(data['mu_s_true'].copy(), k=1, axes=(-2,-1))
         mu_s = uf.square_centre_pad(mu_s, cfg['mcx_grid_size'][0])
     
     with h5py.File(os.path.join(args.save_dir, 'temp.h5'), 'w') as f:
@@ -766,9 +767,9 @@ if __name__ == '__main__':
                     r'$\Phi$ (J m$^{-2}$)', r'$p_{0}$ initial pressure (Pa)',
                     r'$\hat{p}_{0}$ reconstructed (Pa)']
         images = [data['mu_a_true'], 
-                    data['mu_s'], 
-                    data['Phi'], 
-                    data['mu_a']*data['Phi'],
+                    data['mu_s_true'], 
+                    data['Phi_true'], 
+                    data['mu_a_true']*data['Phi_true'],
                     data['H_recon_true']]
         (fig, ax, frames) = pf.heatmap(
             np.asarray(images), dx=cfg['dx'], rowmax=5, labels=labels
