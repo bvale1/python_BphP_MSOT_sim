@@ -81,6 +81,7 @@ def padded_convolution(H : np.ndarray, PSF : np.ndarray) -> np.ndarray:
     I = PSF.shape[0]//2
     J = PSF.shape[1]//2
     # pad with zeros
+    breakpoint()
     H = np.pad(H, ((I, J), (I, J)), mode='constant') # (x+2I, z+2J)
     # perform convolution using sliding window view
     H_window = np.lib.stride_tricks.sliding_window_view(H, PSF.shape, axis=(0, 1)) # (x, y, i, j)
