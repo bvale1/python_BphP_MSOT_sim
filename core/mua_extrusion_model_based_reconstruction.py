@@ -339,7 +339,7 @@ if __name__ == '__main__':
         ]
         cfg['dx'] = cfg['mcx_domain_size'][0] / cfg['mcx_grid_size'][0]
         cfg['mcx_domain_size'][1] = cfg['dx'] * cfg['mcx_grid_size'][1]
-        cfg['kwave_domain_size'][1] = cfg['dx'] * cfg['kwavedomain_size'][1]
+        cfg['kwave_domain_size'][1] = cfg['dx'] * cfg['kwave_domain_size'][1]
         logging.info(f'resampled k-grid size: {cfg["kwave_grid_size"]}')
         # resample mu_a_true, Phi_true and bg_mask
         zoom_factor = cfg['kwave_grid_size'][0] / intitial_k_grid_size[0]
