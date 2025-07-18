@@ -290,11 +290,6 @@ if __name__ == '__main__':
     logging.info(f'loaded simulation data from {args.dataset}')
     logging.info(f'simulation config: {cfg}')
     
-    if not os.path.exists(args.save_dir):
-        os.makedirs(args.save_dir)
-    with open(os.path.join(args.save_dir, 'cfg.json'), 'w') as f:
-        json.dump(cfg, f, indent='\t')
-    
     rng = np.random.default_rng(cfg['seed'])
     
     # load impulse response function
@@ -343,6 +338,7 @@ if __name__ == '__main__':
         logging.info(f'resampled k-grid size: {cfg["kwave_grid_size"]}')
         # resample mu_a_true, Phi_true and bg_mask
         zoom_factor = cfg['kwave_grid_size'][0] / intitial_k_grid_size[0]
+        cfg['zoom_factor'] = zoom_factor
         mu_a_true = zoom(mu_a_true, zoom=zoom_factor, order=1)
         Phi_true = zoom(Phi_true, zoom=zoom_factor, order=1)
         bg_mask = zoom(bg_mask.astype(np.float32), zoom=zoom_factor, order=0).astype(bool)
@@ -352,6 +348,11 @@ if __name__ == '__main__':
     mu_a_true = uf.square_centre_pad(mu_a_true, cfg['mcx_grid_size'][0])
     Phi_true = uf.square_centre_pad(Phi_true, cfg['mcx_grid_size'][0])
     bg_mask = uf.square_centre_pad(bg_mask, cfg['mcx_grid_size'][0])
+    
+    if not os.path.exists(args.save_dir):
+        os.makedirs(args.save_dir)
+    with open(os.path.join(args.save_dir, 'cfg.json'), 'w') as f:
+        json.dump(cfg, f, indent='\t')
     
     # re-compute reconstruction with noise added
     start = timeit.default_timer()
@@ -596,7 +597,7 @@ if __name__ == '__main__':
         grad_MSE = grad_masked_MSE_loss(H_recon_true, H_recon_pred, PSF, Phi, bg_mask)
         grad_TV = masked_grad_TV(mu_a, bg_mask, eps=args.epsilon)
         grad = grad_MSE + args.tv_weight * grad_TV # [m^-1]
-        mu_a += args.step_size * grad
+        mu_a -= args.step_size * grad
         
         # pad to the original size
         mu_a = uf.square_centre_pad(mu_a, cfg['mcx_grid_size'][0]) # [m^-1]
@@ -791,6 +792,7 @@ if __name__ == '__main__':
                     data['Phi_true'], 
                     data['mu_a_true']*data['Phi_true'],
                     data['H_recon_true']]
+        breakpoint()
         (fig, ax, frames) = pf.heatmap(
             np.asarray(images), dx=cfg['dx'], rowmax=5, labels=labels
         )

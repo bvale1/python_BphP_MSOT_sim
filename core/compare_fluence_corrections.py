@@ -7,7 +7,6 @@ import func.plot_func as pf
 import func.utility_func as uf
 from scipy.fft import fft, ifft, fftfreq, fftshift
 from scipy.interpolate import interp1d
-from skimage.restoration import denoise_tv_chambolle
 #from mua_extrusion_model_based_reconstruction import TestMetricCalculator
 
 def plot_line_profiles(line_profile_axis, line_profiles, labels, colors, save_dir, ylabel):
@@ -88,14 +87,16 @@ def make_filter(n_samples : int,
 #save_dir = '/home/wv00017/python_BphP_MSOT_sim/20250409_mua_recon_mus_exact_extrusion.Naisurrey24.j774342'
 
 # paths for y=200 voxels, wavelength=750 nm
-sim_path_3d = '/mnt/f/cluster_MSOT_simulations/digimouse_fluence_correction/3d_digimouse/20241018_digimouse_phantom.c193723.p0'
-sim_path_extrusion = '/mnt/f/cluster_MSOT_simulations/digimouse_fluence_correction/2d_extrusion_digimouse/20241015_digimouse_extrusion_phantom.c193162.p0'
+dataset_path = '/home/wv00017/MSOT_Diffusion/20250716_digimouse_extrusion_MSOT_Dataset'
 image_name = '200_750'
 
 #results_path = '/home/wv00017/python_BphP_MSOT_sim/no_filter_noise_std_16_20250412_mua_recon_mus_exact_extrusion_200_750.Naisurrey23.j774822/results.h5'
 #save_dir = '/home/wv00017/python_BphP_MSOT_sim/no_filter_noise_std_16_20250412_mua_recon_mus_exact_extrusion_200_750.Naisurrey23.j774822'
-results_path = '/home/wv00017/20250412_mua_recon_mus_exact_extrusion_200_750_TVreg1.Naisurrey25.j775863/results.h5'
-save_dir = '/home/wv00017/20250412_mua_recon_mus_exact_extrusion_200_750_TVreg1.Naisurrey25.j775863'
+#results_path = '/home/wv00017/20250412_mua_recon_mus_exact_extrusion_200_750_TVreg1.Naisurrey25.j775863/results.h5'
+#save_dir = '/home/wv00017/20250412_mua_recon_mus_exact_extrusion_200_750_TVreg1.Naisurrey25.j775863'
+results_path = '/home/wv00017/digimouse_mua_recons/test_200_750/test_200_750/results.h5'
+save_dir = '/home/wv00017/digimouse_mua_recons/test_200_750/test_200_750'
+
 
 print(f'saving plots to: {save_dir}')
 '''
@@ -203,32 +204,38 @@ with h5py.File(results_path, 'r') as f:
         gt[key] = f['ground_truth'][key][()]
     mu_a = f['results']['mu_a'][()]
     Phi = f['results']['Phi'][()]
-    p0_tr = f['results']['p0_tr'][()]
+    p0_tr = f['results']['H_recon'][()]
+    grad_TV = f['results']['grad_TV'][()]
+    grad_MSE = f['results']['grad_MSE'][()]
     
 # convert m^-1 to cm^-1
-mu_a = mu_a * 1e-2
-gt['mu_a'] = gt['mu_a'] * 1e-2
-gt['mu_s'] = gt['mu_s'] * 1e-2
+#mu_a = mu_a# * 1e-2
+#gt['mu_a_true'] = gt['mu_a_true'] * 1e-2
+#gt['mu_s_true'] = gt['mu_s_true'] * 1e-2
     
-print(f'GT mu_a shape: {gt["mu_a"].shape}')
-print(f'GT mu_s shape: {gt["mu_s"].shape}')
-print(f'GT Phi shape: {gt["Phi"].shape}')
-print(f'GT p0_tr shape: {gt["p0_tr"].shape}')
+print(f'GT mu_a shape: {gt["mu_a_true"].shape}')
+print(f'GT mu_s shape: {gt["mu_s_true"].shape}')
+print(f'GT Phi shape: {gt["Phi_true"].shape}')
+print(f'GT p0_tr shape: {gt["H_recon_true"].shape}')
 print(f'mu_a shape: {mu_a.shape}')
 print(f'Phi shape: {Phi.shape}')
 print(f'p0_tr shape: {p0_tr.shape}')
+print(f'grad_TV shape: {grad_TV.shape}')
+print(f'grad_MSE shape: {grad_MSE.shape}')
     
 with open (os.path.join(save_dir, 'cfg.json'), 'r') as f:
     cfg = json.load(f)    
 
-mu_a_true = gt['mu_a']
+mu_a_true = gt['mu_a_true']
 
 mu_a_line_profiles = [np.diag(x) for x in mu_a]
 recon_line_profiles = [np.diag(x) for x in p0_tr]
 phi_line_profiles = [np.diag(x) for x in Phi]
 p0_line_profiles = [np.diag(x*y) for x, y in zip(mu_a, Phi)]
-recon_err_line_profiles = [np.diag(gt["p0_tr"] - x) for x in (p0_tr)]
-recon_err_over_phi_line_profiles = [np.diag(gt["p0_tr"] - x) / (np.diag(y) + 1e-8) for x, y in zip(p0_tr, Phi)]
+recon_err_line_profiles = [np.diag(gt["H_recon_true"] - x) for x in (p0_tr)]
+recon_err_over_phi_line_profiles = [np.diag(gt["H_recon_true"] - x) / (np.diag(y) + 1e-8) for x, y in zip(p0_tr, Phi)]
+grad_TV_line_profiles = [np.diag(x) for x in grad_TV]
+grad_MSE_line_profiles = [np.diag(x) for x in grad_MSE]
 
 mu_a_plots = uf.square_centre_crop(np.asarray(mu_a), cfg['crop_size'])
 labels=['ground truth', 'initial guess n=0']
@@ -313,6 +320,14 @@ plot_line_profiles(line_profile_axis, p0_line_profiles, labels, colors,
                    os.path.join(save_dir, 'p0_line_profile.png'),
                    ylabel=r'$p_{0}$ (Pa)')
 
+plot_line_profiles(line_profile_axis, grad_TV_line_profiles, labels, colors,
+                   os.path.join(save_dir, 'grad_TV_line_profile.png'),
+                   ylabel=r'$\nabla_{\mu_{\mathrm{a}}} TV(\mu_{\mathrm{a}}) (m$^{-1}$)')
+
+plot_line_profiles(line_profile_axis, grad_MSE_line_profiles, labels, colors,
+                   os.path.join(save_dir, 'grad_MSE_line_profile.png'),
+                   ylabel=r'$\nabla_{\mu_{\mathrm{a}}} MSE(\mu_{\mathrm{a}}) (m$^{-1}$)')
+
 # line profiles for final iteration
 (fig, ax) = plt.subplots(1, 2, figsize=(6, 3))
 ax[0].plot(line_profile_axis, mu_a_line_profiles[0], 
@@ -362,14 +377,39 @@ fig.savefig(os.path.join(save_dir, 'p0_recon.png'))
     cbar_label=r'J m$^{-2}$'
 )
 fig.savefig(os.path.join(save_dir, 'Phi.png'))
+
+(fig, ax, frames) = pf.heatmap(
+    np.asarray(grad_TV), 
+    labels=labels,
+    title=r'$\nabla_{\mu_{\mathrm{a}}} TV(\mu_{\mathrm{a}})$',
+    dx=cfg['dx'],
+    sharescale=True,
+    cmap='viridis',
+    rowmax=4,
+    cbar_label=r'm$^{-1}$'
+)
+fig.savefig(os.path.join(save_dir, 'grad_TV.png'))
+
+(fig, ax, frames) = pf.heatmap(
+    np.asarray(grad_MSE),
+    labels=labels,
+    title=r'$\nabla_{\mu_{\mathrm{a}}} MSE(\mu_{\mathrm{a}})$',
+    dx=cfg['dx'],
+    sharescale=True,
+    cmap='viridis',
+    rowmax=4,
+    cbar_label=r'm$^{-1}$'
+)
+fig.savefig(os.path.join(save_dir, 'grad_MSE.png'))
+
 labels = [r'$\mu_{a}$ (cm$^{-1}$)', r'$\mu_{s}$ (cm$^{-1}$)',
             r'$\Phi$ (J m$^{-2}$)', r'$p_{0}$ initial pressure (Pa)',
             r'$\hat{p}_{0}$ reconstructed (Pa)']
-images = [gt['mu_a'], 
-            gt['mu_s'], 
-            gt['Phi'], 
-            gt['mu_a']*gt['Phi'],
-            gt['p0_tr']]
+images = [gt['mu_a_true'], 
+            gt['mu_s_true'], 
+            gt['Phi_true'], 
+            gt['mu_a_true']*gt['Phi_true'],
+            gt['H_recon_true']]
 (fig, ax, frames) = pf.heatmap(
     np.asarray(images), dx=cfg['dx'], rowmax=5, labels=labels
 )
