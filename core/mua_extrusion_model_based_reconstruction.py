@@ -289,6 +289,8 @@ if __name__ == '__main__':
     logging.info(f'loaded simulation data from {args.dataset}')
     logging.info(f'simulation config: {cfg}')
     
+    if not os.path.exists(args.save_dir):
+        os.makedirs(args.save_dir)
     with open(os.path.join(args.save_dir, 'cfg.json'), 'w') as f:
         json.dump(cfg, f, indent='\t')
     
