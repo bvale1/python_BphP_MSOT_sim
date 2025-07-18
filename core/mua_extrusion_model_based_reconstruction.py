@@ -279,7 +279,7 @@ if __name__ == '__main__':
             'mu_a_true' : f['samples'][args.image_name]['mu_a'][()],
             'Phi_true' : f['samples'][args.image_name]['Phi'][()],
             'bg_mask' : f['samples'][args.image_name]['bg_mask'][()],
-            'wavelengths_nm' : f['samples'][args.image_name]['wavelengths_nm'][()],
+            'wavelength_nm' : f['samples'][args.image_name]['wavelength_nm'][()],
             'sensor_data' : f['samples'][args.image_name]['sensor_data'][()],
         }
         
