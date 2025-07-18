@@ -284,8 +284,6 @@ if __name__ == '__main__':
             'sensor_data' : f['samples'][args.image_name]['sensor_data'][()], # [Pa]
         }
         
-    image_idx = list(data.keys()).index(args.image_name)
-    cfg['image_idx'] = image_idx
     cfg['image_LaserEnergy'] = laser_energy
     cfg = {**cfg, **vars(args)}
     logging.info(f'loaded simulation data from {args.dataset}')
