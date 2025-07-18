@@ -312,9 +312,9 @@ if __name__ == '__main__':
     
     H_recon_true = data['H_recon_true'].copy()
     H_recon_true = uf.square_centre_pad(H_recon_true, cfg['mcx_grid_size'][0])
-    mu_a_true = data['mu_a'].copy()
+    mu_a_true = data['mu_a_true'].copy()
     mu_a_true = uf.square_centre_pad(mu_a_true, cfg['mcx_grid_size'][0])
-    Phi_true = data['Phi'].copy()
+    Phi_true = data['Phi_true'].copy()
     Phi_true = uf.square_centre_pad(Phi_true, cfg['mcx_grid_size'][0])
     bg_mask = data['bg_mask'].copy().astype(bool)
     bg_mask = uf.square_centre_pad(bg_mask, cfg['mcx_grid_size'][0])
@@ -765,7 +765,7 @@ if __name__ == '__main__':
         labels = [r'$\mu_{a}$ (m$^{-1}$)', r'$\mu_{s}$ (m$^{-1}$)',
                     r'$\Phi$ (J m$^{-2}$)', r'$p_{0}$ initial pressure (Pa)',
                     r'$\hat{p}_{0}$ reconstructed (Pa)']
-        images = [data['mu_a'], 
+        images = [data['mu_a_true'], 
                     data['mu_s'], 
                     data['Phi'], 
                     data['mu_a']*data['Phi'],
