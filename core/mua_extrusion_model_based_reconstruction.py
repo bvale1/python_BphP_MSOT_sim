@@ -484,6 +484,7 @@ if __name__ == '__main__':
         out *= cfg['gruneisen'] * volume[0]
         
         # save 3D p0 to temp.h5
+        breakpoint()
         with h5py.File(os.path.join(args.save_dir, 'temp.h5'), 'r+') as f:
             f['p0_3D'][()] =  uf.crop_p0_3D(
                 out,
