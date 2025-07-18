@@ -251,7 +251,7 @@ if __name__ == '__main__':
         '--resample_time_array', default=False, action=argparse.BooleanOptionalAction
     )
     parser.add_argument(
-        '--resample_k_grid', default=None, action='store',
+        '--resample_k_grid', type=float, default=None, action='store',
         help='factor to resample k-grid to reduce inverse crime, \
             data was simulated with a [748, 236, 748] size grid (excluding pml), \
             the domian size is kept as close to [0.082, 0.025871657754010697, 0.082] \
