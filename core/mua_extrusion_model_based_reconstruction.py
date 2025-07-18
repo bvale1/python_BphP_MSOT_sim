@@ -312,13 +312,10 @@ if __name__ == '__main__':
         logging.info('bandpass filter initialised')
     
     H_recon_true = data['H_recon_true'].copy()
-    H_recon_true = uf.square_centre_pad(H_recon_true, cfg['mcx_grid_size'][0])
     mu_a_true = data['mu_a_true'].copy()
-    mu_a_true = uf.square_centre_pad(mu_a_true, cfg['mcx_grid_size'][0])
     Phi_true = data['Phi_true'].copy()
-    Phi_true = uf.square_centre_pad(Phi_true, cfg['mcx_grid_size'][0])
     bg_mask = data['bg_mask'].copy().astype(bool)
-    bg_mask = uf.square_centre_pad(bg_mask, cfg['mcx_grid_size'][0])
+    
     
     # simulation is orientated at 90 deg anticlockwise
     H_recon_true = np.rot90(H_recon_true, k=1, axes=(-2,-1))
@@ -350,6 +347,11 @@ if __name__ == '__main__':
         Phi_true = zoom(Phi_true, zoom=zoom_factor, order=1)
         bg_mask = zoom(bg_mask.astype(np.float32), zoom=zoom_factor, order=0).astype(bool)
         PSF = zoom(PSF, zoom=zoom_factor, order=1)
+        
+    H_recon_true = uf.square_centre_pad(H_recon_true, cfg['mcx_grid_size'][0])
+    mu_a_true = uf.square_centre_pad(mu_a_true, cfg['mcx_grid_size'][0])
+    Phi_true = uf.square_centre_pad(Phi_true, cfg['mcx_grid_size'][0])
+    bg_mask = uf.square_centre_pad(bg_mask, cfg['mcx_grid_size'][0])
     
     # re-compute reconstruction with noise added
     start = timeit.default_timer()
@@ -390,7 +392,9 @@ if __name__ == '__main__':
         mu_s = args.mu_s_guess # [m^-1] assumed scattering coefficient
     else: # mu_s is known exactly
         mu_s = np.rot90(data['mu_s_true'].copy(), k=1, axes=(-2,-1))
+        mu_s = zoom(mu_s, zoom=zoom_factor, order=1)
         mu_s = uf.square_centre_pad(mu_s, cfg['mcx_grid_size'][0])
+        
     
     with h5py.File(os.path.join(args.save_dir, 'temp.h5'), 'w') as f:
         logging.info('allocating storage for p0_3d temp.h5')
