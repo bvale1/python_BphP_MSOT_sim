@@ -392,7 +392,8 @@ if __name__ == '__main__':
         mu_s = args.mu_s_guess # [m^-1] assumed scattering coefficient
     else: # mu_s is known exactly
         mu_s = np.rot90(data['mu_s_true'].copy(), k=1, axes=(-2,-1))
-        mu_s = zoom(mu_s, zoom=zoom_factor, order=1)
+        if args.resample_k_grid:
+            mu_s = zoom(mu_s, zoom=zoom_factor, order=1)
         mu_s = uf.square_centre_pad(mu_s, cfg['mcx_grid_size'][0])
         
     
