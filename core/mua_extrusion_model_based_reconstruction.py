@@ -797,7 +797,7 @@ if __name__ == '__main__':
                     data['Phi_true'], 
                     data['mu_a_true']*data['Phi_true'],
                     data['H_recon_true']]
-        breakpoint()
+        
         (fig, ax, frames) = pf.heatmap(
             np.asarray(images), dx=cfg['dx'], rowmax=5, labels=labels
         )

@@ -333,14 +333,14 @@ if __name__ == '__main__':
                 f[h5_group].create_dataset(
                     'mu_a',
                     data=uf.square_centre_crop(
-                        volume[0,:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size']
+                        volume[0,:,(cfg['mcx_grid_size'][1]//2),:], cfg['crop_size']
                     ), dtype=np.float32
                 )
             if 'mu_s' not in f[h5_group]:
                 f[h5_group].create_dataset(
                     'mu_s',
                     data=uf.square_centre_crop(
-                        volume[1,:,(cfg['mcx_grid_size'][1]//2)-1,:], cfg['crop_size']
+                        volume[1,:,(cfg['mcx_grid_size'][1]//2),:], cfg['crop_size']
                     ), dtype=np.float32
                 )
             if 'bg_mask' not in f[h5_group]:
