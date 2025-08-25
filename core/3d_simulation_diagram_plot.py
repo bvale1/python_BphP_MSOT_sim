@@ -14,16 +14,18 @@ def meanpool(X, f=2):
 
 # wsl
 #water_sim_path = '/mnt/f/cluster_MSOT_simulations/20240104_water_calibration.c144702.p0/temp.h5'
-#digimouse_atlas_path = '/home/wv00017/digimouse_atlas/atlas_380x992x208.img'
+digimouse_atlas_path = '/home/billy/digimouse_atlas/atlas_380x992x208.img'
 # win
-water_sim_path = r'F:\cluster_MSOT_simulations\20240104_water_calibration.c144702.p0\temp.h5'
-digimouse_atlas_path = r'F:\digimouse_atlas\atlas_380x992x208.img'
+#water_sim_path = r'F:\cluster_MSOT_simulations\20240104_water_calibration.c144702.p0\temp.h5'
+#digimouse_atlas_path = r'F:\digimouse_atlas\atlas_380x992x208.img'
 
 # config
 cfg = {
-    'mcx_grid_size' : [748, 236*4, 748],
-    'dx' : 0.00010962566844919787 # 109.62566844919787 microns
+    'mcx_grid_size' : [748, 236*4, 748], # [voxels]
+    'dx' : 0.00010962566844919787 # [m]
+    #'dx' : 109.62566844919787 # [microns]
 }
+extrusion = True
 
 # create 3d plot
 ax = plt.figure().add_subplot(projection='3d')
@@ -36,10 +38,10 @@ H2O = phantom.define_H2O()
 (Hb, HbO2) = phantom.define_Hb()
 #absorption_coefficients = phantom.calculate_tissue_absorption_coefficients()
 (volume, bg_mask) = phantom.create_volume(
-    cfg, 500, rotate=2, extrusion=False, bg_mask_2d=False
+    cfg, 500, rotate=2, extrusion=extrusion, bg_mask_2d=False
 )
 volume = volume[0]
-# downsample
+# (optional) downsample
 #volume = meanpool(volume)
 #bg_mask = meanpool(bg_mask.astype(np.float32))
 #bg_mask = np.round(bg_mask).astype(bool)
@@ -65,7 +67,11 @@ colors[bg_mask == 1] = volume[bg_mask==1] # greyscale
 colors = np.repeat(colors[...,np.newaxis], 3, axis=-1)
 # plot the digimouse phantom
 print('plotting digimouse voxels')
-ax.voxels(X, Y, Z, bg_mask, facecolors=colors)
+#ax.voxels(X, Y, Z, bg_mask, facecolors=colors)
+ax.voxels(
+    X[:,:X.shape[1]*3//4], Y[:,:Y.shape[1]*3//4], Z[:,:Z.shape[1]*3//4],
+    bg_mask[:,:(bg_mask.shape[1]*3//4)-1], facecolors=colors[:,:(colors.shape[1]*3//4)-1]
+)
 '''
 # load p0_3d data
 print('loading p0_3d data')
@@ -158,7 +164,7 @@ for det_idx in range(len(det_elements)):
 ax.set_xlabel('X (mm)')
 ax.set_ylabel('Y (mm)')
 ax.set_zlabel('Z (mm)')
-#ax.set_ylim(0, 40)
+ax.set_ylim(0, 40)
 ax.set_aspect('equal')
 print('show plot')
 plt.show()

@@ -190,16 +190,16 @@ if __name__ == '__main__':
         help='path to dataset'
     )
     parser.add_argument(
-        '--mcx_bin_path', type=str,
-        default='/home/wv00017/mcx/bin/mcx',
-        action='store',
-        help='path to MCX CUDA binary'
-    )
-    parser.add_argument(
         '--save_dir', type=str,
         default='mua_recovery_test',
         action='store',
         help='directory to save simulation data'
+    )
+    parser.add_argument(
+        '--mcx_bin_path', type=str,
+        default='/home/wv00017/mcx/bin/mcx',
+        action='store',
+        help='path to MCX CUDA binary'
     )
     parser.add_argument(
         '--irf_path', type=str,
@@ -207,6 +207,10 @@ if __name__ == '__main__':
         default='/home/wv00017/python_BphP_MSOT_sim/invision_irf.npy',
         action='store',
         help='path to the impulse response function of the invision transducer'
+    )
+    parser.add_argument(
+        '--reconstruction_method', type=str, choices=['PSF', 'k-Wave'], default='k-Wave',
+        help='whether to perform full forward and inverse acoustic modelling or to approximate using a point spread function (--psf_path)'
     )
     parser.add_argument(
         '--psf_path', type=str, 
@@ -500,113 +504,114 @@ if __name__ == '__main__':
         # delete mcx input and out files, they are not needed anymore
         simulation.delete_temporary_files()
         start = timeit.default_timer()
-        """ # not needed when using the PSF as an approximation of the forward and adjoint operators
-        # overwrite mcx simulation to save memory
-        simulation = acoustic_forward_simulation.kwave_forward_adapter(
-            cfg, 
-            transducer_model=cfg['forward_model']
-        )
-        simulation.configure_simulation()
-        if args.resample_time_array:
-            # change time step size to reduce inverse crime
-            simulation.kgrid.setTime(1500, 30e-9)
-        logging.info(f'kwave forward initialised in {timeit.default_timer() - start} seconds')
-        gc.collect()
-            
-        logging.info(f'k-wave forward simulation {n+1}/{args.niter}')
-        start = timeit.default_timer()
-        with h5py.File(os.path.join(args.save_dir, 'temp.h5'), 'r') as f:
-            out = uf.pad_p0_3D(
-                f['p0_3D'],
-                cfg['kwave_grid_size'][0]
+        if args.reconstruction_method == 'k-Wave':
+            # not needed when using the PSF as an approximation of the forward and adjoint operators
+            # overwrite mcx simulation to save memory
+            simulation = acoustic_forward_simulation.kwave_forward_adapter(
+                cfg, 
+                transducer_model=cfg['forward_model']
             )
-        logging.info(f'p0 loaded in {timeit.default_timer() - start} seconds')
-        
-        start = timeit.default_timer()
-        # run also saves the sensor data to data.h5 as float16
-        out = simulation.run_kwave_forward(out)
-        logging.info(f'kwave forward run in {timeit.default_timer() - start} seconds')
-        if not np.any(out):
-            logging.error('sensor data is all zeros')
-            exit(1)                        
-        #start = timeit.default_timer()
-        #with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
-        #    f[h5_group].create_dataset(
-        #        'sensor_data',
-        #        data=out.astype(np.float16)
-        #    )
-        #logging.info(f'sensor data saved in {timeit.default_timer() - start} seconds')
-        
-        logging.info('acoustic forward stage complete')
-        
-        start = timeit.default_timer()
-        simulation = acoustic_inverse_simulation.kwave_inverse_adapter(
-            cfg,
-            transducer_model=cfg['inverse_model']
-        )
-        simulation.configure_simulation()
-        if args.resample_time_array:
-            simulation.kgrid.setTime(1500, 30e-9)
-        logging.info(f'kwave inverse initialised in {timeit.default_timer() - start} seconds')
-        gc.collect()
-            
-        # load sensor data
-        #start = timeit.default_timer()
-        #with h5py.File(cfg['save_dir']+'data.h5', 'r') as f:
-        #    out = f[h5_group]['sensor_data'][()].astype(np.float32)
-        #logging.info(f'sensor data loaded in {timeit.default_timer() - start} seconds')
-        
-        start = timeit.default_timer()
-        # apply convolution with the impulse response function
-        out = convolve1d(out, irf, mode='nearest', axis=-1)
-        # apply bandpass filter to the noisy sensor data
-        if args.bandpass_filter:
-            out = np.fft.ifft(
-                np.fft.fft(out, axis=-1) * filter, axis=-1
-            ).real.astype(np.float32)
-        logging.info(f'noise added in {timeit.default_timer() - start} seconds')
-
-        start = timeit.default_timer()
-        H_recon_pred = simulation.run_time_reversal(out)
-        H_recon_pred = np.rot90(H_recon_pred, k=2, axes=(-2,-1))
-        logging.info(f'time reversal run in {timeit.default_timer() - start} seconds')
-
-        #start = timeit.default_timer()
-        #with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
-        #    f[h5_group].create_dataset(
-        #        'H_recon_true',
-        #        data=uf.square_centre_crop(tr, cfg['crop_size']),
-        #        dtype=np.float32
-        #    )
-        #logging.info(f'p0_recon saved in {timeit.default_timer() - start} seconds')
-        """
-        out = out[:, (cfg['mcx_grid_size'][1]//2)-1, :] # [Pa]
-        out = uf.square_centre_crop(out, cfg['crop_size'])
-        H_recon_pred = padded_convolution(out, PSF) # [Pa]
-        
-        # update scheme for model absorption coefficient,
-        # small number added to denominator to improve numerical stability
-        logging.info(f'mu_a {mu_a.dtype} {mu_a.shape}')
-        mu_a = mu_a.astype(np.float32)
-        # crop to save memory, everything outside this region is assumed to be water
-        mu_a = uf.square_centre_crop(mu_a, cfg['crop_size']) # [m^-1]
-        Phi = uf.square_centre_crop(Phi, cfg['crop_size']) # [J m^-2]
-        H_recon_true = uf.square_centre_crop(H_recon_true, cfg['crop_size']) # [Pa]
-        bg_mask = uf.square_centre_crop(bg_mask, cfg['crop_size']) # [bool]
-        
-        grad_MSE = grad_masked_MSE_loss(H_recon_true, H_recon_pred, PSF, Phi, bg_mask)
-        grad_TV = masked_grad_TV(mu_a, bg_mask, eps=args.epsilon)
-        grad = grad_MSE + args.tv_weight * grad_TV # [m^-1]
-        mu_a -= args.step_size * grad
-        
-        # pad to the original size
-        mu_a = uf.square_centre_pad(mu_a, cfg['mcx_grid_size'][0]) # [m^-1]
-        Phi = uf.square_centre_pad(Phi, cfg['mcx_grid_size'][0]) # [J m^-2]
-        H_recon_pred = uf.square_centre_pad(H_recon_pred, cfg['mcx_grid_size'][0]) # [Pa]
-        H_recon_true = uf.square_centre_pad(H_recon_true, cfg['mcx_grid_size'][0]) # [Pa]
-        bg_mask = uf.square_centre_pad(bg_mask, cfg['mcx_grid_size'][0]) # [bool]
+            simulation.configure_simulation()
+            if args.resample_time_array:
+                # change time step size to reduce inverse crime
+                simulation.kgrid.setTime(1500, 30e-9)
+            logging.info(f'kwave forward initialised in {timeit.default_timer() - start} seconds')
+            gc.collect()
                 
-        #mu_a += args.step_size * (p0_recon - tr) / (cfg['gruneisen'] * Phi + args.epsilon) # depricated
+            logging.info(f'k-wave forward simulation {n+1}/{args.niter}')
+            start = timeit.default_timer()
+            with h5py.File(os.path.join(args.save_dir, 'temp.h5'), 'r') as f:
+                out = uf.pad_p0_3D(
+                    f['p0_3D'],
+                    cfg['kwave_grid_size'][0]
+                )
+            logging.info(f'p0 loaded in {timeit.default_timer() - start} seconds')
+            
+            start = timeit.default_timer()
+            # run also saves the sensor data to data.h5 as float16
+            out = simulation.run_kwave_forward(out)
+            logging.info(f'kwave forward run in {timeit.default_timer() - start} seconds')
+            if not np.any(out):
+                logging.error('sensor data is all zeros')
+                exit(1)                        
+            #start = timeit.default_timer()
+            #with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
+            #    f[h5_group].create_dataset(
+            #        'sensor_data',
+            #        data=out.astype(np.float16)
+            #    )
+            #logging.info(f'sensor data saved in {timeit.default_timer() - start} seconds')
+            
+            logging.info('acoustic forward stage complete')
+            
+            start = timeit.default_timer()
+            simulation = acoustic_inverse_simulation.kwave_inverse_adapter(
+                cfg,
+                transducer_model=cfg['inverse_model']
+            )
+            simulation.configure_simulation()
+            if args.resample_time_array:
+                simulation.kgrid.setTime(1500, 30e-9)
+            logging.info(f'kwave inverse initialised in {timeit.default_timer() - start} seconds')
+            gc.collect()
+                
+            # load sensor data
+            #start = timeit.default_timer()
+            #with h5py.File(cfg['save_dir']+'data.h5', 'r') as f:
+            #    out = f[h5_group]['sensor_data'][()].astype(np.float32)
+            #logging.info(f'sensor data loaded in {timeit.default_timer() - start} seconds')
+            
+            start = timeit.default_timer()
+            # apply convolution with the impulse response function
+            out = convolve1d(out, irf, mode='nearest', axis=-1)
+            # apply bandpass filter to the noisy sensor data
+            if args.bandpass_filter:
+                out = np.fft.ifft(
+                    np.fft.fft(out, axis=-1) * filter, axis=-1
+                ).real.astype(np.float32)
+            logging.info(f'noise added in {timeit.default_timer() - start} seconds')
+
+            start = timeit.default_timer()
+            H_recon_pred = simulation.run_time_reversal(out)
+            H_recon_pred = np.rot90(H_recon_pred, k=2, axes=(-2,-1))
+            logging.info(f'time reversal run in {timeit.default_timer() - start} seconds')
+
+            #start = timeit.default_timer()
+            #with h5py.File(cfg['save_dir']+'data.h5', 'r+') as f:
+            #    f[h5_group].create_dataset(
+            #        'H_recon_true',
+            #        data=uf.square_centre_crop(tr, cfg['crop_size']),
+            #        dtype=np.float32
+            #    )
+            #logging.info(f'p0_recon saved in {timeit.default_timer() - start} seconds')
+            mu_a += args.step_size * (H_recon_true - H_recon_pred) / (cfg['gruneisen'] * Phi + args.epsilon)
+        
+        if args.reconstruction_method == 'PSF':
+            out = out[:, (cfg['mcx_grid_size'][1]//2)-1, :] # [Pa]
+            out = uf.square_centre_crop(out, cfg['crop_size'])
+            H_recon_pred = padded_convolution(out, PSF) # [Pa]
+            
+            # update scheme for model absorption coefficient,
+            # small number added to denominator to improve numerical stability
+            logging.info(f'mu_a {mu_a.dtype} {mu_a.shape}')
+            mu_a = mu_a.astype(np.float32)
+            # crop to save memory, everything outside this region is assumed to be water
+            mu_a = uf.square_centre_crop(mu_a, cfg['crop_size']) # [m^-1]
+            Phi = uf.square_centre_crop(Phi, cfg['crop_size']) # [J m^-2]
+            H_recon_true = uf.square_centre_crop(H_recon_true, cfg['crop_size']) # [Pa]
+            bg_mask = uf.square_centre_crop(bg_mask, cfg['crop_size']) # [bool]
+            
+            grad_MSE = grad_masked_MSE_loss(H_recon_true, H_recon_pred, PSF, Phi, bg_mask)
+            grad_TV = masked_grad_TV(mu_a, bg_mask, eps=args.epsilon)
+            grad = grad_MSE + args.tv_weight * grad_TV # [m^-1]
+            mu_a -= args.step_size * grad
+            
+            # pad to the original size
+            mu_a = uf.square_centre_pad(mu_a, cfg['mcx_grid_size'][0]) # [m^-1]
+            Phi = uf.square_centre_pad(Phi, cfg['mcx_grid_size'][0]) # [J m^-2]
+            H_recon_pred = uf.square_centre_pad(H_recon_pred, cfg['mcx_grid_size'][0]) # [Pa]
+            H_recon_true = uf.square_centre_pad(H_recon_true, cfg['mcx_grid_size'][0]) # [Pa]
+            bg_mask = uf.square_centre_pad(bg_mask, cfg['mcx_grid_size'][0]) # [bool]
         
         # non-negativity constraint
         mu_a = np.maximum(mu_a, 0)

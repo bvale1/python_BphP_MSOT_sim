@@ -1,5 +1,7 @@
 *.log
 
+invision_weights
+
 temp/
 
 __pycache__
