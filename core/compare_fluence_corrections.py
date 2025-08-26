@@ -94,8 +94,8 @@ image_name = '200_750'
 #save_dir = '/home/wv00017/python_BphP_MSOT_sim/no_filter_noise_std_16_20250412_mua_recon_mus_exact_extrusion_200_750.Naisurrey23.j774822'
 #results_path = '/home/wv00017/20250412_mua_recon_mus_exact_extrusion_200_750_TVreg1.Naisurrey25.j775863/results.h5'
 #save_dir = '/home/wv00017/20250412_mua_recon_mus_exact_extrusion_200_750_TVreg1.Naisurrey25.j775863'
-results_path = '/home/wv00017/digimouse_mua_recons/test_200_750/test_200_750/results.h5'
-save_dir = '/home/wv00017/digimouse_mua_recons/test_200_750/test_200_750'
+results_path = '/home/billy/Projects/Scripts/PSF_test_200_750/test_200_750/results.h5'
+save_dir = '/home/billy/Projects/Scripts/PSF_test_200_750/test_200_750/'
 
 
 print(f'saving plots to: {save_dir}')

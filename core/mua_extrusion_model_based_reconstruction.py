@@ -584,34 +584,39 @@ if __name__ == '__main__':
             #        dtype=np.float32
             #    )
             #logging.info(f'p0_recon saved in {timeit.default_timer() - start} seconds')
-            mu_a += args.step_size * (H_recon_true - H_recon_pred) / (cfg['gruneisen'] * Phi + args.epsilon)
         
-        if args.reconstruction_method == 'PSF':
+        elif args.reconstruction_method == 'PSF':
             out = out[:, (cfg['mcx_grid_size'][1]//2)-1, :] # [Pa]
             out = uf.square_centre_crop(out, cfg['crop_size'])
             H_recon_pred = padded_convolution(out, PSF) # [Pa]
             
-            # update scheme for model absorption coefficient,
-            # small number added to denominator to improve numerical stability
-            logging.info(f'mu_a {mu_a.dtype} {mu_a.shape}')
-            mu_a = mu_a.astype(np.float32)
-            # crop to save memory, everything outside this region is assumed to be water
-            mu_a = uf.square_centre_crop(mu_a, cfg['crop_size']) # [m^-1]
-            Phi = uf.square_centre_crop(Phi, cfg['crop_size']) # [J m^-2]
-            H_recon_true = uf.square_centre_crop(H_recon_true, cfg['crop_size']) # [Pa]
-            bg_mask = uf.square_centre_crop(bg_mask, cfg['crop_size']) # [bool]
-            
+        # update scheme for model absorption coefficient,
+        # small number added to denominator to improve numerical stability
+        logging.info(f'mu_a {mu_a.dtype} {mu_a.shape}')
+        mu_a = mu_a.astype(np.float32)
+        # crop to save memory, everything outside this region is assumed to be water
+        mu_a = uf.square_centre_crop(mu_a, cfg['crop_size']) # [m^-1]
+        Phi = uf.square_centre_crop(Phi, cfg['crop_size']) # [J m^-2]
+        H_recon_true = uf.square_centre_crop(H_recon_true, cfg['crop_size']) # [Pa]
+        bg_mask = uf.square_centre_crop(bg_mask, cfg['crop_size']) # [bool]
+        
+        grad_TV = masked_grad_TV(mu_a, bg_mask, eps=args.epsilon)
+        if args.recstruction_method == 'PSF':
             grad_MSE = grad_masked_MSE_loss(H_recon_true, H_recon_pred, PSF, Phi, bg_mask)
-            grad_TV = masked_grad_TV(mu_a, bg_mask, eps=args.epsilon)
             grad = grad_MSE + args.tv_weight * grad_TV # [m^-1]
             mu_a -= args.step_size * grad
-            
-            # pad to the original size
-            mu_a = uf.square_centre_pad(mu_a, cfg['mcx_grid_size'][0]) # [m^-1]
-            Phi = uf.square_centre_pad(Phi, cfg['mcx_grid_size'][0]) # [J m^-2]
-            H_recon_pred = uf.square_centre_pad(H_recon_pred, cfg['mcx_grid_size'][0]) # [Pa]
-            H_recon_true = uf.square_centre_pad(H_recon_true, cfg['mcx_grid_size'][0]) # [Pa]
-            bg_mask = uf.square_centre_pad(bg_mask, cfg['mcx_grid_size'][0]) # [bool]
+
+        elif args.reconstruction_method == 'k-Wave':
+            grad_MSE = -2 * cfg['gruneisen'] * Phi * (H_recon_true - H_recon_pred)
+            grad = grad_MSE + args.tv_weight * grad_TV # [m^-1]
+            mu_a += args.step_size * (H_recon_true - H_recon_pred) / (cfg['gruneisen'] * Phi + args.epsilon)
+        
+        # pad to the original size
+        mu_a = uf.square_centre_pad(mu_a, cfg['mcx_grid_size'][0]) # [m^-1]
+        Phi = uf.square_centre_pad(Phi, cfg['mcx_grid_size'][0]) # [J m^-2]
+        H_recon_pred = uf.square_centre_pad(H_recon_pred, cfg['mcx_grid_size'][0]) # [Pa]
+        H_recon_true = uf.square_centre_pad(H_recon_true, cfg['mcx_grid_size'][0]) # [Pa]
+        bg_mask = uf.square_centre_pad(bg_mask, cfg['mcx_grid_size'][0]) # [bool]
         
         # non-negativity constraint
         mu_a = np.maximum(mu_a, 0)
