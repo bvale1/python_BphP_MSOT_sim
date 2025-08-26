@@ -471,7 +471,7 @@ if __name__ == '__main__':
         # convert from normalised fluence [mm^-2] -> [J m^-2]
         start = timeit.default_timer()
         out *= cfg['image_LaserEnergy'] * 1e6
-        Phi = out[:,(cfg['mcx_grid_size'][1]//2)-1,:].copy()
+        Phi = out[:,(cfg['mcx_grid_size'][1]//2),:].copy()
         Phi = np.rot90(Phi, k=2, axes=(-2,-1))
         
         # optical_and_acoustic
@@ -572,9 +572,12 @@ if __name__ == '__main__':
             logging.info(f'noise added in {timeit.default_timer() - start} seconds')
 
             start = timeit.default_timer()
-            H_recon_pred = simulation.run_time_reversal(out)
-            H_recon_pred = np.rot90(H_recon_pred, k=2, axes=(-2,-1))
-            H_recon_pred = uf.square_centre_crop(H_recon_pred, cfg['crop_size'])
+            with h5py.File(os.path.join(args.save_dir, 'sensor_data.h5'), 'w') as f:
+                f.create_dataset('sensor_data', data=out, dtype=np.float16)
+
+            H_recon_pred = simulation.run_time_reversal(out) # [Pa]
+            H_recon_pred = np.rot90(H_recon_pred, k=2, axes=(-2,-1)) # [Pa]
+            H_recon_pred = uf.square_centre_crop(H_recon_pred, cfg['crop_size']) # [Pa]
             logging.info(f'time reversal run in {timeit.default_timer() - start} seconds')
 
             #start = timeit.default_timer()

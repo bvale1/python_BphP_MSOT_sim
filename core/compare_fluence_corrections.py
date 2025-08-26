@@ -94,8 +94,8 @@ image_name = '200_750'
 #save_dir = '/home/wv00017/python_BphP_MSOT_sim/no_filter_noise_std_16_20250412_mua_recon_mus_exact_extrusion_200_750.Naisurrey23.j774822'
 #results_path = '/home/wv00017/20250412_mua_recon_mus_exact_extrusion_200_750_TVreg1.Naisurrey25.j775863/results.h5'
 #save_dir = '/home/wv00017/20250412_mua_recon_mus_exact_extrusion_200_750_TVreg1.Naisurrey25.j775863'
-results_path = '/home/billy/Projects/Scripts/PSF_test_200_750/test_200_750/results.h5'
-save_dir = '/home/billy/Projects/Scripts/PSF_test_200_750/test_200_750/'
+results_path = '/home/billy/Projects/Scripts/20250826_200_750_TV0p0/20250826_200_750_TV0p0/results.h5'
+save_dir = '/home/billy/Projects/Scripts/20250826_200_750_TV0p0/20250826_200_750_TV0p0/'
 
 
 print(f'saving plots to: {save_dir}')
@@ -322,11 +322,11 @@ plot_line_profiles(line_profile_axis, p0_line_profiles, labels, colors,
 
 plot_line_profiles(line_profile_axis, grad_TV_line_profiles, labels, colors,
                    os.path.join(save_dir, 'grad_TV_line_profile.png'),
-                   ylabel=r'$\nabla_{\mu_{\mathrm{a}}} TV(\mu_{\mathrm{a}}) (m$^{-1}$)')
+                   ylabel=r'$\nabla_{\mu_{\mathrm{a}}}$ TV$(\mu_{\mathrm{a}})$ (m$^{-1}$)')
 
 plot_line_profiles(line_profile_axis, grad_MSE_line_profiles, labels, colors,
                    os.path.join(save_dir, 'grad_MSE_line_profile.png'),
-                   ylabel=r'$\nabla_{\mu_{\mathrm{a}}} MSE(\mu_{\mathrm{a}}) (m$^{-1}$)')
+                   ylabel=r'$\nabla_{\mu_{\mathrm{a}}}$ MSE$(\mu_{\mathrm{a}})$ (m$^{-1}$)')
 
 # line profiles for final iteration
 (fig, ax) = plt.subplots(1, 2, figsize=(6, 3))
