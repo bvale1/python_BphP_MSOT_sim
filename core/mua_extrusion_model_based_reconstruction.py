@@ -601,7 +601,7 @@ if __name__ == '__main__':
         bg_mask = uf.square_centre_crop(bg_mask, cfg['crop_size']) # [bool]
         
         grad_TV = masked_grad_TV(mu_a, bg_mask, eps=args.epsilon)
-        if args.recstruction_method == 'PSF':
+        if args.reconstruction_method == 'PSF':
             grad_MSE = grad_masked_MSE_loss(H_recon_true, H_recon_pred, PSF, Phi, bg_mask)
             grad = grad_MSE + args.tv_weight * grad_TV # [m^-1]
             mu_a -= args.step_size * grad
