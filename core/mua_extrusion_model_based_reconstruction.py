@@ -278,7 +278,7 @@ if __name__ == '__main__':
     
     cfg = json.load(open(os.path.join(args.dataset, 'sim_config.json')))
     with h5py.File(os.path.join(args.dataset, 'dataset.h5'), 'r') as f:
-        laser_energy = f['samples'][args.image_name]['LaserEnergy'][()]
+        laser_energy = f['samples'][args.image_name]['laser_energy_J'][()]
         data = {
             'H_recon_true' : f['samples'][args.image_name]['X'][()] * laser_energy, # [Pa J^-1] -> [Pa]
             'mu_a_true' : f['samples'][args.image_name]['mu_a'][()], # [m^-1]
