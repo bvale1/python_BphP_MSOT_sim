@@ -278,7 +278,7 @@ if __name__ == '__main__':
     
     cfg = json.load(open(os.path.join(args.dataset, 'sim_config.json')))
     with h5py.File(os.path.join(args.dataset, 'dataset.h5'), 'r') as f:
-        laser_energy = f['samples'][args.image_name]['wavelength_nm'][()] * 1e-9 # [m]
+        laser_energy = f['samples'][args.image_name]['LaserEnergy'][()]
         data = {
             'H_recon_true' : f['samples'][args.image_name]['X'][()] * laser_energy, # [Pa J^-1] -> [Pa]
             'mu_a_true' : f['samples'][args.image_name]['mu_a'][()], # [m^-1]
@@ -288,7 +288,7 @@ if __name__ == '__main__':
             'sensor_data' : f['samples'][args.image_name]['sensor_data'][()], # [Pa]
             'mu_s_true' : f['samples'][args.image_name]['mu_s'][()] # [m^-1]
         }
-        
+    
     cfg['image_LaserEnergy'] = laser_energy
     cfg = {**cfg, **vars(args)}
     logging.info(f'loaded simulation data from {args.dataset}')
