@@ -574,6 +574,7 @@ if __name__ == '__main__':
             start = timeit.default_timer()
             H_recon_pred = simulation.run_time_reversal(out)
             H_recon_pred = np.rot90(H_recon_pred, k=2, axes=(-2,-1))
+            H_recon_pred = uf.square_centre_crop(H_recon_pred, cfg['crop_size'])
             logging.info(f'time reversal run in {timeit.default_timer() - start} seconds')
 
             #start = timeit.default_timer()
