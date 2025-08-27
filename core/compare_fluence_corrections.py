@@ -2,6 +2,7 @@ import numpy as np
 import h5py
 import os
 import json
+import argparse
 import matplotlib.pyplot as plt
 import func.plot_func as pf
 import func.utility_func as uf
@@ -79,23 +80,12 @@ def make_filter(n_samples : int,
     return output
 
 
-# paths for y=500 voxels, wavelength=750 nm
-#sim_path_3d = '/mnt/f/cluster_MSOT_simulations/digimouse_fluence_correction/3d_digimouse/20241018_digimouse_phantom.c193723.p2'
-#sim_path_extrusion = '/mnt/f/cluster_MSOT_simulations/digimouse_fluence_correction/2d_extrusion_digimouse/20250206_digimouse_extrusion_phantom.Naisurrey26.j742887'
-#image_name = '500_750'
-#results_path = '/home/wv00017/python_BphP_MSOT_sim/20250409_mua_recon_mus_exact_extrusion.Naisurrey24.j774342/results.h5'
-#save_dir = '/home/wv00017/python_BphP_MSOT_sim/20250409_mua_recon_mus_exact_extrusion.Naisurrey24.j774342'
+parser = argparse.ArgumentParser()
+parser.add_argument('--results_dir', type=str, default='/home/billy/Projects/Scripts/20250826_kwave_200_750_TV0p0/20250826_kwave_200_750_TV0p0/')
+args = parser.parse_args()
 
-# paths for y=200 voxels, wavelength=750 nm
-dataset_path = '/home/wv00017/MSOT_Diffusion/20250716_digimouse_extrusion_MSOT_Dataset'
-image_name = '200_750'
-
-#results_path = '/home/wv00017/python_BphP_MSOT_sim/no_filter_noise_std_16_20250412_mua_recon_mus_exact_extrusion_200_750.Naisurrey23.j774822/results.h5'
-#save_dir = '/home/wv00017/python_BphP_MSOT_sim/no_filter_noise_std_16_20250412_mua_recon_mus_exact_extrusion_200_750.Naisurrey23.j774822'
-#results_path = '/home/wv00017/20250412_mua_recon_mus_exact_extrusion_200_750_TVreg1.Naisurrey25.j775863/results.h5'
-#save_dir = '/home/wv00017/20250412_mua_recon_mus_exact_extrusion_200_750_TVreg1.Naisurrey25.j775863'
-results_path = '/home/billy/Projects/Scripts/20250826_kwave_200_750_TV0p0/20250826_kwave_200_750_TV0p0/results.h5'
-save_dir = '/home/billy/Projects/Scripts/20250826_kwave_200_750_TV0p0/20250826_kwave_200_750_TV0p0/'
+results_path = os.path.join(args.results_dir, 'results.h5')
+save_dir = args.results_dir
 
 
 print(f'saving plots to: {save_dir}')
@@ -209,9 +199,9 @@ with h5py.File(results_path, 'r') as f:
     grad_MSE = f['results']['grad_MSE'][()]
     
 # convert m^-1 to cm^-1
-#mu_a = mu_a# * 1e-2
-#gt['mu_a_true'] = gt['mu_a_true'] * 1e-2
-#gt['mu_s_true'] = gt['mu_s_true'] * 1e-2
+mu_a = mu_a * 1e-2 # [m^-1] -> [cm^-1]
+gt['mu_a_true'] = gt['mu_a_true'] * 1e-2 # [m^-1] -> [cm^-1]
+gt['mu_s_true'] = gt['mu_s_true'] * 1e-2 # [m^-1] -> [cm^-1]
     
 print(f'GT mu_a shape: {gt["mu_a_true"].shape}')
 print(f'GT mu_s shape: {gt["mu_s_true"].shape}')

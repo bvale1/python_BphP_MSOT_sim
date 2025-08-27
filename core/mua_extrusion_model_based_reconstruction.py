@@ -609,7 +609,7 @@ if __name__ == '__main__':
             grad_MSE = grad_masked_MSE_loss(H_recon_true, H_recon_pred, PSF, Phi, bg_mask)
 
         elif args.reconstruction_method == 'k-Wave':
-            grad_MSE = -2 * cfg['gruneisen'] * Phi * (H_recon_true - H_recon_pred)
+            grad_MSE = -cfg['gruneisen'] * Phi * (H_recon_true - H_recon_pred)
             # old mu_a update scheme (time reversal based method)
             #mu_a += args.step_size * (H_recon_true - H_recon_pred) / (cfg['gruneisen'] * Phi + args.epsilon)
         
