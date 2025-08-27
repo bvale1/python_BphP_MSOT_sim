@@ -229,7 +229,7 @@ grad_MSE_line_profiles = [np.diag(x) for x in grad_MSE]
 
 mu_a_plots = uf.square_centre_crop(np.asarray(mu_a), cfg['crop_size'])
 labels=['ground truth', 'initial guess n=0']
-for n in range(1, 10+1):
+for n in range(1, len(mu_a)-1):
     labels.append(f'n={n}')
 (fig, ax, frames) = pf.heatmap(
     mu_a_plots, 
@@ -244,7 +244,7 @@ for n in range(1, 10+1):
 fig.savefig(os.path.join(save_dir, 'mu_a.png'))
 residuals = mu_a_plots[2:] - uf.square_centre_crop(mu_a_true.copy(), cfg['crop_size'])
 labels = []
-for n in range(1, 10+1):
+for n in range(1, len(mu_a)-1):
     labels.append(f'n={n}')
 (fig, ax, frames) = pf.heatmap(
     residuals, 
@@ -259,11 +259,11 @@ for n in range(1, 10+1):
 )
 fig.savefig(os.path.join(save_dir, 'mu_a_residuals.png'))
 labels=['ground truth']
-for n in range(1, 10+1):
+for n in range(1, len(mu_a)-1):
     labels.append(f'n={n}')
     
 labels = ['ground truth', 'initial guess n=0']
-for n in range(1, 10+1):
+for n in range(1, len(mu_a)-1):
     labels.append(f'n={n}')
 linestyle = ['solid', 'dotted', 'dashed', 'dashdot', (0, (3, 5, 1, 5)),
                 (0, (3, 1, 1, 1)), (0, (3, 5, 1, 5, 1, 5)), (0, (3, 1, 1, 1, 1, 1)),

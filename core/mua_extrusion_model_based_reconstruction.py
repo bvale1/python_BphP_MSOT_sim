@@ -88,10 +88,11 @@ def padded_convolution(H : np.ndarray, PSF : np.ndarray) -> np.ndarray:
     return np.sum(H_window * PSF, axis=(-1, -2)) # (x, y)
 
 
-def masked_MSE(H_ref : np.ndarray, H_pred : np.ndarray, mu_pred : np.ndarray, mask : np.ndarray) -> dict:
+def masked_MSE(H_ref : np.ndarray, H_pred : np.ndarray, mask : np.ndarray) -> dict:
     mask_sum = float(mask.sum())
     masked_SE = ((H_ref[mask] - H_pred[mask])**2)
-    return {'masked_MSE' : masked_SE.sum() / mask_sum, 'squared_error' : masked_SE}
+    return masked_SE.sum() / mask_sum
+    #return {'masked_MSE' : masked_SE.sum() / mask_sum, 'squared_error' : masked_SE}
 
 
 def grad_masked_MSE_loss(H_recon_ref : np.ndarray,
@@ -449,6 +450,7 @@ if __name__ == '__main__':
     metrics_mu_a = TestMetricCalculator()
     metrics_H_recon = TestMetricCalculator()
     metrics_mu_a(mu_a_true, mu_a, Y_mask=bg_mask)
+    loss = []
     for n in range(args.niter):
         logging.info(f'iteration {n+1}/{args.niter}')
         volume = phantom.create_volume(mu_a, mu_s, cfg)
@@ -614,6 +616,8 @@ if __name__ == '__main__':
             #mu_a += args.step_size * (H_recon_true - H_recon_pred) / (cfg['gruneisen'] * Phi + args.epsilon)
         
         # mu_a update scheme
+        loss = loss.append(0.5 * masked_MSE(H_recon_true, H_recon_pred, bg_mask) + args.tv_weight * masked_TV(mu_a, bg_mask))
+        logging.info(f'loss: {loss}')
         grad = grad_MSE + args.tv_weight * grad_TV # [m^-1]
         mu_a -= args.step_size * grad
         
@@ -687,9 +691,11 @@ if __name__ == '__main__':
 
     logging.info(f'mu_a metrics: {metrics_mu_a.get_metrics()}')
     logging.info(f'H_recon {metrics_H_recon.get_metrics()}')
+    logging.info(f'loss: {loss}')
     with open(os.path.join(args.save_dir, 'metrics.json'), 'w') as f:
         json.dump({'metrics_mu_a' : metrics_mu_a.get_metrics(),
-                   'metrics_H_recon_true' : metrics_H_recon.get_metrics()}, f, indent='\t')
+                   'metrics_H_recon_true' : metrics_H_recon.get_metrics(),
+                   'loss' : loss}, f, indent='\t')
     if args.plot:
         mu_a_plots = uf.square_centre_crop(np.asarray(mu_a_plots), cfg['crop_size'])
         labels=['ground truth', 'initial guess n=0']
