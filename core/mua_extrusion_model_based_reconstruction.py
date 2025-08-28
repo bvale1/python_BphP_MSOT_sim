@@ -618,7 +618,7 @@ if __name__ == '__main__':
             grad_MSE = -cfg['gruneisen'] * Phi * (H_recon_true - H_recon_pred)
             grad = grad_MSE + args.tv_weight * grad_TV # [m^-1]
             # old mu_a update scheme (time reversal based method)
-            mu_a += args.step_size * (((H_recon_true - H_recon_pred)/(cfg['gruneisen']*Phi + args.epsilon)) + args.tv_weight*grad_TV)
+            mu_a += args.step_size * (((H_recon_true - H_recon_pred)/(cfg['gruneisen']*Phi + args.epsilon)) - args.tv_weight*grad_TV)
         
         # mu_a update scheme
         MSE_loss.append(0.5 * masked_MSE(H_recon_true, H_recon_pred, bg_mask))
@@ -626,9 +626,7 @@ if __name__ == '__main__':
         total_loss.append(MSE_loss[-1] + TV_loss[-1])
         logging.info(f'MSE_loss: {MSE_loss}')
         logging.info(f'TV_loss: {TV_loss}')
-        logging.info(f'total_loss: {total_loss}')
-        
-        
+        logging.info(f'total_loss: {total_loss}')        
         
         # pad to the original size
         mu_a = uf.square_centre_pad(mu_a, cfg['mcx_grid_size'][0]) # [m^-1]
