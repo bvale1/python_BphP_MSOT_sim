@@ -321,28 +321,27 @@ plot_line_profiles(line_profile_axis, grad_MSE_line_profiles, labels, colors,
 # line profiles for final iteration
 (fig, ax) = plt.subplots(1, 2, figsize=(6, 3))
 ax[0].plot(line_profile_axis, mu_a_line_profiles[0], 
-        label='ground truth', color='black')
+        label=r'ground truth', color='black')
 ax[0].plot(line_profile_axis, mu_a_line_profiles[-1],
-        label='10th iteration', color='red', linestyle='dashed')
+        label=r'10th iteration estimate', color='red', linestyle='dashed')
 ax[0].set_xlabel('distance (mm)')
 ax[0].set_ylabel(r'$\mu_{\mathrm{a}}$ (cm$^{-1}$)')
 ax[0].grid(True)
 ax[0].set_axisbelow(True)
 ax[0].set_xlim(np.min(line_profile_axis), np.max(line_profile_axis))
-ax[0].legend(bbox_to_anchor=(0, 1.01, 1.5, 0.2), loc="lower left",
+ax[0].legend(bbox_to_anchor=(0, 1.01, 2.0, 0.2), loc="lower left",
                mode="expand", ncol=3)
 
 ax[1].plot(line_profile_axis, recon_line_profiles[0], color='black')
 ax[1].plot(line_profile_axis, recon_line_profiles[-1], color='red',
              linestyle='dashed')
 ax[1].set_xlabel('distance (mm)')
-ax[1].set_ylabel(r'$\hat{p}_{0}$ (Pa)')
+ax[1].set_ylabel(r'$p_{\mathrm{rec}}$ (Pa)')
 ax[1].grid(True)
 ax[1].set_axisbelow(True)
 ax[1].set_xlim(np.min(line_profile_axis), np.max(line_profile_axis))
 fig.tight_layout()
 fig.savefig(os.path.join(save_dir, 'final_reconstructions_line_profile.png'))
-
 
 (fig, ax, frames) = pf.heatmap(
     np.asarray(p0_tr), 
@@ -392,15 +391,35 @@ fig.savefig(os.path.join(save_dir, 'grad_TV.png'))
 )
 fig.savefig(os.path.join(save_dir, 'grad_MSE.png'))
 
-labels = [r'$\mu_{a}$ (cm$^{-1}$)', r'$\mu_{s}$ (cm$^{-1}$)',
-            r'$\Phi$ (J m$^{-2}$)', r'$p_{0}$ initial pressure (Pa)',
-            r'$\hat{p}_{0}$ reconstructed (Pa)']
+labels = [r'Absorption coefficient $\mu_{\text{a}}$ (cm$^{-1}$)', 
+          r'Scattering coefficient $\mu_{\text{s}}$ (cm$^{-1}$)',
+          r'Fluence $\Phi$ (J m$^{-2}$)', 
+          r'Initial pressure $p_{0}$ (Pa)',
+          r'Reconstruction $p_{\text{rec}}$ (Pa)']
 images = [gt['mu_a_true'], 
-            gt['mu_s_true'], 
-            gt['Phi_true'], 
-            gt['mu_a_true']*gt['Phi_true'],
-            gt['H_recon_true']]
+          gt['mu_s_true'], 
+          gt['Phi_true'], 
+          gt['mu_a_true']*gt['Phi_true'] * 1e2, # convert mu_a [cm^-1] -> m^[-1]
+          gt['H_recon_true']]
 (fig, ax, frames) = pf.heatmap(
     np.asarray(images), dx=cfg['dx'], rowmax=5, labels=labels
 )
 fig.savefig(os.path.join(save_dir, 'images.png'))
+
+# final estimated mu_a and p0_recon
+(fig, ax, frames) = pf.heatmap(
+    np.stack((mu_a_plots[-1], 
+              p0_tr[-1],
+              gt['mu_a_true'], 
+              gt['mu_s_true'], 
+              gt['Phi_true'])),
+    labels=[r'Estimated absorption $\hat{\mu}_{\mathrm{a}}$ (cm$^{-1}$)',
+            r'Reconstruction $\hat{p}_{\mathrm{rec}}(\hat{\mu}_{\mathrm{a}})$ (Pa)',
+            r'Absorption coefficient $\mu_{\text{a}}$ (cm$^{-1}$)',
+            r'Scattering coefficient $\mu_{\text{s}}$ (cm$^{-1}$)',
+            r'Fluence $\Phi$ (J m$^{-2}$)', ],
+    dx=cfg['dx'],
+    sharescale=False,
+    rowmax=5
+)
+fig.savefig(os.path.join(save_dir, 'final_mua_prec.png'))
