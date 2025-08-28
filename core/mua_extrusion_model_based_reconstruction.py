@@ -450,7 +450,9 @@ if __name__ == '__main__':
     metrics_mu_a = TestMetricCalculator()
     metrics_H_recon = TestMetricCalculator()
     metrics_mu_a(mu_a_true, mu_a, Y_mask=bg_mask)
-    loss = []
+    total_loss = []
+    MSE_loss = []
+    TV_loss = []
     for n in range(args.niter):
         logging.info(f'iteration {n+1}/{args.niter}')
         volume = phantom.create_volume(mu_a, mu_s, cfg)
@@ -609,17 +611,24 @@ if __name__ == '__main__':
         grad_TV = masked_grad_TV(mu_a, bg_mask, eps=args.epsilon)
         if args.reconstruction_method == 'PSF':
             grad_MSE = grad_masked_MSE_loss(H_recon_true, H_recon_pred, PSF, Phi, bg_mask)
+            grad = grad_MSE + args.tv_weight * grad_TV # [m^-1]
+            mu_a -= args.step_size * grad
 
         elif args.reconstruction_method == 'k-Wave':
             grad_MSE = -cfg['gruneisen'] * Phi * (H_recon_true - H_recon_pred)
+            grad = grad_MSE + args.tv_weight * grad_TV # [m^-1]
             # old mu_a update scheme (time reversal based method)
-            #mu_a += args.step_size * (H_recon_true - H_recon_pred) / (cfg['gruneisen'] * Phi + args.epsilon)
+            mu_a += args.step_size * (((H_recon_true - H_recon_pred)/(cfg['gruneisen']*Phi + args.epsilon)) + args.tv_weight*grad_TV)
         
         # mu_a update scheme
-        loss.append(0.5 * masked_MSE(H_recon_true, H_recon_pred, bg_mask) + args.tv_weight * masked_TV(mu_a, bg_mask))
-        logging.info(f'loss: {loss}')
-        grad = grad_MSE + args.tv_weight * grad_TV # [m^-1]
-        mu_a -= args.step_size * grad
+        MSE_loss.append(0.5 * masked_MSE(H_recon_true, H_recon_pred, bg_mask))
+        TV_loss.append(args.tv_weight * masked_TV(mu_a, bg_mask))
+        total_loss.append(MSE_loss[-1] + TV_loss[-1])
+        logging.info(f'MSE_loss: {MSE_loss}')
+        logging.info(f'TV_loss: {TV_loss}')
+        logging.info(f'total_loss: {total_loss}')
+        
+        
         
         # pad to the original size
         mu_a = uf.square_centre_pad(mu_a, cfg['mcx_grid_size'][0]) # [m^-1]
@@ -691,11 +700,15 @@ if __name__ == '__main__':
 
     logging.info(f'mu_a metrics: {metrics_mu_a.get_metrics()}')
     logging.info(f'H_recon {metrics_H_recon.get_metrics()}')
-    logging.info(f'loss: {loss}')
+    logging.info(f'MSE_loss: {MSE_loss}')
+    logging.info(f'TV_loss: {TV_loss}')
+    logging.info(f'total_loss: {total_loss}')
     with open(os.path.join(args.save_dir, 'metrics.json'), 'w') as f:
         json.dump({'metrics_mu_a' : metrics_mu_a.get_metrics(),
                    'metrics_H_recon_true' : metrics_H_recon.get_metrics(),
-                   'loss' : loss}, f, indent='\t')
+                   'MSE_loss' : MSE_loss,
+                   'TV_loss' : TV_loss,
+                   'total_loss' : total_loss}, f, indent='\t')
     if args.plot:
         mu_a_plots = uf.square_centre_crop(np.asarray(mu_a_plots), cfg['crop_size'])
         labels=['ground truth', 'initial guess n=0']
