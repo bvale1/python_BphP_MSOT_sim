@@ -452,6 +452,7 @@ if __name__ == '__main__':
     metrics_mu_a(mu_a_true, mu_a, Y_mask=bg_mask)
     loss = []
     for n in range(args.niter):
+        breakpoint()
         logging.info(f'iteration {n+1}/{args.niter}')
         volume = phantom.create_volume(mu_a, mu_s, cfg)
         volume = np.rot90(volume, k=2, axes=(-3,-1))
@@ -616,7 +617,9 @@ if __name__ == '__main__':
             #mu_a += args.step_size * (H_recon_true - H_recon_pred) / (cfg['gruneisen'] * Phi + args.epsilon)
         
         # mu_a update scheme
+        breakpoint()
         loss = loss.append(0.5 * masked_MSE(H_recon_true, H_recon_pred, bg_mask) + args.tv_weight * masked_TV(mu_a, bg_mask))
+        breakpoint()
         logging.info(f'loss: {loss}')
         grad = grad_MSE + args.tv_weight * grad_TV # [m^-1]
         mu_a -= args.step_size * grad
