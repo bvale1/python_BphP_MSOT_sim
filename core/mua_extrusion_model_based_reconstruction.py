@@ -123,6 +123,7 @@ class TestMetricCalculator():
         }
     
     def __call__(self, Y : np.ndarray, Y_hat : np.ndarray, Y_mask=None) -> None:
+        # Y is the reference/ground truth, Y_hat is the estimate/preditction
         assert Y.shape == Y_hat.shape, f"Y.shape {Y.shape} must equal \
             Y_hat.shape {Y_hat.shape}"
         assert Y.ndim == 2, f"Y.ndim {Y.ndim} must be of shape (H, W)"

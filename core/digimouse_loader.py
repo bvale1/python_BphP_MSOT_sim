@@ -7,7 +7,7 @@ from phantoms.digimouse_phantom import digimouse_phantom
 
 # this is a test script I used to implement and visualise the digimouse phantom
 
-path = '/home/wv00017/digimouse_atlas/atlas_380x992x208.img'
+path = '/home/billy/digimouse_atlas/atlas_380x992x208.img'
 
 # load the img file
 with open(path, 'rb') as f:
@@ -276,7 +276,7 @@ if __name__ == '__main__':
     '''
     
     # plot wavelength dependant optical properties of tissue types
-    fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(10,5))
+    fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(10,5), layout='constrained')
     tissue_labels = ['adipose', 'skeleton', 'brain', 'heart', 'muscle', 'stomach', 'liver & spleen', 'kidneys', 'lungs']
     colours = ['black', 'grey', 'tab:blue', 'tab:purple', 'green', 'tab:red', 'tab:orange', 'tab:pink', 'tab:cyan']
     linestyles = ['solid', (0,(1,1)), 'dashdot', (0,(5,5)), (0,(3,1,1,1,1,1)), (0,(4,2,4,2,1,2)), (0,(10,1,10,1,10,3)), (0,(10,3)), (0,(4,1))]
@@ -284,7 +284,7 @@ if __name__ == '__main__':
     
     wavelengths_nm = np.linspace(500, 1200, num=1000)
     wavelengths_m = wavelengths_nm * 1e-9
-    phantom_obj = digimouse_phantom('\\\\wsl$\\Ubuntu-22.04\\home\\wv00017\\digimouse_atlas\\atlas_380x992x208.img', wavelengths_m)
+    phantom_obj = digimouse_phantom('~/digimouse_atlas/atlas_380x992x208.img', wavelengths_m)
     H2O = phantom_obj.define_H2O()
     (Hb, HbO2) = phantom_obj.define_Hb()
     tissue_types_dict = phantom_obj.get_tissue_types_dict()
@@ -297,7 +297,7 @@ if __name__ == '__main__':
         # absorption coefficient
         axes[0].plot(
             wavelengths_nm, 
-            tissue_types_dict[tissue_labels[i]]['mu_a'],
+            tissue_types_dict[tissue_labels[i]]['mu_a'] * 1e-2, # [m^-1] -> [cm^-1]
             linestyle=linestyles[i], 
             linewidth=2, 
             color=colours[i], 
@@ -306,7 +306,7 @@ if __name__ == '__main__':
         # Scattering coefficient
         axes[1].plot(
             wavelengths_nm,
-            tissue_types_dict[tissue_labels[i]]['mu_s'],
+            tissue_types_dict[tissue_labels[i]]['mu_s'] * 1e-2, # [m^-1] -> [cm^-1]
             linestyle=linestyles[i],
             linewidth=2,
             color=colours[i],
@@ -314,27 +314,29 @@ if __name__ == '__main__':
         )
     
     axes[0].set_xlabel("Wavelength (nm)")
-    axes[0].set_ylabel("Absorption coefficient ($\mathrm{m}^{-1}$)")
-    axes[0].set_yscale("log")
-    #axes[0].set_ylim(0, 1000)
+    axes[0].set_ylabel("Absorption coefficient ($\mathrm{cm}^{-1}$)")
+    #axes[0].set_yscale("log")
+    axes[0].set_xlim(650, 900)
+    axes[0].set_ylim(0, 1.3)
     axes[0].grid()
-    axes[0].text(0.1, 0.95, 'A', transform=axes[0].transAxes, fontsize=13, fontweight='bold', va='top')
-    axes[0].legend(bbox_to_anchor=(0.47, 0.6, 0.45, 0.38))
+    #axes[0].legend(bbox_to_anchor=(0.47, 0.6, 0.45, 0.38))
     
     axes[1].set_xlabel("Wavelength (nm)")
-    axes[1].set_ylabel("Scattering coefficient ($\mathrm{m}^{-1}$)")
+    axes[1].set_ylabel("Scattering coefficient ($\mathrm{cm}^{-1}$)")
+    axes[1].set_xlim(650, 900)
+    axes[1].set_ylim(0, 400)
     #axes[1].set_yscale("log")
     axes[1].grid()
     #axes[1].set_yticks([1E02,1E01])
     axes[1].ticklabel_format(useMathText=True)
     axes[1].ticklabel_format(style='plain')
-    axes[1].text(0.1, 0.95, 'B', transform=axes[1].transAxes, fontsize=13, fontweight='bold', va='top')
     axes[1].legend(loc="best")
+    plt.savefig('digimouse_tissue_optical_properties.png', dpi=300)
 
-    mu_a = phantom_obj.calculate_tissue_absorption_coefficients()
-    mu_s = phantom_obj.calculate_tissue_scattering_coefficients()
-    wavelength_index = np.where(np.round(wavelengths_nm) == 770)[0][0] # 770 nm
-    cross_sections_mu_a = mu_a[cross_sections, wavelength_index]
-    cross_sections_mu_s = mu_s[cross_sections, wavelength_index]
-    pf.heatmap(cross_sections_mu_a, dx=dx, sharescale=True, title=r'$\mu_{a}(770$ nm$)$ (m$^{-1}$)')
-    pf.heatmap(cross_sections_mu_s, dx=dx, sharescale=True, title=r'$\mu_{s}(770$ nm$)$ (m$^{-1}$)')
+    # mu_a = phantom_obj.calculate_tissue_absorption_coefficients()
+    # mu_s = phantom_obj.calculate_tissue_scattering_coefficients()
+    # wavelength_index = np.where(np.round(wavelengths_nm) == 770)[0][0] # 770 nm
+    # cross_sections_mu_a = mu_a[cross_sections, wavelength_index]
+    # cross_sections_mu_s = mu_s[cross_sections, wavelength_index]
+    # pf.heatmap(cross_sections_mu_a, dx=dx, sharescale=True, title=r'$\mu_{a}(770$ nm$)$ (m$^{-1}$)')
+    # pf.heatmap(cross_sections_mu_s, dx=dx, sharescale=True, title=r'$\mu_{s}(770$ nm$)$ (m$^{-1}$)')

@@ -16,7 +16,7 @@ class digimouse_phantom(phantom):
         # note that the equation in the paper contains a typo, mu_a_HbO2 and mu_a_Hb are the wrong way around.
         
         # I didn't include other molecular absorbers (e.g. fat and melanin) in the equation as it was 
-        # couldn't find data on them for most of the tissues in the digimouse phantom.
+        # difficult to find that data for most of the tissues in the digimouse phantom.
         
         # This model obviously underestimates the absorption of most tissues, for example bone, which is not vascularized.
         # Using this, all I could see was the liver and lungs as they contain a lot of blood,
@@ -50,6 +50,7 @@ class digimouse_phantom(phantom):
         return np.array([
             np.asarray(self.H2O['mu_a']), # 0 --> background
             self.linear_mixing_law_mu_a(0.0033, 0.7, 0.5), # 1 --> skin --> adipose, alexandrakis eta al. (2005)
+            #self.linear_mixing_law_mu_a(0.06, 0.75, 0.5), # 1 --> skin, alexandrakis eta al. (2005)
             self.linear_mixing_law_mu_a(0.049, 0.8, 0.15), # 2 --> skeleton, alexandrakis eta al. (2005)
             self.linear_mixing_law_mu_a(0.0033, 0.7, 0.5), # 3 --> eye --> adipose, alexandrakis eta al. (2005)
             self.linear_mixing_law_mu_a(0.03, 0.6, 0.75), # 4 --> medulla --> Rat brain cortex, Steven L Jacques (2013)

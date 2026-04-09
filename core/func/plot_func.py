@@ -42,8 +42,8 @@ def plot4D(data,
 def heatmap(img : np.ndarray, 
             title : str='', 
             cmap : str='binary_r', 
-            vmax : float=None,
-            vmin : float=None,
+            vmax : Union[float, list, tuple]=None,
+            vmin : Union[float, list, tuple]=None,
             dx : float=0.0001, 
             rowmax : int=6,
             labels : Union[list, tuple]=None,
@@ -64,7 +64,7 @@ def heatmap(img : np.ndarray,
             vmin = np.min(img[mask])
         if not vmax:
             vmax = np.max(img[mask])
-    
+
     extent = [-dx*shape[-2]/2, dx*shape[-2]/2, -dx*shape[-1]/2, dx*shape[-1]/2]
     
     if len(shape) == 2: # one image
@@ -102,13 +102,26 @@ def heatmap(img : np.ndarray,
         for frame in range(nframes): 
             if not sharescale:
                 mask = np.logical_not(np.isnan(img[frame]))
-                vmin = np.min(img[frame][mask])
-                vmax = np.max(img[frame][mask])
+                if not vmin:
+                    frame_vmin = np.min(img[frame][mask])
+                elif type(vmin) == float:
+                    frame_vmin = vmin
+                elif type(vmin) in [list, tuple]:
+                    frame_vmin = vmin[frame]
+                if not vmax:
+                    frame_vmax = np.max(img[frame][mask])
+                elif type(vmax) == float:
+                    frame_vmax = vmax
+                elif type(vmax) in [list, tuple]:
+                    frame_vmax = vmax[frame]
+            else:
+                frame_vmin = vmin
+                frame_vmax = vmax
             frames.append(ax[frame].imshow(
                 img[frame],
                 cmap=cmap, 
-                vmin=vmin, 
-                vmax=vmax,
+                vmin=frame_vmin, 
+                vmax=frame_vmax,
                 extent=extent,
                 origin='lower'
             ))

@@ -265,10 +265,10 @@ for n in range(1, len(mu_a)-1):
 labels = ['ground truth', 'initial guess n=0']
 for n in range(1, len(mu_a)-1):
     labels.append(f'n={n}')
-linestyle = ['solid', 'dotted', 'dashed', 'dashdot', (0, (3, 5, 1, 5)),
-                (0, (3, 1, 1, 1)), (0, (3, 5, 1, 5, 1, 5)), (0, (3, 1, 1, 1, 1, 1)),
-                (0, (3, 5, 1, 5, 1, 5, 1, 5)), (0, (3, 1, 1, 1, 1, 1, 1, 1)),
-                (0, (5, 10)), (0, (3, 10, 1, 10)), (0, (10, 3))]
+#linestyle = ['solid', 'dotted', 'dashed', 'dashdot', (0, (3, 5, 1, 5)),
+#                (0, (3, 1, 1, 1)), (0, (3, 5, 1, 5, 1, 5)), (0, (3, 1, 1, 1, 1, 1)),
+#                (0, (3, 5, 1, 5, 1, 5, 1, 5)), (0, (3, 1, 1, 1, 1, 1, 1, 1)),
+#                (0, (5, 10)), (0, (3, 10, 1, 10)), (0, (10, 3))]
 #colors = ['black', 'red', 'blue', 'green', 'orange', 'purple', 'brown',
 #          'pink', 'gray', 'cyan', 'magenta', 'yellow', 'lime', 'teal']
 # create a palette of colors equally spaced between (26, 133, 255) and (212, 17, 89)
@@ -279,10 +279,11 @@ for x in np.linspace(0, 1, len(mu_a_line_profiles)-1):
         (133/256)*x + (17/256)*(1-x), # g [0.0 to 1.0]
         (255/256)*x + (89/256)*(1-x)  # b [0.0 to 1.0]
     ))
+line_profile_dx = np.sqrt(2*(cfg['dx']**2)) # c^2 = a^2 + b^2
 line_profile_axis = np.arange(
-    -cfg['dx']*cfg['crop_size']/2,
-    cfg['dx']*cfg['crop_size']/2, 
-    cfg['dx']
+    -line_profile_dx*cfg['crop_size']/2,
+    line_profile_dx*cfg['crop_size']/2, 
+    line_profile_dx
 ) * 1e3 # convert to mm
 
 # line profiles for all iterations
@@ -413,11 +414,21 @@ fig.savefig(os.path.join(save_dir, 'images.png'))
               gt['mu_a_true'], 
               gt['mu_s_true'], 
               gt['Phi_true'])),
+    vmin=[np.min(gt['mu_a_true']), 
+          np.min(gt['H_recon_true']),
+          np.min(gt['mu_a_true']),
+          np.min(gt['mu_s_true']),
+          np.min(gt['Phi_true'])],
+    vmax=[np.max(gt['mu_a_true']), 
+          np.max(gt['H_recon_true']),
+          np.max(gt['mu_a_true']),
+          np.max(gt['mu_s_true']),
+          np.max(gt['Phi_true'])],
     labels=[r'Estimated absorption $\hat{\mu}_{\mathrm{a}}$ (cm$^{-1}$)',
-            r'Reconstruction $\hat{p}_{\mathrm{rec}}(\hat{\mu}_{\mathrm{a}})$ (Pa)',
+            r'Pressure reconstruction $\hat{p}_{\mathrm{rec}}(\hat{\mu}_{\mathrm{a}})$ (Pa)',
             r'Absorption coefficient $\mu_{\text{a}}$ (cm$^{-1}$)',
             r'Scattering coefficient $\mu_{\text{s}}$ (cm$^{-1}$)',
-            r'Fluence $\Phi$ (J m$^{-2}$)', ],
+            r'Fluence $\Phi$ (J m$^{-2}$)'],
     dx=cfg['dx'],
     sharescale=False,
     rowmax=5
